@@ -51,3 +51,10 @@ Live at https://cyiber069.github.io/Enivel/ (GitHub Pages, main branch, root). T
 
 ## Pickup reminders + chauffeur prompts
 Driver gets in-app reminders 30 and 10 minutes before each pickup (route pickup time, agreed schedule incl. exam school pickup, once-off trips). Catches up if the app is opened late; stacks if several are due; skipped once the trip is started, child picked up or absent, weekends, SA public holidays, driver off days. Countdown card on driver home. Phone pop-ups when the driver allows notifications and the app is open or in the background; true push with the app fully closed needs a push service later. Private chauffeur: setup card on driver Routes, request button on parent Find when none listed. Uber/Bolt order integration: not possible (no public API to receive/accept trips).
+
+## Driver convenience (auto pickup, Enivel hours, phone pop-ups)
+- Auto pickup/drop-off: during an active trip with GPS, a stop of 45 s inside ~60–120 m of a child's home then driving off marks pickup (recorded at the stop position); 30 s at school marks drop-off; afternoon school pickup only after 11:00 / near agreed time. Siblings share one 10-second Undo; Undo deletes the event and alert and tells the parent. Driver setting in More (default on).
+- Enivel hours card on driver home: today's windows from routes + agreed schedules, "Free for other work until 14:15 / go offline by 14:05".
+- Phone pop-ups: sw.js + Web Push (VAPID). Driver app saves a 7-day reminder plan to its own profile; Supabase due_push() (service role only) picks due items, drops absent / already-picked-up children, skips started trips; Worker cron every minute encrypts (RFC 8291) and sends. Buttons: Start trip / Open Enivel. iPhone needs Add to Home Screen first. Tested: SQL 7/7, encryption decrypts with independent library, VAPID signature verifies. Not testable here: real delivery to a phone.
+- VAPID public key in app + WORKER-SETUP.md; private key given to the owner separately, not in git.
+- Four-phone live test now 26/26.

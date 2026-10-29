@@ -31,9 +31,9 @@ Right now each phone keeps its own accounts and bookings in its own browser stor
 6. Under **Authentication → Providers**, make sure Email is enabled. Under **Authentication → URL Configuration**, set Site URL to `https://cyiber069.github.io/Enivel/`.
 
 ### 2. SMS codes (BulkSMS + Cloudflare Worker)
-Follow `SMS-SETUP.md` in the repo exactly:
+Follow `WORKER-SETUP.md` in the repo exactly (one Worker does SMS codes and driver reminders):
 1. Create a BulkSMS account at https://www.bulksms.com. Stop and let me pay for a small credit bundle (about R100).
-2. Create a free Cloudflare account, create a Worker called `enivel-otp`, paste the code from `sms-worker.js`, deploy.
+2. Create a free Cloudflare account, create a Worker called `enivel-otp`, paste the code from `worker.js`, deploy, add the secrets and the every-minute Cron Trigger listed in WORKER-SETUP.md.
 3. Set the Worker secrets `BULKSMS_TOKEN` and `OTP_SECRET` and the variables `ALLOWED_ORIGIN=https://cyiber069.github.io` and `SENDER=Enivel`. For `BULKSMS_TOKEN`, I type my BulkSMS username and password; you build the base64 value.
 4. Open the live app, log in as admin (I type the password), go to **More → SMS gateway**, paste the Worker URL, Save.
 5. Test: sign up a test parent with my own cellphone number and confirm a real SMS code arrives.
