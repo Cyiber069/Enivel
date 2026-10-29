@@ -48,3 +48,6 @@ Live at https://cyiber069.github.io/Enivel/ (GitHub Pages, main branch, root). T
 - Owner must: run setup.sql, set Confirm email off, set Site URL, create admin account with a NEW password.
 - Later: real email sender (SMTP) then Confirm email on; phone-number login via Supabase phone auth;
   move photos to Supabase Storage; realtime instead of polling at scale.
+
+## Pickup reminders + chauffeur prompts
+Driver gets in-app reminders 30 and 10 minutes before each pickup (route pickup time, agreed schedule incl. exam school pickup, once-off trips). Catches up if the app is opened late; stacks if several are due; skipped once the trip is started, child picked up or absent, weekends, SA public holidays, driver off days. Countdown card on driver home. Phone pop-ups when the driver allows notifications and the app is open or in the background; true push with the app fully closed needs a push service later. Private chauffeur: setup card on driver Routes, request button on parent Find when none listed. Uber/Bolt order integration: not possible (no public API to receive/accept trips).
