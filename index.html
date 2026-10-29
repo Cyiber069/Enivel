@@ -1,3 +1,4 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Enivel: verified scholar transport for South Africa."><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:15px/1.5 system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
 <title>Enivel</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
@@ -204,6 +205,11 @@ td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle;font-v
 .footer button{background:none;border:0;color:inherit;cursor:pointer;text-decoration:underline;padding:0}
 .empty{text-align:center;padding:30px 16px;color:var(--fg3)}
 .empty svg{width:40px;height:40px;margin-bottom:8px;opacity:.5}
+</style>
+<style>
+@media (max-width:700px){input,select,textarea{font-size:16px!important}.btn{min-height:44px}.btn.sm{min-height:38px}.tabs button{min-height:56px}}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+@media (max-width:380px){.searchbar .btn.ghost{display:none}.searchbar{padding-left:12px}.top{gap:8px}.top .ib{width:36px;height:36px}}
 </style>
 <div class="app" id="app"></div>
 <script>
@@ -1356,3 +1362,5 @@ const _otpModal=otpModal;otpModal=function(phone,title,onOk){const ep=otpEndpoin
     i.oninput=()=>{if(i.value.length===6)check()};go_.onclick=check;$('#otp-re',m).onclick=send;await send()})};
 const _amore8=VIEWS['a-more'];VIEWS['a-more']=()=>{const ep=otpEndpoint();return _amore8().replace('<div class="card"><h3>Announcements</h3>',`<div class="card"><h3>SMS gateway ${ep?'<span class="pill live">Live</span>':'<span class="pill warn">Test mode</span>'}</h3><p class="small muted">Paste the Enivel OTP Worker URL (see SMS-SETUP.md). Empty = codes shown on screen.</p><div class="row" style="margin-top:10px"><input id="cfg-otp" value="${h(ep)}" placeholder="https://enivel-otp.you.workers.dev" style="flex:1;min-width:200px;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg)"><button class="btn sm" onclick="Store.put('settings','config',{...(Store.get('settings','config')||{}),otpEndpoint:document.getElementById('cfg-otp').value.trim()}).then(()=>toast('Gateway saved'))">Save</button></div></div><div class="card"><h3>Announcements</h3>`)};
 </script>
+
+</body></html>

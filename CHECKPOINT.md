@@ -29,3 +29,6 @@ Intro slides on first visit; parent journey stepper (Driver out → Picked up �
 
 ## SMS provider chosen: BulkSMS via Cloudflare Worker
 Files: sms-worker.js (Worker code: /send signs an HMAC token + sends SMS through BulkSMS; /check verifies), SMS-SETUP.md (15-min setup). App: Admin → More → SMS gateway stores otpEndpoint in settings/config; otpModal uses the Worker when set, else test mode.
+
+## Hosting
+Live at https://cyiber069.github.io/Enivel/ (GitHub Pages, main branch, root). The hosted index.html wraps the app source with a full <head> incl. viewport meta (build.sh). Phone fit tested at 320, 390, 430, 768 and 1366 px.
