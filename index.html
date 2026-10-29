@@ -3,6 +3,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 <style>
 /* Layout: app shell — top bar, scrolling main, bottom tab bar on phones, side rail on desktop. Monochrome: white ground, black ink; dark mode flips. One accent only for live status. */
 :root{
@@ -215,7 +216,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <script>
 /* ===================== Enivel core ===================== */
 const ADMIN_EMAIL='kgosimosupi10@gmail.com';
-const ADMIN_HASH='6b66e9dd1224e2704c501fde82bfada66fb41972cc5d5de088c7e1a77634e649';
+const ADMIN_HASH='';
 const COLS=['users','kids','vehicles','routes','bookings','requests','offers','messages','events','transactions','notifications','ratings','settings'];
 const FEE_RATE=0.02, DRIVER_FEE=100, PARKING_FEE=49.99, FREE_VEHICLES=3;
 const S={route:'landing',session:null,data:{},mode:'local',db:null,user:null,viewer:null,theme:null,ready:false,chatWith:null,busy:false,filters:{},admin:false,trip:null};
@@ -718,7 +719,7 @@ async function clearDemo(){for(const c of COLS)for(const d of Store.all(c))if(d.
 
 /* ===================== boot ===================== */
 (async function boot(){const th=ls.get('enivel_theme');if(th)setTheme(th);S.session=ls.get('enivel_session');S.admin=!!ls.get('enivel_admin');
-  render();await initStore();
+  render();await new Promise(r=>document.readyState==='loading'?document.addEventListener('DOMContentLoaded',r,{once:true}):r());await initStore();
   if(S.session&&!me()){S.session=null;S.admin=false}
   if(S.admin&&me()?.email!==ADMIN_EMAIL)S.admin=false;
   const u=me();if(u)S.route=S.admin?'a-home':u.role==='driver'?'d-home':'p-home';render();
@@ -1361,6 +1362,102 @@ const _otpModal=otpModal;otpModal=function(phone,title,onOk){const ep=otpEndpoin
     const check=async()=>{if(!tok)return;go_.disabled=true;try{const r=await fetch(ep+'/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:ph,code:i.value.trim(),token:tok.token,exp:tok.exp})});const j=await r.json();if(!j.ok){go_.disabled=false;return toast(j.reason==='expired'?'Code expired, resend':'Wrong code, try again')}closeModal();await onOk()}catch(e){go_.disabled=false;toast('Could not check the code: '+e.message)}};
     i.oninput=()=>{if(i.value.length===6)check()};go_.onclick=check;$('#otp-re',m).onclick=send;await send()})};
 const _amore8=VIEWS['a-more'];VIEWS['a-more']=()=>{const ep=otpEndpoint();return _amore8().replace('<div class="card"><h3>Announcements</h3>',`<div class="card"><h3>SMS gateway ${ep?'<span class="pill live">Live</span>':'<span class="pill warn">Test mode</span>'}</h3><p class="small muted">Paste the Enivel OTP Worker URL (see SMS-SETUP.md). Empty = codes shown on screen.</p><div class="row" style="margin-top:10px"><input id="cfg-otp" value="${h(ep)}" placeholder="https://enivel-otp.you.workers.dev" style="flex:1;min-width:200px;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg)"><button class="btn sm" onclick="Store.put('settings','config',{...(Store.get('settings','config')||{}),otpEndpoint:document.getElementById('cfg-otp').value.trim()}).then(()=>toast('Gateway saved'))">Save</button></div></div><div class="card"><h3>Announcements</h3>`)};
+</script>
+<style>
+.demobar{position:sticky;top:0;z-index:20;background:var(--acc3);color:#1a1200;font-size:.8rem;font-weight:600;text-align:center;padding:6px max(16px,env(safe-area-inset-left,0px))}
+.demobar button{background:none;border:0;text-decoration:underline;font:inherit;color:inherit;cursor:pointer;margin-left:8px}
+</style>
+<script>
+/* ===================== Cloud backend: Supabase (live site only) ===================== */
+const SUPA_URL='https://kakzsotpfzgghlfanaut.supabase.co';
+const SUPA_KEY='sb_publishable_189hy2dtUN4ihB6V8Wfdvw__gECogUx';
+let sb=null,lastSync=null,pulling=false,pullT=null,pollT=null,pendingRender=false;
+const FORM_ROUTES=['d-verify','p-more','d-more','a-more'];
+function cloudRender(){const a=document.activeElement;const typing=a&&a.closest&&a.closest('#app')&&/INPUT|TEXTAREA|SELECT/.test(a.tagName);if(typing||FORM_ROUTES.includes(S.route)||$('.overlay')){pendingRender=true;return}pendingRender=false;render()}
+document.addEventListener('focusout',()=>{if(pendingRender)setTimeout(()=>{const a=document.activeElement;if(!(a&&a.closest&&a.closest('#app')&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)))cloudRender()},200)});
+async function cloudPull(full){if(!sb||pulling||!S.session)return;pulling=true;try{const {data,error}=await sb.rpc('fetch_docs',{p_since:full?null:lastSync});if(error)throw error;if(full)COLS.forEach(c=>S.data[c]={});let max=full?null:lastSync;for(const r of data||[]){S.data[r.coll]=S.data[r.coll]||{};if(r.deleted)delete S.data[r.coll][r.id];else S.data[r.coll][r.id]={...r.data,id:r.id};if(!max||r.updated_at>max)max=r.updated_at}if(max)lastSync=max;if(full||(data&&data.length))cloudRender()}catch(e){console.warn('sync',e)}finally{pulling=false}}
+function schedulePull(){clearTimeout(pullT);pullT=setTimeout(()=>cloudPull(false),500)}
+function startPolling(){clearInterval(pollT);let n=0;pollT=setInterval(()=>{if(document.hidden||!S.session)return;n++;cloudPull(n%10===0)},6000)}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.cloud&&S.session)cloudPull(false)});
+async function cloudWrite(c,id,doc){const {error}=await sb.rpc('put_doc',{p_coll:c,p_id:id,p_data:doc});if(error){schedulePull();throw new Error(error.message)}schedulePull()}
+const cloudDB={collection:c=>({doc:id=>({set:doc=>cloudWrite(c,id,doc),update:p=>cloudWrite(c,id,{...(S.data[c]?.[id]||{}),...p}),delete:async()=>{const {error}=await sb.rpc('del_doc',{p_coll:c,p_id:id});if(error)throw new Error(error.message);schedulePull()}})})};
+/* storage key for local and demo modes */
+Store.flush=function(){ls.set(S.demo?'enivel_demo_db':'enivel_db',S.data)};
+Store.loadLocal=function(){const d=ls.get(S.demo?'enivel_demo_db':'enivel_db');if(d)COLS.forEach(c=>S.data[c]=d[c]||{})};
+async function cloudReachable(){if(typeof supabase==='undefined'||!supabase.createClient)return false;try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),4000);const r=await fetch(SUPA_URL+'/auth/v1/health',{headers:{apikey:SUPA_KEY},signal:ac.signal});clearTimeout(t);return r.ok}catch(e){return false}}
+const _initStore=initStore;
+initStore=async function(){
+  if(ls.get('enivel_demo_on')){S.demo=true;S.mode='local';Store.loadLocal();S.session=ls.get('enivel_session');S.ready=true;return}
+  if(await cloudReachable()){
+    sb=supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    S.cloud=true;S.mode='db';S.db=cloudDB;COLS.forEach(c=>S.data[c]={});
+    const {data:{session}}=await sb.auth.getSession();
+    if(session){S.session={userId:session.user.id};const {data:adm}=await sb.rpc('is_admin');S.admin=!!adm;await cloudPull(true);
+      const u=me();
+      if(u?.twoFactor&&!ls.get('enivel_2fa_'+session.user.id)){await sb.auth.signOut();S.session=null;S.admin=false}
+      else if(u?.banned){await sb.auth.signOut();S.session=null;S.admin=false;setTimeout(()=>toast('This account has been permanently banned.'),500)}
+      else if(!u){setTimeout(()=>ensureProfile(session.user),300)}
+    }
+    ls.set('enivel_session',S.session);ls.set('enivel_admin',S.admin);
+    sb.auth.onAuthStateChange((ev,sess)=>{if(ev==='SIGNED_OUT'){S.session=null;S.admin=false;COLS.forEach(c=>S.data[c]={});render()}});
+    startPolling();S.ready=true;return}
+  return _initStore()};
+/* first sign-in: create the profile from what was entered at sign-up */
+async function ensureProfile(user){S.session={userId:user.id};ls.set('enivel_session',S.session);if(me())return;const email=(user.email||'').toLowerCase();if(S.admin){await Store.put('users',user.id,{name:'Enivel Admin',email,role:'admin',createdAt:Date.now(),verification:{status:'approved'}});return go('a-home')}
+  const pend=ls.get('enivel_pending_'+email);if(pend){await createCloudProfile(user,pend);return}
+  modal(`<h3>Finish your profile</h3><p class="muted small">One time only.</p><div class="stack" style="margin-top:12px"><div class="rolepick"><button type="button" class="on" data-r="parent"><b>Parent</b><span>Book transport</span></button><button type="button" data-r="driver"><b>Driver</b><span>I transport scholars</span></button></div><div class="field"><label>Full name</label><input id="fp-n"></div><div class="field"><label>Cellphone</label><input id="fp-p" inputmode="tel" placeholder="072 123 4567"></div><button class="btn wide" id="fp-go">Continue</button></div>`,m=>{let role='parent';m.querySelectorAll('.rolepick button').forEach(b=>b.onclick=()=>{role=b.dataset.r;m.querySelectorAll('.rolepick button').forEach(x=>x.classList.toggle('on',x===b))});$('#fp-go',m).onclick=async()=>{const name=val(m,'fp-n').trim(),phone=normPhone(val(m,'fp-p'));if(!name.includes(' '))return toast('Enter your full name');if(!phone)return toast('Enter a valid South African cellphone');closeModal();await createCloudProfile(user,{name,phone,role})}})}
+async function createCloudProfile(user,f){const email=(user.email||'').toLowerCase();await Store.put('users',user.id,{name:f.name.trim(),email,phone:f.phone,phoneVerified:!!f.phoneVerified,role:f.role,createdAt:Date.now(),verification:{status:'none'},refCode:refCodeFor(f.name)});
+  if(f.ref){const {data:rid}=await sb.rpc('award_referral',{p_code:f.ref});if(rid){await notify(rid,`${f.name} joined with your code. R50 credit added.`,'pay');await notify(user.id,'R50 welcome credit added for using a referral code.','pay')}else toast('That referral code was not found, so no credit was added')}
+  await notify(user.id,`Welcome to Enivel, ${f.name.split(' ')[0]}! ${f.role==='driver'?'Complete verification to start listing transport.':'Add your children and find a verified transport.'}`,'info');
+  ls.set('enivel_pending_'+email,null);await cloudPull(true);go(f.role==='driver'?'d-verify':'p-home');setTimeout(()=>twoFaPrompt(),700)}
+/* sign up */
+const _register2=register;
+register=async function(form){if(!S.cloud)return _register2(form);
+  const email=form.email.trim().toLowerCase();if(!validEmail(email))return toast('Enter a real email address, like name@gmail.com');
+  const phone=normPhone(form.phone);if(!phone)return toast('Enter a valid South African cellphone, e.g. 072 123 4567');
+  if(!form.name.trim().includes(' '))return toast('Enter your full name (first and last)');if(form.password.length<8)return toast('Password needs at least 8 characters');
+  const {data:taken}=await sb.rpc('phone_taken',{p:phone});if(taken)return toast('That phone number already has an account');
+  otpModal(phone,'Verify your phone',async()=>{const f={name:form.name.trim(),phone,role:form.role,ref:(form.ref||'').trim(),phoneVerified:true};ls.set('enivel_pending_'+email,f);
+    const {data,error}=await sb.auth.signUp({email,password:form.password,options:{emailRedirectTo:location.origin+location.pathname}});
+    if(error)return toast(/registered|exists/i.test(error.message)?'That email already has an account. Log in instead.':error.message);
+    if(!data.session){return modal(`<h3>Check your email</h3><p class="muted small" style="margin:8px 0 14px">We sent a confirmation link to <b>${h(email)}</b>. Open it on this phone and you'll be signed in.</p><button class="btn wide" onclick="closeModal()">OK</button>`)}
+    S.session={userId:data.user.id};ls.set('enivel_session',S.session);const {data:adm}=await sb.rpc('is_admin');S.admin=!!adm;if(S.admin)return ensureProfile(data.user);await createCloudProfile(data.user,f)})};
+/* log in */
+const _login2=login;
+login=async function(email,password){if(!S.cloud)return _login2(email,password);email=email.trim().toLowerCase();
+  let {data,error}=await sb.auth.signInWithPassword({email,password});
+  if(error&&email===ADMIN_EMAIL&&/invalid/i.test(error.message)){return confirmBox('Create the admin account?','No Enivel account exists for this email yet. Creating it now makes it the admin account, with the password you just typed.',async()=>{const r=await sb.auth.signUp({email,password});if(r.error)return toast(r.error.message);if(!r.data.session)return toast('Check your email to confirm the admin account, then log in.');S.session={userId:r.data.user.id};const {data:adm}=await sb.rpc('is_admin');S.admin=!!adm;if(!S.admin)return toast('This account was created but is not admin. Run the setup script again in Supabase.');ls.set('enivel_admin',true);await cloudPull(true);await ensureProfile(r.data.user);go('a-home')})}
+  if(error)return toast(/confirm/i.test(error.message)?'Confirm your email first: open the link we sent you.':/invalid/i.test(error.message)?'Email or password is wrong':error.message);
+  const uid_=data.user.id;S.session={userId:uid_};const {data:adm}=await sb.rpc('is_admin');S.admin=!!adm;await cloudPull(true);
+  let u=me();if(!u){await ensureProfile(data.user);return}
+  if(u.banned){await sb.auth.signOut();S.session=null;S.admin=false;return toast('This account has been permanently banned.')}
+  if(u.suspended)toast('This account is suspended. Contact support@enivel.co.za');
+  const done=()=>{ls.set('enivel_2fa_'+uid_,1);ls.set('enivel_session',S.session);ls.set('enivel_admin',S.admin);go(S.admin?'a-home':u.role==='driver'?'d-home':'p-home');setTimeout(expiryReminders,800)};
+  const bail=async()=>{await sb.auth.signOut();S.session=null;S.admin=false};
+  if(u.twoFactor==='pin'){S.session=null;pinModal(u,()=>{S.session={userId:uid_};done()});setTimeout(()=>{const o=$('.overlay');if(o)o.addEventListener('click',e=>{if(e.target===o)bail()})},50);return}
+  if(u.twoFactor==='sms'){S.session=null;otpModal(u.phone,'Two-step verification',()=>{S.session={userId:uid_};done()});return}
+  done()};
+const _logout2=logout;
+function exitDemo(){ls.set('enivel_demo_on',null);ls.set('enivel_session',null);ls.set('enivel_admin',null);ls.set('enivel_demo_db',null);location.reload()}
+logout=async function(){if(S.demo){S.session=null;S.admin=false;S.adminApp=false;ls.set('enivel_session',null);ls.set('enivel_admin',null);go('landing');return}if(S.cloud&&sb){const id=S.session?.userId;if(id)ls.set('enivel_2fa_'+id,null);await sb.auth.signOut();COLS.forEach(c=>S.data[c]={});lastSync=null}_logout2()};
+/* phone login needs SMS sign-in on the server; hide it on the live site for now */
+const _phoneLogin=phoneLogin;phoneLogin=function(){if(S.cloud)return toast('Phone login is coming soon. Use email and password for now.');_phoneLogin()};
+/* admin notifications */
+const _myNotifs=myNotifs;myNotifs=function(){const u=me();if(!u)return [];return Store.all('notifications').filter(n=>n.userId===u.id||(S.admin&&n.userId==='admin')).sort((a,b)=>b.ts-a.ts)};
+/* driver fee is recorded by the driver's own app (payments can only be written by the payer) */
+const _chargeFee=chargeDriverFeeIfDue;chargeDriverFeeIfDue=async function(driverId){if(!me()||me().id!==driverId)return;return _chargeFee(driverId)};
+const _dhome9=VIEWS['d-home'];VIEWS['d-home']=()=>{const u=me();if(u&&!S._feeChecked){S._feeChecked=true;setTimeout(()=>chargeDriverFeeIfDue(u.id).catch(()=>{}),1500)}return _dhome9()};
+/* referral credit for the referrer is added on the server */
+/* admin always re-runs the checks rather than trusting what the phone saved */
+const _averify=VIEWS['a-verify'];VIEWS['a-verify']=()=>{Store.all('users').forEach(u=>{if(u.screen)u.screen=null});return _averify()};
+/* demo: isolated, never touches the live database */
+const _loadDemo2=loadDemo;
+loadDemo=async function(){if(S.cloud){ls.set('enivel_demo_on',1);ls.set('enivel_demo_db',null);ls.set('enivel_session',null);ls.set('enivel_admin',null);ls.set('enivel_demo_seed',1);location.reload();return}return _loadDemo2()};
+const _demoInner2=loadDemoInner;loadDemoInner=async function(){await _demoInner2();const pw=await sha('demo1234');await Store.put('users','adm',{id:'adm',name:'Demo Admin',email:'admin@demo.enivel',role:'admin',password:pw,createdAt:Date.now(),verification:{status:'approved'},demo:true})};
+const _finish9=finishLogin;finishLogin=function(u){if(u.role==='admin'){S.admin=true;ls.set('enivel_admin',true);S.session={userId:u.id};ls.set('enivel_session',S.session);return go('a-home')}_finish9(u)};
+const _render11=render;render=function(){_render11();if(S.demo&&!$('.demobar')){const b=document.createElement('div');b.className='demobar';b.innerHTML='Demo mode · made-up data, nothing is saved to Enivel<button onclick="exitDemo()">Exit demo</button>';document.getElementById('app').prepend(b)}
+  if(S.cloud){const pill=$('.top .pill.mode');if(pill)pill.title='Connected to the Enivel database'}};
+setTimeout(async()=>{if(ls.get('enivel_demo_seed')&&S.demo){ls.set('enivel_demo_seed',null);await _loadDemo2()}},1500);
 </script>
 
 </body></html>

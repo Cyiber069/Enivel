@@ -32,3 +32,19 @@ Files: sms-worker.js (Worker code: /send signs an HMAC token + sends SMS through
 
 ## Hosting
 Live at https://cyiber069.github.io/Enivel/ (GitHub Pages, main branch, root). The hosted index.html wraps the app source with a full <head> incl. viewport meta (build.sh). Phone fit tested at 320, 390, 430, 768 and 1366 px.
+
+## Live database (Supabase) — built and tested
+- Project URL https://kakzsotpfzgghlfanaut.supabase.co, publishable key in index.html (public by design).
+- `supabase/setup.sql`: one closed `docs` table + security-definer functions fetch_docs / put_doc / del_doc /
+  award_referral / phone_taken / is_admin, admins table auto-filled for the owner email (first account only).
+  Tested with 36 rule checks on real Postgres (PGlite).
+- App: on the live site it detects Supabase, signs in with Supabase Auth, syncs every 6 s (full refresh every 60 s),
+  defers re-render while the user is typing or a sheet is open. Preview on claude.ai keeps its own storage.
+- Demo ("Try demo") runs fully in the browser, marked with a yellow bar, writes nothing to the live database.
+  Demo accounts: naledi@demo.enivel, brasipho@demo.enivel, admin@demo.enivel, password demo1234.
+- Live build (build.sh) strips the preview-only admin password hash. Admin on the live site = Supabase account.
+- End-to-end test with four separate phones: 23/23 pass (sign-up, referral, privacy, approve, book, geofenced
+  pickup alert, live-location privacy, admin money, PIN 2FA, ban, demo isolation).
+- Owner must: run setup.sql, set Confirm email off, set Site URL, create admin account with a NEW password.
+- Later: real email sender (SMTP) then Confirm email on; phone-number login via Supabase phone auth;
+  move photos to Supabase Storage; realtime instead of polling at scale.
