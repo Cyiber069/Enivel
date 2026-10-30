@@ -27,9 +27,10 @@ One small Cloudflare Worker does two jobs:
 | `ALLOWED_ORIGIN` | Text | `https://cyiber069.github.io` |
 | `SENDER` | Text | `Enivel` |
 
-4. **Settings → Triggers → Cron Triggers → Add**: `* * * * *` (every minute). Save.
-5. Open `https://enivel.<your-name>.workers.dev/health` in a browser. It should show
-   `{"ok":true,"sms":true,"reminders":true}`.
+4. **Rate limits (required for SMS):** Workers & Pages → **KV** → Create namespace `enivel-limits`. Then in the Worker: **Settings → Bindings → Add → KV namespace**, variable name `LIMITS`, namespace `enivel-limits`. This stops people spamming SMS codes at your cost or guessing codes.
+5. **Settings → Triggers → Cron Triggers → Add**: `* * * * *` (every minute). Save.
+6. Open `https://enivel.<your-name>.workers.dev/health` in a browser. It should show
+   `{"ok":true,"sms":true,"limits":true,"reminders":true}`.
 
 ## C. Connect it to the app
 1. Supabase → SQL Editor → run the latest `supabase/setup.sql` again (adds the reminder sender; safe to re-run).

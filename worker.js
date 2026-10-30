@@ -11,6 +11,9 @@
  * Variables (type Text):
  *   ALLOWED_ORIGIN     https://cyiber069.github.io
  *   SENDER             Enivel
+ * Binding (Settings → Bindings → KV namespace), strongly recommended:
+ *   LIMITS             a KV namespace. Limits code sends per phone and per network, attempts per code,
+ *                      and makes each code single-use. Without it /send and /check refuse to run.
  *   SUPABASE_URL       https://kakzsotpfzgghlfanaut.supabase.co
  *   VAPID_PUBLIC       the public key (also inside the app)
  *   VAPID_SUBJECT      mailto:acxebikes@gmail.com
@@ -30,6 +33,19 @@ function cors(env) {
 }
 const json = (env, obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: cors(env) });
 const validZA = p => /^\+27[6-8]\d{8}$/.test(p);
+/* simple counters in KV: at most `max` hits per `ttl` seconds for a key */
+async function allow(env, key, max, ttl) {
+  const n = parseInt(await env.LIMITS.get('rl:' + key) || '0', 10);
+  if (n >= max) return false;
+  await env.LIMITS.put('rl:' + key, String(n + 1), { expirationTtl: Math.max(60, ttl) });
+  return true;
+}
+function safeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+
 
 /* ---------- Web Push (RFC 8291 aes128gcm + RFC 8292 VAPID) ---------- */
 async function hkdf(salt, ikm, info, len) {
@@ -90,12 +106,15 @@ export default {
   async fetch(req, env) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors(env) });
     const url = new URL(req.url);
-    if (req.method === 'GET' && url.pathname === '/health') return json(env, { ok: true, sms: !!env.BULKSMS_TOKEN, reminders: !!(env.SUPABASE_SECRET && env.VAPID_PRIVATE_JWK) });
+    if (req.method === 'GET' && url.pathname === '/health') return json(env, { ok: true, sms: !!env.BULKSMS_TOKEN, limits: !!env.LIMITS, reminders: !!(env.SUPABASE_SECRET && env.VAPID_PRIVATE_JWK) });
     if (req.method !== 'POST') return json(env, { error: 'POST only' }, 405);
     let body; try { body = await req.json(); } catch { return json(env, { error: 'bad json' }, 400); }
     const phone = String(body.phone || '').replace(/[\s\-()]/g, '');
     if (!validZA(phone)) return json(env, { error: 'South African cellphone in +27 format required' }, 400);
+    if (!env.LIMITS) return json(env, { error: 'Rate limiting is not set up (add the LIMITS KV binding)' }, 503);
+    const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
     if (url.pathname === '/send') {
+      if (!(await allow(env, 'p:' + phone, 3, 900)) || !(await allow(env, 'ip:' + ip, 10, 3600))) return json(env, { error: 'Too many codes requested. Try again later.' }, 429);
       const code = String(Math.floor(100000 + Math.random() * 900000));
       const exp = Date.now() + CODE_TTL_MS;
       const token = await hmac(env.OTP_SECRET, `${phone}|${code}|${exp}`);
@@ -108,9 +127,14 @@ export default {
     }
     if (url.pathname === '/check') {
       const { code, token, exp } = body;
+      if (typeof token !== 'string' || !/^[0-9a-f]{64}$/.test(token)) return json(env, { ok: false, reason: 'format' });
       if (!/^\d{6}$/.test(String(code || ''))) return json(env, { ok: false, reason: 'format' });
       if (Date.now() > Number(exp)) return json(env, { ok: false, reason: 'expired' });
-      return json(env, { ok: (await hmac(env.OTP_SECRET, `${phone}|${code}|${exp}`)) === token });
+      if (await env.LIMITS.get('used:' + token)) return json(env, { ok: false, reason: 'used' });
+      if (!(await allow(env, 't:' + token, 5, 600))) return json(env, { ok: false, reason: 'locked' });
+      const good = safeEqual(await hmac(env.OTP_SECRET, `${phone}|${code}|${exp}`), token);
+      if (good) await env.LIMITS.put('used:' + token, '1', { expirationTtl: 900 });
+      return json(env, { ok: good });
     }
     return json(env, { error: 'not found' }, 404);
   },

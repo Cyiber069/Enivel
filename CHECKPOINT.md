@@ -58,3 +58,15 @@ Driver gets in-app reminders 30 and 10 minutes before each pickup (route pickup 
 - Phone pop-ups: sw.js + Web Push (VAPID). Driver app saves a 7-day reminder plan to its own profile; Supabase due_push() (service role only) picks due items, drops absent / already-picked-up children, skips started trips; Worker cron every minute encrypts (RFC 8291) and sends. Buttons: Start trip / Open Enivel. iPhone needs Add to Home Screen first. Tested: SQL 7/7, encryption decrypts with independent library, VAPID signature verifies. Not testable here: real delivery to a phone.
 - VAPID public key in app + WORKER-SETUP.md; private key given to the owner separately, not in git.
 - Four-phone live test now 26/26.
+
+## 30 Oct 2026 — bug sweep + legal pack (terms version 2026-10-30)
+Fixed (from an independent code review, each replayed in a browser test):
+- XSS: notification links (client whitelist + server strips), image src (safeImg + server only accepts data:image/*), no user text in inline handlers (removeKid, journey search).
+- Money: giveaway pays the transport price once and blocks already-paid months; payment status is per booking (no double charge, sponsored months count as paid); Enivel credit applies to every payment and is recorded (credit_used) so profit/paid totals are right; parking slots charged every month; R100 driver fee re-checked whenever passengers/slots/month change.
+- Data: removing a child cancels its bookings and tells the driver; pages survive missing children; orphan bookings auto-cancelled.
+- Live site: server enforces route capacity and one account per phone; parents see true seat counts and driver stats (route_load, driver_stats); suspended accounts are signed out; due_push only uses children booked with that driver; phone_taken no longer open to anonymous callers.
+- Worker: KV-backed rate limits (3 codes/phone/15 min, 10/network/hour), 5 tries per code, single-use codes, constant-time compare. Owner must add the LIMITS KV binding.
+- Dates use the local (SA) day everywhere; reminder sender uses Africa/Johannesburg.
+Legal: Legal centre with 11 documents (~8,000 words): Important terms (CPA s49), Terms of Service, Driver Agreement, Privacy Policy (POPIA incl. s26/35/71/72), Child Safeguarding, Payments & refunds, Acceptable use, Location & automated features, Device storage, Complaints & disputes (mediation/AFSA, consumer forums preserved), PAIA summary. Acceptance recorded per user with version; existing users must accept new versions; parent consent recorded per child; drivers now upload operating licence/permit and passenger liability insurance; drivers under 21 flagged. Company details editable in Admin → More → Legal details (placeholders highlighted until filled).
+Tests: database 46/46, reminders 8/8, Worker 9/9, push crypto 2/2, four-phone live test 29/29, browser regressions all pass.
+Needs a South African attorney's review before launch.

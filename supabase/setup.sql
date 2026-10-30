@@ -111,6 +111,72 @@ begin
     );
 end $$;
 
+-- Photos and documents: only data:image/... values are accepted.
+create or replace function public._images_ok(p_coll text, d jsonb) returns boolean
+language plpgsql immutable as $$
+declare v text;
+begin
+  if p_coll = 'vehicles' and jsonb_typeof(d -> 'photos') = 'object' then
+    for v in select value from jsonb_each_text(d -> 'photos') loop
+      if v is not null and v !~ '^data:image/(jpeg|jpg|png|webp|gif|svg\+xml)[;,]' then return false; end if; end loop;
+  end if;
+  if p_coll = 'users' then
+    if jsonb_typeof(d -> 'idPhoto') = 'string' and (d ->> 'idPhoto') !~ '^data:image/(jpeg|jpg|png|webp|gif|svg\+xml)[;,]' then return false; end if;
+    if jsonb_typeof(d #> '{verification,docs}') = 'object' then
+      for v in select value from jsonb_each_text(d #> '{verification,docs}') loop
+        if v is not null and v !~ '^data:image/(jpeg|jpg|png|webp|gif|svg\+xml)[;,]' then return false; end if; end loop;
+    end if;
+  end if;
+  return true;
+end $$;
+
+-- One account per phone number; a route can never take more children than seats.
+create or replace function public._check_unique_and_capacity(p_coll text, p_id text, d jsonb) returns void
+language plpgsql stable security definer set search_path = public as $$
+declare seats int; used int;
+begin
+  if p_coll = 'users' and coalesce(d ->> 'phone','') <> '' and exists (
+       select 1 from public.docs where coll = 'users' and not deleted and id <> p_id and data ->> 'phone' = d ->> 'phone') then
+    raise exception 'That phone number already has an account'; end if;
+  if p_coll = 'bookings' and d ->> 'status' = 'active' and coalesce(d ->> 'once','false') <> 'true' then
+    if exists (select 1 from public.docs where coll = 'bookings' and id = p_id and data ->> 'status' = 'active') then return; end if;
+    select nullif(data ->> 'seats','')::int into seats from public.docs where coll = 'routes' and id = d ->> 'routeId' and not deleted;
+    select count(*) into used from public.docs where coll = 'bookings' and not deleted and id <> p_id
+      and data ->> 'routeId' = d ->> 'routeId' and data ->> 'status' = 'active' and coalesce(data ->> 'once','false') <> 'true';
+    if seats is not null and used >= seats then raise exception 'This route is full'; end if;
+  end if;
+end $$;
+
+-- Seats taken per route and public driver stats (no personal details), for everyone signed in.
+create or replace function public.route_load()
+returns table (route_id text, used int)
+language sql stable security definer set search_path = public as $$
+  select data ->> 'routeId', count(*)::int from public.docs
+  where coll = 'bookings' and not deleted and data ->> 'status' = 'active' and coalesce(data ->> 'once','false') <> 'true'
+  group by data ->> 'routeId'
+$$;
+create or replace function public.driver_stats()
+returns table (driver_id text, passengers int, trips int, pickups int, ontime int)
+language sql stable security definer set search_path = public as $$
+  with p as (
+    select data ->> 'driverId' did, count(*)::int n from public.docs
+    where coll = 'bookings' and not deleted and data ->> 'status' = 'active' group by 1),
+  e as (
+    select ev.data ->> 'driverId' did,
+      count(*) filter (where ev.data ->> 'type' = 'dropoff')::int trips,
+      count(*) filter (where ev.data ->> 'type' = 'pickup')::int pickups,
+      count(*) filter (where ev.data ->> 'type' = 'pickup' and (
+        r.data ->> 'pickupTime' !~ '^\d{1,2}:\d{2}$'
+        or extract(hour from to_timestamp((ev.data ->> 'ts')::bigint / 1000.0) at time zone 'Africa/Johannesburg') * 60
+           + extract(minute from to_timestamp((ev.data ->> 'ts')::bigint / 1000.0) at time zone 'Africa/Johannesburg')
+           <= split_part(r.data ->> 'pickupTime', ':', 1)::int * 60 + split_part(r.data ->> 'pickupTime', ':', 2)::int + 15))::int ontime
+    from public.docs ev left join public.docs r on r.coll = 'routes' and r.id = ev.data ->> 'routeId'
+    where ev.coll = 'events' and not ev.deleted and ev.data ->> 'type' in ('pickup','dropoff')
+    group by 1)
+  select coalesce(p.did, e.did), coalesce(p.n,0), coalesce(e.trips,0), coalesce(e.pickups,0), coalesce(e.ontime,0)
+  from p full join e on p.did = e.did
+$$;
+
 -- Create or replace one document, with per-collection rules.
 create or replace function public.put_doc(p_coll text, p_id text, p_data jsonb) returns void
 language plpgsql security definer set search_path = public as $$
@@ -121,6 +187,11 @@ begin
     raise exception 'Unknown collection %', p_coll; end if;
   if octet_length(p_data::text) > 3000000 then raise exception 'That is too large to save (photos too big?)'; end if;
   if p_coll = 'settings' and not adm then raise exception 'Only the admin can change settings'; end if;
+  -- in-app links must be a plain screen name
+  if p_coll = 'notifications' and jsonb_typeof(d -> 'link') = 'string' and (d ->> 'link') !~ '^[a-z0-9-]{1,30}$' then
+    d := d - 'link'; end if;
+  -- photos and documents must be real image data
+  if not public._images_ok(p_coll, d) then raise exception 'Photos must be image files'; end if;
 
   select * into cur from public.docs where coll = p_coll and id = p_id;
 
@@ -156,6 +227,7 @@ begin
          and (d ->> 'idStatus') is distinct from (cur.data ->> 'idStatus') then
         d := jsonb_set(d, '{idStatus}', coalesce(cur.data -> 'idStatus', '"pending"'::jsonb)); end if;
     end if;
+    perform public._check_unique_and_capacity(p_coll, p_id, d);
     update public.docs set data = d, parties = public._parties(p_coll, d), updated_at = now()
     where coll = p_coll and id = p_id;
   else
@@ -173,6 +245,7 @@ begin
       elsif p_coll = 'events' and not (coalesce(d ->> 'driverId','') = me or coalesce(d ->> 'by','') = me or coalesce(d ->> 'parentId','') = me) then raise exception 'You cannot create this';
       end if;
     end if;
+    perform public._check_unique_and_capacity(p_coll, p_id, d);
     insert into public.docs (coll, id, data, owner, parties, deleted, updated_at)
     values (p_coll, p_id, d, auth.uid(), public._parties(p_coll, d), false, now())
     on conflict (coll, id) do update
@@ -220,7 +293,11 @@ revoke execute on function public.put_doc(text, text, jsonb), public.del_doc(tex
   public.fetch_docs(timestamptz), public.award_referral(text) from public, anon;
 grant execute on function public.put_doc(text, text, jsonb), public.del_doc(text, text),
   public.fetch_docs(timestamptz), public.award_referral(text), public.is_admin() to authenticated;
-grant execute on function public.phone_taken(text) to anon, authenticated;
+revoke execute on function public.phone_taken(text) from public, anon;
+grant execute on function public.phone_taken(text) to authenticated;
+revoke execute on function public._images_ok(text, jsonb), public._check_unique_and_capacity(text, text, jsonb) from public, anon, authenticated;
+grant execute on function public.route_load(), public.driver_stats() to authenticated;
+revoke execute on function public.route_load(), public.driver_stats() from public, anon;
 
 select 'Enivel backend ready' as status;
 
@@ -240,7 +317,7 @@ returns table (endpoint text, p256dh text, auth text, title text, body text, tag
 language plpgsql security definer set search_path = public as $$
 declare
   nowms bigint := (extract(epoch from now()) * 1000)::bigint;
-  today text := to_char(now() at time zone 'UTC', 'YYYY-MM-DD');
+  today text := to_char(now() at time zone 'Africa/Johannesburg', 'YYYY-MM-DD');
   u record; it jsonb; sub jsonb; k record; names text[]; t text;
 begin
   delete from public.push_log where sent_at < now() - interval '3 days';
@@ -261,7 +338,10 @@ begin
       names := '{}';
       for k in select kd.id, kd.data from public.docs kd
                where kd.coll = 'kids' and not kd.deleted
-                 and kd.id in (select jsonb_array_elements_text(coalesce(it -> 'kidIds', '[]'::jsonb))) loop
+                 and kd.id in (select jsonb_array_elements_text(coalesce(it -> 'kidIds', '[]'::jsonb)))
+                 and exists (select 1 from public.docs bk where bk.coll = 'bookings' and not bk.deleted
+                             and bk.data ->> 'kidId' = kd.id and bk.data ->> 'driverId' = u.id
+                             and bk.data ->> 'status' in ('active','trip')) loop
         if coalesce(k.data -> 'absences', '[]'::jsonb) ? today then continue; end if;
         if exists (select 1 from public.docs e where e.coll = 'events' and not e.deleted
                    and e.data ->> 'kidId' = k.id and e.data ->> 'type' = 'pickup'
