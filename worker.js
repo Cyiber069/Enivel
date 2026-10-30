@@ -47,6 +47,56 @@ function safeEqual(a, b) {
 }
 
 
+
+/* ---------- Sign in with Face ID / fingerprint (WebAuthn passkeys) ---------- */
+const b64uBytes = s => unb64u(String(s || ''));
+async function sha256(buf) { return new Uint8Array(await crypto.subtle.digest('SHA-256', buf)); }
+function derToRaw(der) {
+  // ECDSA signature: DER SEQUENCE(r, s) -> 64-byte r||s
+  let i = 2; if (der[1] & 0x80) i = 2 + (der[1] & 0x7f);
+  const read = () => { i++; const len = der[i++]; let v = der.slice(i, i + len); i += len; while (v.length > 32 && v[0] === 0) v = v.slice(1); const out = new Uint8Array(32); out.set(v, 32 - v.length); return out; };
+  return concat(read(), read());
+}
+async function passkeyChallenge(env) {
+  const challenge = b64u(crypto.getRandomValues(new Uint8Array(32)));
+  const exp = Date.now() + 2 * 60 * 1000;
+  return { challenge, exp, sig: await hmac(env.OTP_SECRET, 'pk|' + challenge + '|' + exp) };
+}
+async function passkeyLogin(b, env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SECRET) return { error: 'Face ID sign-in is not set up yet' };
+  if (!b || typeof b.challenge !== 'string' || typeof b.sig !== 'string') return { error: 'bad request' };
+  if (Date.now() > Number(b.exp)) return { error: 'This sign-in took too long. Try again.' };
+  if (!safeEqual(await hmac(env.OTP_SECRET, 'pk|' + b.challenge + '|' + b.exp), b.sig)) return { error: 'bad challenge' };
+  if (env.LIMITS) { if (await env.LIMITS.get('pkc:' + b.challenge)) return { error: 'already used' }; await env.LIMITS.put('pkc:' + b.challenge, '1', { expirationTtl: 300 }); }
+  const clientData = b64uBytes(b.clientDataJSON), authData = b64uBytes(b.authenticatorData), sig = b64uBytes(b.signature);
+  let cd; try { cd = JSON.parse(new TextDecoder().decode(clientData)); } catch { return { error: 'bad client data' }; }
+  const origin = env.ALLOWED_ORIGIN || '';
+  if (cd.type !== 'webauthn.get' || cd.challenge !== b.challenge || (origin && origin !== '*' && cd.origin !== origin)) return { error: 'This sign-in did not come from the Enivel app' };
+  const rpId = b.rpId && (origin === '*' || !origin) ? b.rpId : new URL(origin).hostname;
+  const rpHash = await sha256(enc.encode(rpId));
+  if (authData.length < 37 || !rpHash.every((x, i) => x === authData[i])) return { error: 'wrong site' };
+  const flags = authData[32]; if (!(flags & 0x01) || !(flags & 0x04)) return { error: 'Face ID or fingerprint was not confirmed' };
+  const look = await fetch(env.SUPABASE_URL + '/rest/v1/rpc/passkey_lookup', { method: 'POST', headers: supaHeaders(env), body: JSON.stringify({ p_cred_id: b.id }) });
+  if (!look.ok) return { error: 'lookup failed' };
+  const rows = await look.json(); const row = rows && rows[0];
+  if (!row) return { error: 'This Face ID is not linked to an Enivel account. Sign in with your password and turn it on again.' };
+  if (row.banned) return { error: 'This account has been permanently banned.' };
+  if (row.suspended) return { error: 'This account is suspended. Contact Enivel support.' };
+  const signed = concat(authData, await sha256(clientData));
+  let ok = false;
+  try {
+    if (row.alg === -257) { const key = await crypto.subtle.importKey('spki', b64uBytes(row.pk), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']); ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, sig, signed); }
+    else { const key = await crypto.subtle.importKey('spki', b64uBytes(row.pk), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']); ok = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, derToRaw(sig), signed); }
+  } catch (e) { ok = false; }
+  if (!ok) return { error: 'Face ID sign-in could not be verified' };
+  const gl = await fetch(env.SUPABASE_URL + '/auth/v1/admin/generate_link', { method: 'POST', headers: supaHeaders(env), body: JSON.stringify({ type: 'magiclink', email: row.email }) });
+  if (!gl.ok) return { error: 'Could not start the session (' + gl.status + ')' };
+  const link = await gl.json();
+  const token_hash = link.hashed_token || (link.properties && link.properties.hashed_token);
+  if (!token_hash) return { error: 'Could not start the session' };
+  return { token_hash, email: row.email, user_id: row.user_id };
+}
+
 /* ---------- Web Push (RFC 8291 aes128gcm + RFC 8292 VAPID) ---------- */
 async function hkdf(salt, ikm, info, len) {
   const key = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
@@ -106,9 +156,14 @@ export default {
   async fetch(req, env) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors(env) });
     const url = new URL(req.url);
-    if (req.method === 'GET' && url.pathname === '/health') return json(env, { ok: true, sms: !!env.BULKSMS_TOKEN, limits: !!env.LIMITS, reminders: !!(env.SUPABASE_SECRET && env.VAPID_PRIVATE_JWK) });
+    if (req.method === 'GET' && url.pathname === '/health') return json(env, { ok: true, sms: !!env.BULKSMS_TOKEN, limits: !!env.LIMITS, reminders: !!(env.SUPABASE_SECRET && env.VAPID_PRIVATE_JWK), faceid: !!(env.SUPABASE_SECRET && env.OTP_SECRET) });
     if (req.method !== 'POST') return json(env, { error: 'POST only' }, 405);
     let body; try { body = await req.json(); } catch { return json(env, { error: 'bad json' }, 400); }
+    if (url.pathname === '/passkey/challenge') return json(env, await passkeyChallenge(env));
+    if (url.pathname === '/passkey/login') {
+      if (env.LIMITS && !(await allow(env, 'pk:' + (req.headers.get('CF-Connecting-IP') || 'x'), 30, 600))) return json(env, { error: 'Too many attempts. Try again later.' }, 429);
+      const r = await passkeyLogin(body, env); return json(env, r, r.error ? 400 : 200);
+    }
     const phone = String(body.phone || '').replace(/[\s\-()]/g, '');
     if (!validZA(phone)) return json(env, { error: 'South African cellphone in +27 format required' }, 400);
     if (!env.LIMITS) return json(env, { error: 'Rate limiting is not set up (add the LIMITS KV binding)' }, 503);

@@ -84,3 +84,10 @@ Needs a South African attorney's review before launch.
 
 ## Admin switch + school search
 Admin header: Admin | Parent | Transport (own row on phones). Admin can use the parent and driver sides with their own account. School fields, the drop-off pin and the Home/Find search bars show live school suggestions (schools first, with suburb, city, province underneath); search bars also suggest schools and areas served by Enivel routes. Picking a school saves its map pin and location on the child.
+
+## Faster sign-in + second review fixes
+- Sign in with Face ID / fingerprint (WebAuthn passkeys): phone key registered after sign-in (offer + Settings switch), public key on own profile; Worker /passkey/challenge + /passkey/login verifies origin, site, user-verification flag and ES256/RS256 signature, single-use challenge, rate-limited, refuses banned/suspended; mints a session via Supabase admin generate_link → verifyOtp. Needs the Worker with SUPABASE_SECRET. Tested with a virtual authenticator end to end (13/13).
+- Password managers: proper autocomplete tags (iPhone Keychain / Google offer saved login with Face ID); email remembered on the phone; after sign-out always the Log in form.
+- public_config(): sign-in screen can read the Worker URL (fixes sign-up SMS staying in test mode and the Face ID button) .
+- Review fixes: map labels escaped; handover hash salted and never sent to drivers, checked on the server (handover_check, 5 tries / 15 min, parent alerted); handover sheet above Trip Mode; no false "handed over"; home/school detection without a school pin; parent confirmation tied to the request id; ids validated server-side; waiting-list offers hold the seat for 24 h (route_load.held, capacity check), cleared on booking, expire on every phone.
+- Tests: db 62/62, reminders 9/9, Worker 9/9, live 29/29, features 28/28, switch+schools 16/16, Face ID 13/13, review replays 11/11, older suites all pass.

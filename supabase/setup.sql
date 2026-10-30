@@ -86,6 +86,7 @@ begin
     case
       when adm or d.owner = auth.uid() then d.data
       when d.coll = 'users' then public._public_user(d.data)
+      when d.coll = 'kids' then (d.data - 'handoverHash' - 'handoverSalt') || case when d.data ? 'handoverHash' and jsonb_typeof(d.data -> 'handoverHash') = 'string' then '{"handoverOn":true}'::jsonb else '{}'::jsonb end
       when d.coll = 'routes' and not exists (
              select 1 from public.docs b
              where b.coll = 'bookings' and not b.deleted
@@ -143,17 +144,24 @@ begin
     select nullif(data ->> 'seats','')::int into seats from public.docs where coll = 'routes' and id = d ->> 'routeId' and not deleted;
     select count(*) into used from public.docs where coll = 'bookings' and not deleted and id <> p_id
       and data ->> 'routeId' = d ->> 'routeId' and data ->> 'status' = 'active' and coalesce(data ->> 'once','false') <> 'true';
+    select used + count(*) into used from public.docs where coll = 'waitlist' and not deleted and data ->> 'routeId' = d ->> 'routeId'
+      and data ->> 'status' = 'offered' and data ->> 'parentId' <> coalesce(d ->> 'parentId','')
+      and (data ->> 'offeredAt')::bigint > (extract(epoch from now())*1000)::bigint - 86400000;
     if seats is not null and used >= seats then raise exception 'This route is full'; end if;
   end if;
 end $$;
 
 -- Seats taken per route and public driver stats (no personal details), for everyone signed in.
+drop function if exists public.route_load();
 create or replace function public.route_load()
-returns table (route_id text, used int)
+returns table (route_id text, used int, held int)
 language sql stable security definer set search_path = public as $$
-  select data ->> 'routeId', count(*)::int from public.docs
-  where coll = 'bookings' and not deleted and data ->> 'status' = 'active' and coalesce(data ->> 'once','false') <> 'true'
-  group by data ->> 'routeId'
+  with b as (select data ->> 'routeId' rid, count(*)::int n from public.docs
+             where coll = 'bookings' and not deleted and data ->> 'status' = 'active' and coalesce(data ->> 'once','false') <> 'true' group by 1),
+       w as (select data ->> 'routeId' rid, count(*)::int n from public.docs
+             where coll = 'waitlist' and not deleted and data ->> 'status' = 'offered'
+               and (data ->> 'offeredAt')::bigint > (extract(epoch from now())*1000)::bigint - 86400000 group by 1)
+  select coalesce(b.rid, w.rid), coalesce(b.n,0), coalesce(w.n,0) from b full join w on b.rid = w.rid
 $$;
 create or replace function public.driver_stats()
 returns table (driver_id text, passengers int, trips int, pickups int, ontime int)
@@ -187,6 +195,7 @@ begin
     raise exception 'Unknown collection %', p_coll; end if;
   if octet_length(p_data::text) > 3000000 then raise exception 'That is too large to save (photos too big?)'; end if;
   if p_coll = 'settings' and not adm then raise exception 'Only the admin can change settings'; end if;
+  if p_id !~ '^[A-Za-z0-9_-]{1,64}$' then raise exception 'Invalid id'; end if;
   -- in-app links must be a plain screen name
   if p_coll = 'notifications' and jsonb_typeof(d -> 'link') = 'string' and (d ->> 'link') !~ '^[a-z0-9-]{1,30}$' then
     d := d - 'link'; end if;
@@ -375,3 +384,67 @@ $$;
 revoke execute on function public.due_push(), public.drop_push_sub(text) from public, anon, authenticated;
 grant execute on function public.due_push(), public.drop_push_sub(text) to service_role;
 select 'Enivel reminders ready' as status;
+
+-- =====================================================================
+-- Sign in with Face ID / fingerprint (passkeys).
+-- Each phone's public key is saved on the person's own profile (never shown
+-- to anyone else). The Enivel Worker looks it up here to check a sign-in.
+-- =====================================================================
+create or replace function public.passkey_lookup(p_cred_id text)
+returns table (user_id text, email text, pk text, alg int, banned boolean, suspended boolean)
+language sql stable security definer set search_path = public, auth as $$
+  select d.id, u.email::text, k ->> 'pk', coalesce((k ->> 'alg')::int, -7),
+         coalesce((d.data ->> 'banned')::boolean, false), coalesce((d.data ->> 'suspended')::boolean, false)
+  from public.docs d
+  join auth.users u on u.id::text = d.id
+  cross join lateral jsonb_array_elements(coalesce(d.data -> 'passkeys', '[]'::jsonb)) k
+  where d.coll = 'users' and not d.deleted and k ->> 'id' = p_cred_id
+  limit 1
+$$;
+revoke execute on function public.passkey_lookup(text) from public, anon, authenticated;
+grant execute on function public.passkey_lookup(text) to service_role;
+select 'Enivel Face ID sign-in ready' as status;
+
+
+-- =====================================================================
+-- Handover code check, done on the server so drivers never see the code.
+-- At most 5 tries per child per 15 minutes; the 5th wrong try alerts the parent.
+-- =====================================================================
+create table if not exists public.handover_attempts (kid_id text not null, at timestamptz not null default now());
+alter table public.handover_attempts enable row level security;
+revoke all on public.handover_attempts from anon, authenticated;
+create or replace function public.handover_check(p_kid text, p_code text) returns text
+language plpgsql security definer set search_path = public as $$
+declare k record; tries int; want text; got text;
+begin
+  if auth.uid() is null then return 'signin'; end if;
+  select id, data into k from public.docs where coll = 'kids' and id = p_kid and not deleted;
+  if not found then return 'nokid'; end if;
+  if not public.is_admin() and not exists (select 1 from public.docs b where b.coll = 'bookings' and not b.deleted
+      and b.data ->> 'kidId' = p_kid and b.data ->> 'driverId' = auth.uid()::text and b.data ->> 'status' in ('active','trip')) then return 'notyours'; end if;
+  want := k.data ->> 'handoverHash'; if want is null then return 'ok'; end if;
+  select count(*) into tries from public.handover_attempts where kid_id = p_kid and at > now() - interval '15 minutes';
+  if tries >= 5 then return 'locked'; end if;
+  if jsonb_typeof(k.data -> 'handoverSalt') = 'string' then got := encode(sha256(convert_to((k.data ->> 'handoverSalt') || ':' || coalesce(p_code,''), 'UTF8')), 'hex');
+  else got := encode(sha256(convert_to('ho:' || p_kid || ':' || coalesce(p_code,''), 'UTF8')), 'hex'); end if;
+  if got = want then delete from public.handover_attempts where kid_id = p_kid; return 'ok'; end if;
+  insert into public.handover_attempts (kid_id) values (p_kid);
+  if tries + 1 >= 5 then
+    insert into public.docs (coll, id, data, owner, parties) values ('notifications', 'ho' || replace(gen_random_uuid()::text,'-',''),
+      jsonb_build_object('userId', k.data ->> 'parentId', 'type', 'info', 'link', 'p-home', 'read', false, 'ts', (extract(epoch from now())*1000)::bigint,
+        'text', 'Wrong handover code entered 5 times for ' || coalesce(k.data ->> 'name','your child') || '. Handover is locked for 15 minutes. Call your driver.'),
+      auth.uid(), array[k.data ->> 'parentId']);
+    return 'locked'; end if;
+  return 'wrong';
+end $$;
+revoke execute on function public.handover_check(text, text) from public, anon;
+grant execute on function public.handover_check(text, text) to authenticated;
+
+select 'Enivel handover check ready' as status;
+
+-- The sign-in screen needs the Worker address before anyone is signed in.
+create or replace function public.public_config() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object('otpEndpoint', coalesce((select data ->> 'otpEndpoint' from public.docs where coll = 'settings' and id = 'config' and not deleted), ''))
+$$;
+grant execute on function public.public_config() to anon, authenticated;
