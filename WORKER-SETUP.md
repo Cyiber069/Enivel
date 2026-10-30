@@ -40,3 +40,30 @@ One small Cloudflare Worker does two jobs:
    On iPhone: first Share → **Add to Home Screen**, open Enivel from the Home Screen, then tap the button.
 
 Never put `SUPABASE_SECRET`, `VAPID_PRIVATE_JWK` or the BulkSMS login in GitHub or in chat.
+
+## Card payments (PayFast) — "Pay for parents" and Enivel Pays (about 15 minutes)
+Lets the admin pay parents' monthly transport by card. You type your card on **PayFast's own page**:
+Enivel and the Worker never see or store it, and parents never get any access to it.
+1. **PayFast** (payfast.co.za): open a merchant account. Settings → **Integration**: copy the **Merchant ID** and
+   **Merchant Key**, and set a **Salt Passphrase** (any long text).
+   To try it first with test cards, use a sandbox account at sandbox.payfast.co.za and set `PAYFAST_SANDBOX` to `1`.
+2. Supabase → SQL Editor → run `supabase/r10-pays.sql` (after `setup.sql`; safe to re-run).
+3. Worker → **Settings → Variables and Secrets**, add:
+
+| Name | Type | Value |
+|---|---|---|
+| `PAYFAST_MERCHANT_ID` | Text | your Merchant ID |
+| `PAYFAST_MERCHANT_KEY` | Text | your Merchant Key |
+| `PAYFAST_PASSPHRASE` | Secret | the Salt Passphrase from step 1 (exactly the same) |
+| `PAYFAST_SANDBOX` | Text | `1` for test payments, leave out (or `0`) for real payments |
+| `APP_URL` | Text | `https://cyiber069.github.io/Enivel/` (where PayFast sends you back) |
+
+   It also uses `SUPABASE_URL` and `SUPABASE_SECRET` from section B.
+4. Deploy the latest `worker.js`. `/health` should now include `"payfast":true`.
+5. The app finds the Worker through Admin → Settings → **SMS gateway** (same Worker URL).
+6. Test: Admin → Settings → **Enivel Pays** → pick a family → **Pay by card** → pay on PayFast →
+   you come back to "Checking your payment…" and it turns to Paid once PayFast confirms (usually seconds).
+   PayFast tells the Worker at `https://enivel.<your-name>.workers.dev/pay/itn`; nothing to set up for that.
+
+No PayFast yet? The Pay screen says so and offers **Record as paid (EFT / other)** for payments you made another way.
+Never put `PAYFAST_PASSPHRASE` in GitHub or in chat.

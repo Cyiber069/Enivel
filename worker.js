@@ -2,6 +2,8 @@
  * Enivel Worker (Cloudflare Workers, free plan)
  *  1. SMS one-time codes through BulkSMS            POST /send, POST /check
  *  2. Pickup reminder pop-ups to drivers' phones     runs every minute (Cron Trigger "* * * * *")
+ *  3. Phone pop-ups for parents and kids             POST /push/notify {id} right away, and the same cron
+ *     (driver nearby, picked up, dropped off, driver outside, running late, emergency)
  *
  * Secrets (Settings → Variables and Secrets → type Secret):
  *   BULKSMS_TOKEN      base64 of "username:password" from BulkSMS
@@ -125,7 +127,11 @@ export async function vapidAuth(endpoint, env) {
   const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, enc.encode(header + '.' + claims));
   return `vapid t=${header}.${claims}.${b64u(sig)}, k=${env.VAPID_PUBLIC}`;
 }
+/* only real browser push services (Chrome/Android, Firefox, Safari/iPhone, Edge) */
+const PUSH_HOSTS = /^https:\/\/([a-z0-9-]+\.)*(googleapis\.com|push\.services\.mozilla\.com|mozaws\.net|push\.apple\.com|notify\.windows\.com)(:\d+)?\//i;
+export const pushHostOk = endpoint => PUSH_HOSTS.test(String(endpoint || ''));
 async function sendPush(row, env) {
+  if (!pushHostOk(row.endpoint)) return new Response(null, { status: 400 });
   const payload = JSON.stringify({ title: row.title, body: row.body, tag: row.tag, url: row.url });
   const body = await encryptPayload(payload, row.p256dh, row.auth);
   return fetch(row.endpoint, { method: 'POST', body, headers: { 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '900', Urgency: 'high', Authorization: await vapidAuth(row.endpoint, env) } });
@@ -135,12 +141,10 @@ function supaHeaders(env) {
   if (!k.startsWith('sb_')) h.Authorization = 'Bearer ' + k;
   return h;
 }
-async function runReminders(env) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SECRET || !env.VAPID_PRIVATE_JWK) return { skipped: 'not configured' };
-  const r = await fetch(env.SUPABASE_URL + '/rest/v1/rpc/due_push', { method: 'POST', headers: supaHeaders(env), body: '{}' });
-  if (!r.ok) return { error: 'due_push ' + r.status + ' ' + (await r.text()) };
-  const rows = await r.json(); let sent = 0, dropped = 0;
-  for (const row of rows) {
+/* send a list of pop-up rows; phones that no longer accept pop-ups are removed */
+async function deliver(rows, env) {
+  let sent = 0, dropped = 0;
+  for (const row of rows || []) {
     try {
       const res = await sendPush(row, env);
       if (res.status === 404 || res.status === 410) {
@@ -149,20 +153,172 @@ async function runReminders(env) {
       } else if (res.ok) sent++;
     } catch (e) { /* one bad phone must not stop the others */ }
   }
-  return { due: rows.length, sent, dropped };
+  return { sent, dropped };
 }
+const pushReady = env => !!(env.SUPABASE_URL && env.SUPABASE_SECRET && env.VAPID_PRIVATE_JWK);
+/* parents' and kids' pop-ups: notifications saved in the last 5 minutes (each sent once, checked in Supabase) */
+async function notifPush(id, env) {
+  const r = await fetch(env.SUPABASE_URL + '/rest/v1/rpc/notif_push', { method: 'POST', headers: supaHeaders(env), body: JSON.stringify({ p_id: id }) });
+  if (!r.ok) return { error: 'notif_push ' + r.status };
+  const rows = await r.json();
+  return { due: rows.length, ...(await deliver(rows, env)) };
+}
+async function runNotifs(env) {
+  if (!pushReady(env)) return { skipped: 'not configured' };
+  const r = await fetch(env.SUPABASE_URL + '/rest/v1/rpc/notif_push_due', { method: 'POST', headers: supaHeaders(env), body: '{}' });
+  if (!r.ok) return { error: 'notif_push_due ' + r.status + ' ' + (await r.text()) };
+  const rows = await r.json();
+  return { due: rows.length, ...(await deliver(rows, env)) };
+}
+async function runReminders(env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SECRET || !env.VAPID_PRIVATE_JWK) return { skipped: 'not configured' };
+  const r = await fetch(env.SUPABASE_URL + '/rest/v1/rpc/due_push', { method: 'POST', headers: supaHeaders(env), body: '{}' });
+  if (!r.ok) return { error: 'due_push ' + r.status + ' ' + (await r.text()) };
+  const rows = await r.json();
+  return { due: rows.length, ...(await deliver(rows, env)) };
+}
+
+/* ===== PayFast (pays) ===== */
+/* "Pay for parents" and Enivel Pays card payments (admin only).
+ * The admin types the card on PayFast's own page: Enivel and this Worker never see or store it.
+ *   POST /pay/start {intentId}  signs the PayFast form for a payment Supabase created (pay_intent_create
+ *                               works out the amount from bookings, never from the app) -> {action, fields}
+ *   POST /pay/itn               PayFast's payment notice. Needs a good signature, PayFast's own validate
+ *                               check, status COMPLETE and exactly the payment's amount; then Supabase
+ *                               pay_intent_complete marks it paid. A repeated notice changes nothing.
+ * Settings: PAYFAST_MERCHANT_ID, PAYFAST_MERCHANT_KEY (Text), PAYFAST_PASSPHRASE (Secret),
+ *           PAYFAST_SANDBOX ('1' = sandbox.payfast.co.za test payments), APP_URL (the app address).
+ *           Also uses SUPABASE_URL + SUPABASE_SECRET. See WORKER-SETUP.md "Card payments (PayFast)". */
+/* MD5 (PayFast signs with MD5; Workers' crypto.subtle has no MD5). Input is hashed as UTF-8. */
+export function pfMd5(str) {
+  const bytes = new TextEncoder().encode(String(str));
+  const n = bytes.length, blocks = ((n + 8) >>> 6) + 1, w = new Uint32Array(blocks * 16);
+  for (let i = 0; i < n; i++) w[i >> 2] |= bytes[i] << ((i % 4) * 8);
+  w[n >> 2] |= 0x80 << ((n % 4) * 8);
+  w[blocks * 16 - 2] = (n * 8) >>> 0; w[blocks * 16 - 1] = Math.floor(n / 0x20000000);
+  const S = [7, 12, 17, 22, 5, 9, 14, 20, 4, 11, 16, 23, 6, 10, 15, 21];
+  const K = Array.from({ length: 64 }, (_, i) => Math.floor(Math.abs(Math.sin(i + 1)) * 4294967296) >>> 0);
+  let a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
+  for (let o = 0; o < w.length; o += 16) {
+    let A = a0, B = b0, C = c0, D = d0;
+    for (let i = 0; i < 64; i++) {
+      const r = i >> 4; let F, g;
+      if (r === 0) { F = (B & C) | (~B & D); g = i; }
+      else if (r === 1) { F = (D & B) | (~D & C); g = (5 * i + 1) % 16; }
+      else if (r === 2) { F = B ^ C ^ D; g = (3 * i + 5) % 16; }
+      else { F = C ^ (B | ~D); g = (7 * i) % 16; }
+      F = (F + A + K[i] + w[o + g]) >>> 0; const s = S[r * 4 + (i % 4)];
+      A = D; D = C; C = B; B = (B + ((F << s) | (F >>> (32 - s)))) >>> 0;
+    }
+    a0 = (a0 + A) >>> 0; b0 = (b0 + B) >>> 0; c0 = (c0 + C) >>> 0; d0 = (d0 + D) >>> 0;
+  }
+  return [a0, b0, c0, d0].map(v => [0, 8, 16, 24].map(s => ((v >>> s) & 255).toString(16).padStart(2, '0')).join('')).join('');
+}
+/* PayFast's encoding is PHP urlencode (spaces as +, upper-case hex). Their JS sample leaves !'()*~ as they are;
+   the notice is accepted with either, the form we send never contains those characters. */
+const pfEnc = v => encodeURIComponent(String(v ?? '').trim()).replace(/[!'()*~]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase()).replace(/%20/g, '+');
+const pfEncJs = v => encodeURIComponent(String(v ?? '').trim()).replace(/%20/g, '+');
+/* signature = MD5 of "key=value&key=value..." in PayFast's documented field order, then "&passphrase=..." */
+export function pfSignature(pairs, passphrase, encode = pfEnc) {
+  let s = pairs.map(([k, v]) => k + '=' + encode(v)).join('&');
+  if (passphrase) s += '&passphrase=' + encode(passphrase);
+  return pfMd5(s);
+}
+export const payfastReady = env => !!(env.PAYFAST_MERCHANT_ID && env.PAYFAST_MERCHANT_KEY && env.SUPABASE_URL && env.SUPABASE_SECRET);
+const pfHost = env => (env.PAYFAST_SANDBOX === '1' || env.PAYFAST_SANDBOX === 'true') ? 'sandbox.payfast.co.za' : 'www.payfast.co.za';
+const PF_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const pfLabel = m => { const [y, mm] = String(m || '').split('-'); return ((PF_MONTHS[+mm - 1] || '') + ' ' + (y || '')).trim(); };
+async function pfRpc(env, fn, args) {
+  const r = await fetch(env.SUPABASE_URL + '/rest/v1/rpc/' + fn, { method: 'POST', headers: supaHeaders(env), body: JSON.stringify(args) });
+  const t = await r.text(); let data = null; try { data = JSON.parse(t); } catch (e) { /* not json */ }
+  return { ok: r.ok, status: r.status, data, text: t };
+}
+async function payStart(b, env, origin) {
+  const id = String((b && b.intentId) || '');
+  if (!/^pi[0-9a-f]{32}$/.test(id)) return [{ error: 'bad payment id' }, 400];
+  const g = await pfRpc(env, 'pay_intent_get', { p_id: id });
+  if (!g.ok) return [{ error: 'Could not read the payment (' + g.status + ')' }, 502];
+  const it = g.data;
+  if (!it || !it.id) return [{ error: 'Payment not found' }, 404];
+  if (it.status === 'paid') return [{ error: 'This payment is already done', status: 'paid' }, 409];
+  if (it.status !== 'pending' || it.method !== 'card') return [{ error: 'This payment was cancelled. Start a new one.', status: it.status }, 409];
+  const app = String(env.APP_URL || 'https://cyiber069.github.io/Enivel/').split('#')[0];
+  const fam = Number(it.families) || 0, kids = Number(it.kids) || 0;
+  const fields = [
+    ['merchant_id', env.PAYFAST_MERCHANT_ID], ['merchant_key', env.PAYFAST_MERCHANT_KEY],
+    ['return_url', app + '#paid=' + id], ['cancel_url', app + '#paycancel=' + id], ['notify_url', origin + '/pay/itn'],
+    ['m_payment_id', id], ['amount', Number(it.amount).toFixed(2)],
+    ['item_name', 'Enivel Pays ' + pfLabel(it.month)],
+    ['item_description', `School transport for ${fam} ${fam === 1 ? 'family' : 'families'}, ${kids} ${kids === 1 ? 'child' : 'children'}`]
+  ].map(([k, v]) => [k, String(v ?? '').trim()]).filter(([, v]) => v !== '');
+  const fieldsOut = Object.fromEntries(fields);
+  fieldsOut.signature = pfSignature(fields, env.PAYFAST_PASSPHRASE);
+  return [{ action: 'https://' + pfHost(env) + '/eng/process', fields: fieldsOut, sandbox: pfHost(env).startsWith('sandbox') }, 200];
+}
+async function payItn(req, env) {
+  const all = [...new URLSearchParams(await req.text())];
+  const at = all.findIndex(([k]) => k === 'signature');
+  if (at < 0) return ['missing signature', 400];
+  const sig = String(all[at][1] || '').toLowerCase();
+  const signed = all.slice(0, at); // like PayFast's PHP sample: every field before the signature, in the order received
+  if (new Set(signed.map(([k]) => k)).size !== signed.length) return ['duplicate fields', 400];
+  if (![pfEnc, pfEncJs].some(enc => safeEqual(pfSignature(signed, env.PAYFAST_PASSPHRASE, enc), sig))) return ['bad signature', 400];
+  const d = Object.fromEntries(signed);
+  if (String(d.merchant_id || '') !== String(env.PAYFAST_MERCHANT_ID)) return ['wrong merchant', 400];
+  const id = String(d.m_payment_id || '');
+  if (!/^pi[0-9a-f]{32}$/.test(id)) return ['bad payment id', 400];
+  const g = await pfRpc(env, 'pay_intent_get', { p_id: id });
+  if (!g.ok) return ['lookup failed', 502];
+  if (!g.data || !g.data.id) return ['unknown payment', 400];
+  if (g.data.status === 'paid') return ['OK already paid', 200];
+  if (d.payment_status !== 'COMPLETE') return ['OK not complete', 200];
+  const gross = Number(d.amount_gross);
+  if (!Number.isFinite(gross) || Math.abs(gross - Number(g.data.amount)) > 0.009) return ['amount mismatch', 400];
+  const v = await fetch('https://' + pfHost(env) + '/eng/query/validate', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: signed.map(([k, val]) => k + '=' + pfEnc(val)).join('&') });
+  if (!v.ok || (await v.text()).trim() !== 'VALID') return ['not confirmed by PayFast', 400];
+  const c = await pfRpc(env, 'pay_intent_complete', { p_id: id, p_pf_payment_id: String(d.pf_payment_id || ''), p_amount: gross });
+  if (!c.ok) return ['could not record the payment (' + c.status + ')', 500]; // PayFast sends the notice again later
+  return ['OK ' + c.data, 200];
+}
+async function payRoute(req, env, url) {
+  if (!payfastReady(env)) return json(env, { error: 'Card payments are not set up on the Enivel Worker yet (PayFast settings missing).' }, 503);
+  if (url.pathname === '/pay/start') {
+    if (env.LIMITS && !(await allow(env, 'pay:' + (req.headers.get('CF-Connecting-IP') || 'x'), 30, 600))) return json(env, { error: 'Too many attempts. Try again later.' }, 429);
+    let b; try { b = await req.json(); } catch { return json(env, { error: 'bad json' }, 400); }
+    const [out, st] = await payStart(b, env, url.origin);
+    return json(env, out, st);
+  }
+  if (url.pathname === '/pay/itn') {
+    let r; try { r = await payItn(req, env); } catch (e) { r = ['error', 500]; }
+    return new Response(r[0], { status: r[1], headers: { 'Content-Type': 'text/plain' } });
+  }
+  return json(env, { error: 'not found' }, 404);
+}
+/* ===== end PayFast (pays) ===== */
 
 export default {
   async fetch(req, env) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors(env) });
     const url = new URL(req.url);
-    if (req.method === 'GET' && url.pathname === '/health') return json(env, { ok: true, sms: !!env.BULKSMS_TOKEN, limits: !!env.LIMITS, reminders: !!(env.SUPABASE_SECRET && env.VAPID_PRIVATE_JWK), faceid: !!(env.SUPABASE_SECRET && env.OTP_SECRET) });
+    if (req.method === 'GET' && url.pathname === '/health') return json(env, { ok: true, sms: !!env.BULKSMS_TOKEN, limits: !!env.LIMITS, reminders: !!(env.SUPABASE_SECRET && env.VAPID_PRIVATE_JWK), faceid: !!(env.SUPABASE_SECRET && env.OTP_SECRET), parentPush: pushReady(env), payfast: payfastReady(env) });
     if (req.method !== 'POST') return json(env, { error: 'POST only' }, 405);
+    if (url.pathname.startsWith('/pay/')) return payRoute(req, env, url); // PayFast (pays)
     let body; try { body = await req.json(); } catch { return json(env, { error: 'bad json' }, 400); }
     if (url.pathname === '/passkey/challenge') return json(env, await passkeyChallenge(env));
     if (url.pathname === '/passkey/login') {
       if (env.LIMITS && !(await allow(env, 'pk:' + (req.headers.get('CF-Connecting-IP') || 'x'), 30, 600))) return json(env, { error: 'Too many attempts. Try again later.' }, 429);
       const r = await passkeyLogin(body, env); return json(env, r, r.error ? 400 : 200);
+    }
+    if (url.pathname === '/push/notify') {
+      // no sign-in needed: it can only deliver a real, fresh notification once, to the person it is for
+      const id = String((body && body.id) || '');
+      if (!/^[A-Za-z0-9_-]{1,64}$/.test(id)) return json(env, { error: 'bad id' }, 400);
+      if (!pushReady(env)) return json(env, { error: 'Pop-ups are not set up yet' }, 503);
+      if (!env.LIMITS) return json(env, { error: 'Rate limiting is not set up (add the LIMITS KV binding)' }, 503);
+      const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
+      if (!(await allow(env, 'pn:' + ip, 120, 600)) || !(await allow(env, 'pid:' + id, 3, 600))) return json(env, { error: 'Too many requests. Try again later.' }, 429);
+      const r = await notifPush(id, env);
+      return json(env, r, r.error ? 502 : 200);
     }
     const phone = String(body.phone || '').replace(/[\s\-()]/g, '');
     if (!validZA(phone)) return json(env, { error: 'South African cellphone in +27 format required' }, 400);
@@ -193,5 +349,5 @@ export default {
     }
     return json(env, { error: 'not found' }, 404);
   },
-  async scheduled(event, env, ctx) { ctx.waitUntil(runReminders(env)); }
+  async scheduled(event, env, ctx) { ctx.waitUntil(Promise.all([runReminders(env), runNotifs(env)])); }
 };
