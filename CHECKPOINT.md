@@ -81,3 +81,6 @@ Needs a South African attorney's review before launch.
 - Pickup/drop-off location now correct for afternoon school pickup and home drop-off (stopPoint/stopLabel).
 - Legal: v2 pack, 16 documents ~23,500 words (new: Parent Terms, Vehicles & insurance, Security & breach, Incidents & emergencies, Promotions). TERMS_VERSION 2026-10-30.2 forces re-acceptance. Attorney points listed in chat.
 - Tests: database 54/54, reminders 9/9, Worker 9/9, four-phone live 29/29, new features 28/28, all older browser suites pass.
+
+## Admin switch + school search
+Admin header: Admin | Parent | Transport (own row on phones). Admin can use the parent and driver sides with their own account. School fields, the drop-off pin and the Home/Find search bars show live school suggestions (schools first, with suburb, city, province underneath); search bars also suggest schools and areas served by Enivel routes. Picking a school saves its map pin and location on the child.

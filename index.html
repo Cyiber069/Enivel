@@ -331,13 +331,13 @@ const NAV={parent:[['p-home','Home','home'],['p-find','Find','search'],['p-kids'
   driver:[['d-home','Home','home'],['d-vehicles','Vehicles','car'],['d-routes','Routes','pin'],['d-chat','Chat','chat'],['d-more','More','list']],
   admin:[['a-home','Overview','chart'],['a-accounts','Accounts','users'],['a-verify','Verify','shield'],['a-money','Money','money'],['a-more','More','list']]};
 function render(){
-  const app=$('#app');const u=me();const role=S.admin?(S.adminApp?'parent':'admin'):u?.role;
+  const app=$('#app');const u=me();const role=S.admin?(S.adminApp==='driver'?'driver':S.adminApp?'parent':'admin'):u?.role;
   const unread=myNotifs().filter(n=>!n.read).length;
   let body='';
   try{body=(VIEWS[S.route]||VIEWS.landing)()}catch(e){console.error(e);body=`<div class="card"><h3>Something went wrong</h3><p class="muted small">${h(e.message)}</p><button class="btn sm" style="margin-top:10px" onclick="go('landing')">Back home</button></div>`}
   const nav=role&&NAV[role]?NAV[role]:null;
   app.innerHTML=`<header class="top">
-    <button class="logo" onclick="go('${role?NAV[role][0][0]:'landing'}')">Enivel</button>${S.admin?`<span class="seg sw"><button class="${!S.adminApp?'on':''}" onclick="S.adminApp=false;go('a-home')">Admin</button><button class="${S.adminApp?'on':''}" onclick="S.adminApp=true;go('p-home')">App</button></span>`:''}
+    <button class="logo" onclick="go('${role?NAV[role][0][0]:'landing'}')">Enivel</button>${S.admin?`<span class="seg sw"><button class="${!S.adminApp?'on':''}" onclick="S.adminApp=false;go('a-home')">Admin</button><button class="${S.adminApp==='parent'?'on':''}" onclick="S.adminApp='parent';go('p-home')">Parent</button><button class="${S.adminApp==='driver'?'on':''}" onclick="S.adminApp='driver';go('d-home')">Transport</button></span>`:''}
     <span class="sp"></span>
     ${S.mode==='db'?'<span class="pill live tiny mode" title="Shared live storage"><i class="blink"></i>live</span>':'<span class="pill tiny mode" title="Data stays in this browser">local</span>'}
     <button class="ib" title="Toggle dark mode" onclick="setTheme(isDark()?'light':'dark');render()">${isDark()?ICON.sun:ICON.moon}</button>
@@ -2573,5 +2573,51 @@ function stopPoint(b,k,type){const r=routeOf(b.routeId)||{};const school=k.schoo
   if(type==='pickup')return atSchoolNow(b,k)?(school||k.geo):(k.geo||null);return isHomeDrop(b,k)?(k.geo||null):(school||null)}
 function stopLabel(b,k,type){const r=routeOf(b.routeId)||{};if(b.once)return type==='pickup'?(b.from||k.pickup):(b.to||r.schools);if(type==='pickup')return atSchoolNow(b,k)?(k.school||r.schools):k.pickup;return isHomeDrop(b,k)?(k.pickup||'home'):(k.school||r.schools)}
 </script>
+<style>
+.sug .sch{display:flex;gap:10px;align-items:flex-start}
+.sug .sch .ic{width:28px;height:28px;border-radius:9px;background:color-mix(in srgb,var(--acc3) 16%,transparent);color:var(--acc3);display:grid;place-items:center;flex-shrink:0;margin-top:1px}
+.sug .sch .ic svg{width:15px;height:15px}
+.sug .sch .loc{display:block;color:var(--fg3);font-size:.75rem;margin-top:1px}
+.sug .tag{display:inline-block;font-size:.65rem;font-weight:700;padding:1px 6px;border-radius:999px;background:var(--bg2);color:var(--fg2);margin-left:6px;vertical-align:1px}
+.sug .grp{padding:6px 12px 2px;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fg3);cursor:default;border:0}
+.sug mark{background:none;color:inherit;font-weight:800}
+</style>
+<script>
+/* ===================== live school suggestions (with location) ===================== */
+ICON.school='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/></svg>';
+const SCHOOL_TYPES=/^(school|college|university|kindergarten|childcare|music_school|language_school)$/;
+const placeCache=new Map();
+function placeLoc(a){if(!a)return '';const sub=a.suburb||a.neighbourhood||a.residential||a.quarter||a.hamlet||'';const city=a.city||a.town||a.village||a.municipality||'';return [sub,city,a.state].filter((x,i,arr)=>x&&arr.indexOf(x)===i).join(', ')}
+async function nomi(q){if(placeCache.has(q))return placeCache.get(q);const pr=fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&countrycodes=za&dedupe=1&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}}).then(r=>r.ok?r.json():[]).catch(()=>null);placeCache.set(q,pr);const res=await pr;if(res===null)placeCache.delete(q);return res}
+async function suggestSchools(q){const tries=[q];if(!/school|college|primary|secondary|high|laerskool|hoërskool|hoerskool|academy|preparatory|prep|cr[eè]che|kindergarten|university/i.test(q))tries.push(q+' school');const lists=await Promise.all(tries.map(nomi));if(lists.every(l=>l===null))return null;const seen=new Set();const out=[];
+  for(const x of lists.flat().filter(Boolean)){const key=x.osm_type+x.osm_id;if(seen.has(key))continue;seen.add(key);const isSchool=x.category==='amenity'&&SCHOOL_TYPES.test(x.type)||x.addresstype==='amenity'&&SCHOOL_TYPES.test(x.type);out.push({lat:+x.lat,lng:+x.lon,name:x.name||x.display_name.split(',')[0],type:x.type,isSchool,loc:placeLoc(x.address),full:fmtAddr(x.address)||x.display_name,address:x.address})}
+  return out.sort((a,b)=>(b.isSchool-a.isSchool)).slice(0,8)}
+function routeSchoolHits(q){q=q.toLowerCase();const hits=new Map();for(const r of Store.all('routes').filter(r=>r.active&&isVerified(Store.get('users',r.driverId)))){for(const part of String(r.schools||'').split(/[,;]+/).map(x=>x.trim()).filter(Boolean))if(part.toLowerCase().includes(q))hits.set('s:'+part.toLowerCase(),{name:part,kind:'school',n:(hits.get('s:'+part.toLowerCase())?.n||0)+1});for(const part of String(r.area||'').split(/[,;]+/).map(x=>x.trim()).filter(Boolean))if(part.toLowerCase().includes(q))hits.set('a:'+part.toLowerCase(),{name:part,kind:'area',n:(hits.get('a:'+part.toLowerCase())?.n||0)+1})}return [...hits.values()].sort((a,b)=>b.n-a.n).slice(0,6)}
+function markQ(text,q){const i=text.toLowerCase().indexOf(q.toLowerCase());if(i<0||!q)return h(text);return h(text.slice(0,i))+'<mark>'+h(text.slice(i,i+q.length))+'</mark>'+h(text.slice(i+q.length))}
+/* one suggestion box for: school fields (places), and route search bars (schools/areas we serve + places) */
+function attachSchoolSuggest(input,mode){if(input.dataset.sug)return;input.dataset.sug='1';input.autocomplete='off';const wrap=document.createElement('div');wrap.className='sugwrap';input.parentNode.insertBefore(wrap,input);wrap.appendChild(input);const box=document.createElement('div');box.className='sug';box.hidden=true;wrap.appendChild(box);let t,seq=0,items=[],idx=-1;
+  const close=()=>{box.hidden=true;idx=-1};
+  const pick=it=>{close();if(it.kind){input.value=it.name;if(mode==='home')goSearch(it.name);else{S.filters.q=it.name;render()}return}
+    input.value=it.name;input.dataset.geo=JSON.stringify({lat:it.lat,lng:it.lng,label:it.name+(it.loc?', '+it.loc:''),address:it.address});input.dataset.loc=it.loc||'';let ok=wrap.querySelector('.addrok');if(!ok){ok=document.createElement('span');ok.className='addrok';wrap.appendChild(ok)}ok.innerHTML=ICON.check+' '+h(it.loc||'Pinned on the map');
+    if(mode==='home'){goSearch(it.name)}else if(mode==='find'){S.filters.q=it.name;render()}input.dispatchEvent(new Event('change'))};
+  const draw=(q,local,places)=>{const rows=[];let i=0;items=[];
+    if(local.length){rows.push('<div class="grp">On Enivel routes</div>');for(const l of local){items.push(l);rows.push(`<div class="${i===idx?'on':''}" data-i="${i++}"><div class="sch"><span class="ic">${l.kind==='school'?ICON.school:ICON.pin}</span><div><b>${markQ(l.name,q)}<span class="tag">${l.n} route${l.n>1?'s':''}</span></b><span class="loc">${l.kind==='school'?'School served by Enivel drivers':'Pickup area'}</span></div></div></div>`)}}
+    if(places===null)rows.push('<div class="st">Live school search needs the hosted Enivel app.</div>');else if(places==='loading')rows.push('<div class="st">Searching schools…</div>');else if(places.length){rows.push('<div class="grp">Schools and places</div>');for(const p of places){items.push(p);rows.push(`<div class="${i===idx?'on':''}" data-i="${i++}"><div class="sch"><span class="ic">${p.isSchool?ICON.school:ICON.pin}</span><div><b>${markQ(p.name,q)}${p.isSchool?'':`<span class="tag">${h(p.type.replace(/_/g,' '))}</span>`}</b><span class="loc">${h(p.loc||p.full)}</span></div></div></div>`)}}else if(!local.length)rows.push('<div class="st">No school found yet. Keep typing the name or add the suburb.</div>');
+    box.innerHTML=rows.join('');box.hidden=false;box.querySelectorAll('[data-i]').forEach(el=>el.onmousedown=e=>{e.preventDefault();pick(items[+el.dataset.i])})};
+  input.addEventListener('input',()=>{delete input.dataset.geo;wrap.querySelector('.addrok')?.remove();const q=input.value.trim();clearTimeout(t);if(q.length<2)return close();const local=mode==='field'?[]:routeSchoolHits(q);draw(q,local,q.length>=3?'loading':[]);if(q.length<3)return;const my=++seq;t=setTimeout(async()=>{const res=await suggestSchools(q);if(my!==seq)return;idx=-1;draw(q,local,res)},260)});
+  input.addEventListener('keydown',e=>{if(box.hidden||!items.length)return;if(e.key==='ArrowDown'){idx=Math.min(items.length-1,idx+1);box.querySelectorAll('[data-i]').forEach(x=>x.classList.toggle('on',+x.dataset.i===idx));e.preventDefault()}else if(e.key==='ArrowUp'){idx=Math.max(0,idx-1);box.querySelectorAll('[data-i]').forEach(x=>x.classList.toggle('on',+x.dataset.i===idx));e.preventDefault()}else if(e.key==='Enter'&&idx>=0){pick(items[idx]);e.preventDefault()}else if(e.key==='Escape')close()});
+  input.addEventListener('blur',()=>setTimeout(close,150))}
+const SCHOOL_IDS=['k-s','rq-s','r-sch'];
+const _attachS=attachSuggest;attachSuggest=function(input){if(SCHOOL_IDS.includes(input.id)||input.dataset.school)return attachSchoolSuggest(input,'field');return _attachS(input)};
+/* drop-off on the home journey is usually a school */
+const _pickPlaceS=pickPlace;pickPlace=function(kind){if(kind==='dropoff'){const _a=attachSuggest;attachSuggest=function(i){if(i.id==='pl-v')i.dataset.school='1';return _a(i)};try{_pickPlaceS(kind)}finally{attachSuggest=_a}}else _pickPlaceS(kind)};
+/* search bars on Home and Find */
+const _renderSch=render;render=function(){_renderSch();const hq=document.getElementById('home-q');if(hq)attachSchoolSuggest(hq,'home');const fq=document.getElementById('f-q');if(fq)attachSchoolSuggest(fq,'find')};
+/* the kid's school: keep the location too */
+const _addKidS=addKid;addKid=function(id){_addKidS(id);const m=$('.modal');if(!m)return;const k=id?Store.get('kids',id):null;const si=$('#k-s',m);if(si&&k?.schoolLoc){si.insertAdjacentHTML('afterend',`<span class="addrok">${ICON.check} ${h(k.schoolLoc)}</span>`)}const b=$('#k-save',m);if(!b)return;const orig=b.onclick;b.onclick=async e=>{const loc=si?.dataset.loc;await orig.call(b,e);if(loc){const kid=id?Store.get('kids',id):Store.all('kids').filter(x=>x.parentId===me().id).sort((a,c)=>(c.createdAt||0)-(a.createdAt||0))[0];if(kid)await Store.patch('kids',kid.id,{schoolLoc:loc})}}};
+</script>
+<style>
+@media (max-width:560px){.top:has(.sw){flex-wrap:wrap;row-gap:8px}.top .sw{order:10;flex-basis:100%;margin-left:0;display:flex}.top .sw button{flex:1;padding:7px 6px;font-size:.82rem}}
+</style>
 
 </body></html>
