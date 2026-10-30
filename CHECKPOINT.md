@@ -70,3 +70,14 @@ Fixed (from an independent code review, each replayed in a browser test):
 Legal: Legal centre with 11 documents (~8,000 words): Important terms (CPA s49), Terms of Service, Driver Agreement, Privacy Policy (POPIA incl. s26/35/71/72), Child Safeguarding, Payments & refunds, Acceptable use, Location & automated features, Device storage, Complaints & disputes (mediation/AFSA, consumer forums preserved), PAIA summary. Acceptance recorded per user with version; existing users must accept new versions; parent consent recorded per child; drivers now upload operating licence/permit and passenger liability insurance; drivers under 21 flagged. Company details editable in Admin → More → Legal details (placeholders highlighted until filled).
 Tests: database 46/46, reminders 8/8, Worker 9/9, push crypto 2/2, four-phone live test 29/29, browser regressions all pass.
 Needs a South African attorney's review before launch.
+
+## 30 Oct 2026 (round 9)
+- Demo mode removed everywhere (link, admin buttons, loader stubbed; leftover demo data purged in preview). Only real accounts.
+- Theme: light by default on every device (ignores phone dark setting); no header toggle; after first sign-in a "Choose your look" sheet; saved per account (users.theme); change in Settings (tab renamed from More).
+- Map: OpenStreetMap tiles tinted to match light/dark, cached per screen (no rebuild/flicker on refresh), recenter + follow-vehicle buttons, numbered stops on driver map, road route with casing.
+- Parents: Handover code (hashed per child; home drop-off needs the code or the parent's in-app confirmation; 5 wrong tries alert the parent). Holidays & closures planner (termBreaks; days off, driver told, reminders skip).
+- Drivers: Smart stop order (nearest-neighbour + 2-opt from GPS or farthest stop; km estimate). Expenses & profit (private 'expenses' collection; month KPIs, categories, 6-month table).
+- Waiting list for full routes ('waitlist' collection; driver app offers freed seats to first in line for 24 h).
+- Pickup/drop-off location now correct for afternoon school pickup and home drop-off (stopPoint/stopLabel).
+- Legal: v2 pack, 16 documents ~23,500 words (new: Parent Terms, Vehicles & insurance, Security & breach, Incidents & emergencies, Promotions). TERMS_VERSION 2026-10-30.2 forces re-acceptance. Attorney points listed in chat.
+- Tests: database 54/54, reminders 9/9, Worker 9/9, four-phone live 29/29, new features 28/28, all older browser suites pass.

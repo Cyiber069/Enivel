@@ -183,7 +183,7 @@ language plpgsql security definer set search_path = public as $$
 declare me text := auth.uid()::text; adm boolean := public.is_admin(); cur public.docs%rowtype; d jsonb := p_data;
 begin
   if auth.uid() is null then raise exception 'Please sign in again'; end if;
-  if p_coll not in ('users','kids','vehicles','routes','bookings','requests','offers','messages','events','transactions','notifications','ratings','settings') then
+  if p_coll not in ('users','kids','vehicles','routes','bookings','requests','offers','messages','events','transactions','notifications','ratings','settings','expenses','waitlist') then
     raise exception 'Unknown collection %', p_coll; end if;
   if octet_length(p_data::text) > 3000000 then raise exception 'That is too large to save (photos too big?)'; end if;
   if p_coll = 'settings' and not adm then raise exception 'Only the admin can change settings'; end if;
@@ -198,12 +198,13 @@ begin
   if found and not cur.deleted then
     -- update an existing document
     if not (adm or cur.owner = auth.uid()
-            or (me = any (cur.parties) and p_coll in ('bookings','notifications','messages'))) then
+            or (me = any (cur.parties) and p_coll in ('bookings','notifications','messages','waitlist'))) then
       raise exception 'You cannot change this'; end if;
     if p_coll = 'transactions' and not adm then raise exception 'Payments cannot be changed'; end if;
     if not adm and cur.owner <> auth.uid() then
       -- connected people may only change one field each
-      if p_coll = 'notifications' then d := cur.data || jsonb_build_object('read', coalesce(d -> 'read', 'false'::jsonb));
+      if p_coll = 'notifications' then d := cur.data || jsonb_build_object('read', coalesce(d -> 'read', 'false'::jsonb), 'answered', coalesce(d -> 'answered', cur.data -> 'answered', 'false'::jsonb));
+      elsif p_coll = 'waitlist' then d := cur.data || jsonb_build_object('status', coalesce(d -> 'status', cur.data -> 'status'), 'offeredAt', coalesce(d -> 'offeredAt', cur.data -> 'offeredAt', 'null'::jsonb));
       elsif p_coll = 'messages' then d := cur.data || jsonb_build_object('read', coalesce(d -> 'read', 'false'::jsonb));
       elsif p_coll = 'bookings' then
         d := cur.data || jsonb_build_object('schedule', coalesce(d -> 'schedule', cur.data -> 'schedule', 'null'::jsonb))
@@ -238,7 +239,8 @@ begin
         if p_id <> me then raise exception 'You can only create your own profile'; end if;
         if coalesce(d ->> 'role','') not in ('parent','driver') then raise exception 'Choose parent or driver'; end if;
         d := (d - 'banned' - 'suspended' - 'referredBy') || jsonb_build_object('credit', 0, 'verification', jsonb_build_object('status','none'));
-      elsif p_coll in ('kids','requests','ratings','bookings') and coalesce(d ->> 'parentId','') <> me then raise exception 'You cannot create this';
+      elsif p_coll in ('kids','requests','ratings','bookings','waitlist') and coalesce(d ->> 'parentId','') <> me then raise exception 'You cannot create this';
+      elsif p_coll = 'expenses' and coalesce(d ->> 'driverId','') <> me then raise exception 'You cannot create this';
       elsif p_coll in ('vehicles','routes','offers') and coalesce(d ->> 'driverId','') <> me then raise exception 'You cannot create this';
       elsif p_coll = 'messages' and coalesce(d ->> 'from','') <> me then raise exception 'You cannot create this';
       elsif p_coll = 'transactions' and coalesce(d ->> 'from','') <> me then raise exception 'You cannot create this';
@@ -343,6 +345,8 @@ begin
                              and bk.data ->> 'kidId' = kd.id and bk.data ->> 'driverId' = u.id
                              and bk.data ->> 'status' in ('active','trip')) loop
         if coalesce(k.data -> 'absences', '[]'::jsonb) ? today then continue; end if;
+        if exists (select 1 from jsonb_array_elements(coalesce(k.data -> 'termBreaks', '[]'::jsonb)) tb
+                   where tb ->> 'from' <= today and today <= tb ->> 'to') then continue; end if;
         if exists (select 1 from public.docs e where e.coll = 'events' and not e.deleted
                    and e.data ->> 'kidId' = k.id and e.data ->> 'type' = 'pickup'
                    and (e.data ->> 'ts')::bigint > (it ->> 'slot')::bigint - 3600000) then continue; end if;
