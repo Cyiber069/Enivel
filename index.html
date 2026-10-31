@@ -6891,5 +6891,117 @@ if(typeof cloudPull==='function'){const _cloudPullPolish=cloudPull;cloudPull=asy
 syncNav(false);
 })();
 </script>
+<!-- r10:owner -->
+<style>
+.own-q{width:30px;height:30px;min-width:30px;border-radius:50%;border:1px solid var(--line);background:transparent;color:inherit;font-weight:700;font-size:.9rem;display:inline-grid;place-items:center;cursor:pointer;margin-left:6px;flex:none}
+.own-q:hover{border-color:currentColor}
+.adm-st .hd{align-items:center}
+.own-steps{counter-reset:s;list-style:none;padding:0;margin:12px 0 0}
+.own-steps li{counter-increment:s;position:relative;padding:0 0 12px 38px;line-height:1.45}
+.own-steps li::before{content:counter(s);position:absolute;left:0;top:-1px;width:26px;height:26px;border-radius:50%;background:var(--fg,#111);color:var(--bg,#fff);display:grid;place-items:center;font-size:.8rem;font-weight:700}
+.own-steps code,.own-why code{font-size:.82em;padding:1px 6px;border-radius:6px;background:rgba(127,127,127,.14);word-break:break-all}
+.own-why{margin-top:8px;line-height:1.5}
+.own-kv{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:.85rem;margin-top:10px}
+.own-kv b{white-space:nowrap}
+.own-tag{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:.82rem;margin:0 6px 6px 0;border:1px solid var(--line)}
+.own-good{background:rgba(22,163,74,.10);border-color:rgba(22,163,74,.35)}
+.own-bad{background:rgba(217,119,6,.10);border-color:rgba(217,119,6,.35)}
+.own-kids{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px}
+.own-kids button{flex:none}
+</style>
+<script>
+/* ===== Owner upgrades: detailed "?" help on System status, PayFast + more checks, admin parent↔kid link, admin transport verified, review strengths ===== */
+
+/* ---------- 1. System status: more rows + a "?" guide on every row ---------- */
+const OWN_SUPA='https://supabase.com/dashboard/project/kakzsotpfzgghlfanaut';
+const OWN_GUIDES={
+ db:{t:'Database connected',why:'Enivel keeps every account, booking and payment in your Supabase database. This check asks the database for a tiny update and times the answer.',
+  steps:['Make sure this phone or computer has internet.',`Open your Supabase project: <code>${OWN_SUPA}</code>`,'If it says <b>Paused</b>, press <b>Restore project</b> (free projects pause after a week with no visits).','Wait 1–2 minutes, then come back here and press the refresh button.','Still red? Open the hosted app (<code>https://cyiber069.github.io/Enivel/</code>), not a downloaded copy.']},
+ sql:{t:'Database script up to date',why:'Every new feature needs matching rules and functions in the database. When the app calls a function the database doesn\'t have yet, that feature breaks. The list below shows exactly which ones are missing.',
+  steps:['On a computer, open <code>https://github.com/Cyiber069/Enivel/blob/main/supabase/setup.sql</code>','Press the <b>copy raw file</b> button (two squares icon, top right of the file).',`Open Supabase → <b>SQL Editor</b>: <code>${OWN_SUPA}/sql/new</code>`,'Paste everything and press <b>Run</b> (bottom right). It is safe to run again — it never deletes data.','Wait for "Success". You should see lines like "Enivel backend ready".','Come back here and press refresh. This row turns green.']},
+ worker:{t:'Worker reachable',why:'The Enivel Worker is a small free Cloudflare program. It sends SMS codes, phone pop-ups, Face ID sign-in and PayFast card payments. The app needs its address.',
+  steps:['Follow <code>WORKER-SETUP.md</code> in your GitHub repo (about 20 minutes, free). It creates the Worker and gives you an address like <code>https://enivel.yourname.workers.dev</code>.','Copy that address.','In Enivel go to Admin → <b>Settings</b> → <b>SMS gateway</b>, paste it and press Save.','Come back here and press refresh.','If it was already set and is now red: open the address + <code>/health</code> in a browser. If it doesn\'t load, open Cloudflare → Workers → enivel → <b>Deployments</b> and redeploy the latest <code>worker.js</code> from GitHub.']},
+ sms:{t:'SMS gateway',why:'Real SMS codes go through BulkSMS. Without a token the app shows codes on screen (test mode), which is fine for testing but not for real users.',
+  steps:['Create a BulkSMS account at <code>https://www.bulksms.com</code> and buy a small credit bundle.','In BulkSMS go to <b>Settings → API Tokens</b>, create a token and copy the "Basic Auth" value.','Cloudflare → Workers → enivel → <b>Settings → Variables and Secrets</b> → Add → type <b>Secret</b>, name <code>BULKSMS_TOKEN</code>, paste, Save.','Press <b>Deploy</b> if Cloudflare asks.','Refresh this page — the SMS chip turns ✓.']},
+ payfast:{t:'PayFast card payments',why:'"Pay for parents" and future card payments go through PayFast\'s own secure page. Your card is typed only on PayFast — Enivel and the parents never see it. The Worker needs your PayFast merchant details to create and confirm payments.',
+  steps:['Sign up for a PayFast business account: <code>https://www.payfast.co.za</code> → <b>Register</b> (choose <b>Business</b>; you need ID, bank account and, for a company, the CIPC registration).','Verify the account (PayFast emails you; upload the documents they ask for). Payouts only start once verified.','In PayFast go to <b>Settings → Developer Settings</b>. Copy your <b>Merchant ID</b> and <b>Merchant Key</b>.','On the same page set a <b>Passphrase</b> (any long secret, e.g. 20 random letters) and save it. Copy it.','Cloudflare → Workers → enivel → <b>Settings → Variables and Secrets</b>. Add these:<br><code>PAYFAST_MERCHANT_ID</code> (Text) = your Merchant ID<br><code>PAYFAST_MERCHANT_KEY</code> (Secret) = your Merchant Key<br><code>PAYFAST_PASSPHRASE</code> (Secret) = your passphrase<br><code>APP_URL</code> (Text) = <code>https://cyiber069.github.io/Enivel/</code><br>Make sure <code>SUPABASE_URL</code> and <code>SUPABASE_SECRET</code> are already there (from the Worker setup).','To test first with fake money add <code>PAYFAST_SANDBOX</code> = <code>1</code> and use the sandbox Merchant ID/Key from <code>https://sandbox.payfast.co.za</code>. Remove it (or set 0) to go live.','Press <b>Deploy</b>. Rerun <code>supabase/setup.sql</code> once (it has the payment tables).','Refresh this page: PayFast turns green. Try Admin → Pay for parents with one family for R1-level sandbox testing first.']},
+ push:{t:'Phone pop-ups on this device',why:'Pop-ups (pickup alerts, 1 km alerts, emergency alerts) need the browser\'s permission and, for closed-app pop-ups, the Worker push keys.',
+  steps:['iPhone: open the app in <b>Safari</b> → Share → <b>Add to Home Screen</b>, then open Enivel from the home screen icon (iPhone only allows pop-ups this way).','Android: use Chrome.','Turn pop-ups on inside Enivel (parent home or Settings → Phone pop-ups) and press <b>Allow</b>.','If it says Blocked: phone Settings → Notifications → Enivel/Chrome → Allow. On a computer click the lock icon next to the address → Notifications → Allow.','For pop-ups with the app closed the Worker needs <code>VAPID_PRIVATE_JWK</code> (the private key file you were sent) and <code>SUPABASE_SECRET</code> — see WORKER-SETUP.md.']},
+ faceid:{t:'Face ID sign-in',why:'"Sign in with Face ID / fingerprint" is checked by the Worker, which then opens a secure session in Supabase.',
+  steps:['In Cloudflare → Workers → enivel → Variables and Secrets make sure these exist: <code>SUPABASE_URL</code> (<code>https://kakzsotpfzgghlfanaut.supabase.co</code>), <code>SUPABASE_SECRET</code> (Supabase → Project Settings → API Keys → <b>secret</b> key; never share it), <code>OTP_SECRET</code> (any 40+ random characters), <code>ALLOWED_ORIGIN</code> = <code>https://cyiber069.github.io</code>.','Deploy, refresh this page.','On your phone: Settings → Face ID → turn on, then sign out and use the Face ID button.']},
+ legal:{t:'Legal details',why:'Your privacy policy and terms must name the company, address and Information Officer (POPIA). Blank spots show as highlighted placeholders to users.',
+  steps:['Admin → <b>Settings</b> → <b>Legal details</b>.','Fill in: registered company name, registration number, physical address, support email, privacy email, phone, Information Officer name, VAT number (if registered).','Save. Then register your Information Officer with the Information Regulator: <code>https://inforegulator.org.za</code> → eServices.','Ask a South African attorney to review the legal pack before launch.']},
+ twofa:{t:'Admin two-step',why:'Your admin account controls money and bans. If someone gets your password, a PIN stops them.',
+  steps:['Press <b>Set a PIN</b> below (or Settings → Security).','Choose 4 digits nobody can guess (not your birthday).','Also change your admin password if you ever shared it in a chat — use Supabase → Authentication → Users → your email → <b>Send password recovery</b>.']},
+ sync:{t:'Last sync',why:'The app pulls new changes from the database every 6 seconds while it is open.',
+  steps:['If this stays old: check the internet.','Pull down / reload the page.','If the Database row is also red, fix that first.']},
+ clock:{t:'Device clock',why:'Reminders and alerts use the time. A wrong phone clock makes them fire at the wrong moment.',
+  steps:['Phone Settings → General/System → Date & Time → turn on <b>Set automatically</b>.','Reload Enivel.']},
+};
+const _ownRows=admStatusRows;
+admStatusRows=function(){const rows=_ownRows();const R=S.admSys;const ep=otpEndpoint();
+  const i=rows.findIndex(r=>r[0]==='sms');const add=[];
+  add.push(['payfast','PayFast card payments',!ep?{st:'bad',v:'Worker not set',fix:'Set up the Worker first, then add your PayFast details.'}:!R||R.ep!==ep?{st:'wait',v:'Checking…',fix:''}:!R.health?{st:'bad',v:'Worker not reachable',fix:'Fix the Worker row first.'}:R.health.payfast?{st:'ok',v:'Connected',fix:''}:{st:'warn',v:'Not connected',fix:'Card payments are off. Press ? for the steps.'}]);
+  add.push(['faceid','Face ID sign-in',!ep?{st:'warn',v:'Worker not set',fix:'Needs the Worker.'}:!R||R.ep!==ep?{st:'wait',v:'Checking…',fix:''}:!R.health?{st:'warn',v:'Worker not reachable',fix:''}:R.health.faceid?{st:'ok',v:'Ready',fix:''}:{st:'warn',v:'Not set up',fix:'Worker is missing its Supabase secret.'}]);
+  rows.splice(i<0?rows.length:i+1,0,...add);
+  if(R&&R.missing?.length){const s=rows.find(r=>r[0]==='sql');if(s)s[2]={...s[2],fix:'Rerun the database script. Press ? for the steps.'}}
+  return rows};
+const _ownRow=admStatusRow;
+admStatusRow=function(row){const html=_ownRow(row);const [k]=row;if(!OWN_GUIDES[k])return html;
+  return html.replace(/(<span class="v"[^>]*>[^<]*<\/span>)/,`$1<button class="own-q" data-own-help="${k}" aria-label="What's wrong and how to fix it">?</button>`)};
+function ownHelp(k){const g=OWN_GUIDES[k];if(!g)return;const row=(admStatusRows().find(r=>r[0]===k)||[])[2]||{};const R=S.admSys||{};
+  const state=row.st==='ok'?'<span class="pill live tiny">Working</span>':row.st==='bad'?'<span class="pill tiny" style="background:rgba(220,38,38,.12);color:var(--bad,#dc2626)">Needs fixing</span>':row.st==='wait'?'<span class="pill tiny">Checking</span>':'<span class="pill tiny" style="background:rgba(217,119,6,.14);color:#b45309">Needs attention</span>';
+  let detail='';
+  if(k==='sql'&&R.missing?.length)detail=`<div class="own-kv"><b>Missing</b><span>${R.missing.map(h).join(', ')}</span></div>`;
+  if(k==='sql'&&R.sqlErr)detail+=`<div class="own-kv"><b>Error</b><span>${h(R.sqlErr)}</span></div>`;
+  if(k==='db'&&R.dbErr)detail=`<div class="own-kv"><b>Error</b><span>${h(R.dbErr)}</span></div>`;
+  if(['worker','sms','payfast','faceid','push'].includes(k)){const ep=otpEndpoint();detail=`<div class="own-kv"><b>Worker</b><span>${ep?h(ep):'not set'}</span>${R.workerErr?`<b>Error</b><span>${h(R.workerErr)}</span>`:''}${R.health?`<b>Reports</b><span>${Object.entries(R.health).filter(([,v])=>typeof v==='boolean').map(([n,v])=>(v?'✓ ':'✗ ')+h(n)).join(' · ')}</span>`:''}</div>`}
+  modal(`<div class="row between"><h3>${h(g.t)}</h3>${state}</div><p class="small muted own-why">${row.v?'<b>Now:</b> '+h(row.v)+'. ':''}${g.why}</p>${detail}<h4 style="margin-top:14px">${row.st==='ok'?'If it ever breaks':'How to fix it'}</h4><ol class="own-steps">${g.steps.map(s=>`<li class="small">${s}</li>`).join('')}</ol><div class="row" style="margin-top:6px"><button class="btn" id="own-re">Check again</button><button class="btn ghost" onclick="closeModal()">Close</button></div>`,m=>{$('#own-re',m).onclick=()=>{closeModal();S.admSys=null;admRunChecks();render()}})}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-own-help]');if(!b)return;e.preventDefault();e.stopPropagation();ownHelp(b.dataset.ownHelp)},true);
+
+/* ---------- 2. Admin: parent ↔ kid connected ---------- */
+myKidProfile=(function(prev){return function(){const u=me();if(u&&S.admin&&S.adminApp==='kid'){const ks=kidsOf(u.id).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));return ks.find(k=>k.id===S.adminKid)||ks[0]||null}return prev()}})(myKidProfile);
+function ownKidSwitch(){if(!S.admin||S.adminApp!=='kid')return '';const ks=kidsOf(me().id).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));if(!ks.length)return `<div class="card" style="margin-bottom:12px"><b>No children yet</b><p class="small muted">Add a child in Parent mode — it shows up here as a kid account.</p><button class="btn sm" style="margin-top:8px" onclick="S.adminApp='parent';go('p-kids')">Add a child</button></div>`;const cur=myKidProfile();
+  return `<div class="own-kids">${ks.map(k=>`<button class="btn sm ${k.id===cur?.id?'':'ghost'}" data-own-kid="${h(k.id)}">${h(k.name)}</button>`).join('')}<button class="btn sm ghost" onclick="S.adminApp='parent';go('p-kids')">Parent view</button></div>`}
+['k-home','k-trips','k-chat','k-more'].forEach(r=>{const prev=VIEWS[r];if(typeof prev!=='function')return;VIEWS[r]=function(){return ownKidSwitch()+prev.apply(this,arguments)}});
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-own-kid]');if(!b)return;S.adminKid=b.dataset.ownKid;render()});
+/* Parent mode (admin): "Open as kid" on each child card */
+const _ownPKids=VIEWS['p-kids'];
+VIEWS['p-kids']=function(){let html=_ownPKids.apply(this,arguments);if(!S.admin)return html;const ks=kidsOf(me().id);if(!ks.length)return html;
+  return `<div class="card" style="margin-bottom:12px"><div class="row between"><div><b>Kid view</b><p class="tiny muted">Your children are connected to your Kid view.</p></div></div><div class="own-kids" style="margin-top:8px">${ks.map(k=>`<button class="btn sm" data-own-askid="${h(k.id)}">Open as ${h(k.name)}</button>`).join('')}</div></div>`+html};
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-own-askid]');if(!b)return;S.adminKid=b.dataset.ownAskid;S.adminApp='kid';go('k-home')});
+
+/* ---------- 3. Admin transport account counts as verified ---------- */
+const _ownVer=isVerified;
+isVerified=function(u){if(u&&u.email&&u.email===ADMIN_EMAIL)return true;if(u&&S.admin&&me()&&u.id===me().id)return true;return _ownVer(u)};
+async function ownVerifyAdmin(){try{const u=me();if(!S.admin||!u)return;if(u.verification?.status==='approved'&&u.adminDriver)return;await Store.patch('users',u.id,{verification:{...(u.verification||{}),status:'approved',reviewedAt:Date.now(),note:'Enivel owner account'},adminDriver:true})}catch(e){console.warn('admin verify',e)}}
+const _ownGo=go;go=function(r,extra){const out=_ownGo(r,extra);if(S.admin&&S.adminApp==='driver'&&me()&&(me().verification?.status!=='approved'||!me().adminDriver))setTimeout(ownVerifyAdmin,50);return out};
+
+/* ---------- 4. Reviews: what the driver is good at / needs to improve ---------- */
+const OWN_TOPICS=[
+ ['Punctuality','⏱',/\b(on ?time|punctual|early|never late|always there|reliable)\b/i,/\b(late|delay|delayed|waited|waiting|never on time|not on time|missed)\b/i],
+ ['Safe driving','🛡',/\b(safe|safely|careful|calm driver|drives well|good driver|responsible)\b/i,/\b(speed|speeding|fast|reckless|dangerous|unsafe|phone while|rough|skipped seat ?belt|no seat ?belt)\b/i],
+ ['Friendly with kids','🧒',/\b(kind|friendly|patient|caring|kids love|children love|gentle|respectful|polite|nice)\b/i,/\b(rude|shout|shouts|shouted|yell|impatient|disrespect|unfriendly|harsh|mean)\b/i],
+ ['Communication','💬',/\b(communicat\w*|updates?|lets? (me|us) know|responsive|answers|replies|informs?|messages?)\b/i,/\b(no updates?|doesn.?t answer|didn.?t answer|ignores?|no reply|never replies|unreachable|no communication)\b/i],
+ ['Clean vehicle','🚐',/\b(clean|neat|tidy|comfortable|aircon|well kept|smells good)\b/i,/\b(dirty|messy|smell|smells|broken|uncomfortable|overloaded|crowded|full of)\b/i],
+ ['Value for money','💰',/\b(fair price|affordable|worth it|good value|cheap)\b/i,/\b(expensive|overpriced|too much|extra charges?|charges? more)\b/i],
+];
+function ownStrengths(driverId){const rs=Store.all('ratings').filter(r=>r.driverId===driverId);const good=[],work=[];
+  OWN_TOPICS.forEach(([name,ic,pos,neg])=>{let p=0,n=0;rs.forEach(r=>{const c=String(r.comment||'');if(!c)return;const isNeg=neg.test(c),isPos=pos.test(c)&&!isNeg;if(isNeg)n++;else if(isPos)p++});if(p||n){(n>0&&n>=p?work:good).push({name,ic,p,n})}});
+  try{const sc=typeof onTimeScore==='function'?onTimeScore(driverId):null;const pct=sc&&typeof sc==='object'?sc.pct:typeof sc==='number'?sc:null;const tot=Store.all('events').filter(e=>e.driverId===driverId&&e.type==='pickup').length;
+    if(pct!=null&&tot>=5){const t=good.find(x=>x.name==='Punctuality')||work.find(x=>x.name==='Punctuality');if(pct>=90&&!work.some(x=>x.name==='Punctuality')){if(!t)good.push({name:'Punctuality',ic:'⏱',p:0,n:0,stat:pct+'% on time'});else t.stat=pct+'% on time'}else if(pct<75){const w=work.find(x=>x.name==='Punctuality');if(w)w.stat=pct+'% on time';else{const gi=good.findIndex(x=>x.name==='Punctuality');if(gi>=0)good.splice(gi,1);work.push({name:'Punctuality',ic:'⏱',p:0,n:0,stat:pct+'% on time'})}}}}catch(e){}
+  const low=rs.filter(r=>r.stars<=2).length;
+  return {count:rs.length,withText:rs.filter(r=>(r.comment||'').trim()).length,good:good.sort((a,b)=>(b.p-b.n)-(a.p-a.n)),work:work.sort((a,b)=>(b.n-b.p)-(a.n-a.p)),low}}
+function ownStrengthCard(driverId){const s=ownStrengths(driverId);const mine=me()&&me().id===driverId;
+  const tag=(x,cls)=>`<span class="own-tag ${cls}">${x.ic} ${h(x.name)}${x.stat?` · ${h(x.stat)}`:''}${x.p||x.n?` <span class="tiny muted">${cls==='own-good'?x.p:x.n} ${(cls==='own-good'?x.p:x.n)===1?'review':'reviews'}</span>`:''}</span>`;
+  if(s.withText<2&&!s.good.length&&!s.work.length)return `<div class="card" style="margin-top:12px"><h3>Strengths &amp; to improve</h3><p class="small muted" style="margin-top:6px">Needs a few written reviews first. ${mine?'Ask parents to rate you with a short comment.':''}</p></div>`;
+  return `<div class="card" style="margin-top:12px"><h3>${mine?'What parents say about you':'What parents say'}</h3><p class="tiny muted">From ${s.withText} written review${s.withText===1?'':'s'}${s.count>s.withText?` (${s.count} ratings)`:''}</p>
+   <div style="margin-top:12px"><b class="small">Good at</b><div style="margin-top:8px">${s.good.length?s.good.map(x=>tag(x,'own-good')).join(''):'<span class="small muted">Nothing stands out yet.</span>'}</div></div>
+   <div style="margin-top:8px"><b class="small">${mine?'Work on':'Needs to improve'}</b><div style="margin-top:8px">${s.work.length?s.work.map(x=>tag(x,'own-bad')).join(''):'<span class="small muted">No complaints in the reviews 🎉</span>'}</div></div>
+   ${mine&&s.work.length?`<p class="tiny muted" style="margin-top:6px">Tip: fix the top one first. Better reviews move you up in parents' search.</p>`:''}</div>`}
+const _ownReviews=VIEWS.reviews;
+VIEWS.reviews=function(){const html=_ownReviews.apply(this,arguments);const d=Store.get('users',S.reviewDriver);if(!d)return html;const card=ownStrengthCard(d.id);
+  const i=html.indexOf('<div class="card"',html.indexOf('<div class="card"')+1);return i>0?html.slice(0,i)+card+html.slice(i):html+card};
+</script>
 
 </body></html>
