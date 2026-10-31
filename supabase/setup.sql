@@ -229,6 +229,8 @@ begin
         'suspended', coalesce(cur.data -> 'suspended','false'::jsonb),
         'banReason', coalesce(cur.data -> 'banReason','null'::jsonb), 'bannedAt', coalesce(cur.data -> 'bannedAt','null'::jsonb),
         'referredBy', coalesce(cur.data -> 'referredBy','null'::jsonb));
+      -- a save from a phone that hasn't seen the credit yet keeps the stored credit
+      if not (p_data ? 'credit') and cur.data ? 'credit' then d := jsonb_set(d, '{credit}', cur.data -> 'credit'); end if;
       if coalesce((d ->> 'credit')::numeric, 0) > coalesce((cur.data ->> 'credit')::numeric, 0) then
         d := jsonb_set(d, '{credit}', coalesce(cur.data -> 'credit', '0'::jsonb)); end if;
       if coalesce(d #>> '{verification,status}', 'none') not in ('none','pending')
@@ -770,6 +772,8 @@ begin
         'suspended', coalesce(cur.data -> 'suspended','false'::jsonb),
         'banReason', coalesce(cur.data -> 'banReason','null'::jsonb), 'bannedAt', coalesce(cur.data -> 'bannedAt','null'::jsonb),
         'referredBy', coalesce(cur.data -> 'referredBy','null'::jsonb));
+      -- a save from a phone that hasn't seen the credit yet keeps the stored credit
+      if not (p_data ? 'credit') and cur.data ? 'credit' then d := jsonb_set(d, '{credit}', cur.data -> 'credit'); end if;
       if coalesce((d ->> 'credit')::numeric, 0) > coalesce((cur.data ->> 'credit')::numeric, 0) then
         d := jsonb_set(d, '{credit}', coalesce(cur.data -> 'credit', '0'::jsonb)); end if;
       if coalesce(d #>> '{verification,status}', 'none') not in ('none','pending')

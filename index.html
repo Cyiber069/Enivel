@@ -36,8 +36,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .logo{font-family:var(--display);font-weight:700;font-size:1.3rem;letter-spacing:-.04em;display:flex;align-items:center;gap:8px;cursor:pointer;background:none;border:0;padding:0}
 .top .logo{transition:transform .9s cubic-bezier(.2,.8,.2,1)}
-body.intro .top .logo{transform:translateX(var(--logo-shift,0px))}
-body.intro .top .ib,body.intro .top .mode{opacity:0}
+body.logo-intro .top .logo{transform:translateX(var(--logo-shift,0px))}
+body.logo-intro .top .ib,body.logo-intro .top .mode{opacity:0}
 .top .ib,.top .mode{transition:opacity .5s}
 main.enter{animation:pageIn .35s ease both}
 @keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -939,7 +939,7 @@ VIEWS['p-more']=()=>_pmore2()+securityCard();VIEWS['d-more']=()=>_dmore()+securi
 payMonth=function(){const u=me();const bs=activeBookings(b=>b.parentId===u.id);const cost=bs.reduce((s,b)=>s+b.price,0);const credit=Math.min(u.credit||0,feeFor(cost)+cost);payModal(cost+feeFor(cost)-credit,async()=>{for(const b of bs){await pushTx({type:'subscription',amount:b.price,from:u.id,to:b.driverId,bookingId:b.id,kidId:b.kidId,note:'Monthly transport'});await pushTx({type:'platform_fee',amount:feeFor(b.price),from:u.id,to:'enivel',bookingId:b.id,note:'2% platform fee'});await chargeDriverFeeIfDue(b.driverId)}if(credit)await Store.patch('users',u.id,{credit:(u.credit||0)-credit});closeModal();toast(credit?'Paid, '+money(credit)+' credit used':'Paid')})};
 
 /* logo intro: centre → left */
-function logoIntro(){const l=$('.top .logo');if(!l||matchMedia('(prefers-reduced-motion:reduce)').matches)return;const r=l.getBoundingClientRect();const shift=innerWidth/2-(r.left+r.width/2);document.body.style.setProperty('--logo-shift',shift+'px');document.body.classList.add('intro');requestAnimationFrame(()=>setTimeout(()=>document.body.classList.remove('intro'),$('.splash')?1900:300))}
+function logoIntro(){const l=$('.top .logo');if(!l||matchMedia('(prefers-reduced-motion:reduce)').matches)return;const r=l.getBoundingClientRect();const shift=innerWidth/2-(r.left+r.width/2);document.body.style.setProperty('--logo-shift',shift+'px');document.body.classList.add('logo-intro');requestAnimationFrame(()=>setTimeout(()=>document.body.classList.remove('logo-intro'),$('.splash')?1900:300))}
 setTimeout(logoIntro,80);
 
 /* richer journey scene */
@@ -5338,7 +5338,7 @@ function growPublicLocal(id){const r=Store.get('routes',id);if(!r||!r.active)ret
   return JSON.parse(JSON.stringify(p))}
 async function growFetchPublic(id){S.growPub={id,state:'loading'};let data=null,err=false;
   try{if(S.cloud&&typeof sb!=='undefined'&&sb){const {data:dd,error}=await sb.rpc('public_route',{p_id:id});if(error)throw error;data=dd||null}else data=growPublicLocal(id)}catch(e){console.warn('public_route',e);err=true}
-  if(S.growPub?.id!==id)return;S.growPub={id,state:err?'error':data?'ok':'none',data};if(S.route==='g-route')render()}
+  if(S.growPub?.id!==id)return;S.growPub={id,state:err?'error':data?'ok':'none',data,at:Date.now()};if(S.route==='g-route')render()}
 function growPubSkel(){return `<div class="gw-pub"><div class="gw-pc"><div class="skel" style="height:150px;border-radius:0"></div><div class="gw-pc-body"><div class="skel" style="height:34px;width:55%"></div><div class="skel gw-skel"></div><div class="skel" style="height:54px;border-radius:999px"></div></div></div></div>`}
 function growPubNone(err){return `<div class="gw-pub"><div class="card gw-none"><div class="ic">${ICON.car}</div><h3>${err?'Could not load this route':'This route isn’t available right now'}</h3><p class="small muted" style="margin:6px 0 16px">${err?'Check your internet and try again.':'It may be full, paused or no longer listed.'}</p>${err?`<button class="btn wide" data-grow-retry>Try again</button>`:me()?`<button class="btn wide" onclick="go('${viewRole()==='driver'?'d-home':viewRole()==='admin'?'a-home':'p-find'}')">${viewRole()==='parent'?'Find transport':'Back home'}</button>`:`<button class="btn wide gw-cta" data-grow-signup>Find transport on Enivel</button>`}</div></div>`}
 function growPubCard(p){const free=p.free==null?null:+p.free;const row=(ic,l,t)=>t?`<div class="gw-row">${ic}<div><small>${l}</small>${h(t)}</div></div>`:'';const veh=p.vehicle?[p.vehicle.make,p.vehicle.model].filter(Boolean).join(' ')+(p.vehicle.seats?' · '+p.vehicle.seats+' seats':''):'';
@@ -5352,7 +5352,7 @@ VIEWS['g-route']=()=>{const id=S.growPubId;if(!id||!GROW_RX.test(id))return grow
   return `<div class="gw-pub" id="gw-pub">${growPubCard(p)}
   ${role==='driver'||role==='admin'?`<p class="tiny muted gw-center">This is what parents see when they open the link.</p>`:`<button class="btn wide gw-cta" data-grow-book="${h(id)}">${full?'Join the waiting list':'Book a seat'}</button><p class="tiny muted gw-center">${me()?'':'Free parent account. Takes a minute.'}</p>`}
   ${me()?'':`<p class="small muted gw-center">Have an account? <a href="#" data-grow-login>Log in</a></p>`}</div>`};
-function growOpenRoute(id){if(!GROW_RX.test(id))return;S.growPubId=id;if(S.growPub?.id!==id||S.growPub.state==='error')S.growPub=null;const u=me();if(u&&viewRole()==='parent'&&!S.admin){growClearHash();growFocusFind(id);return}go('g-route')}
+function growOpenRoute(id,force){if(!GROW_RX.test(id))return;S.growPubId=id;if(S.growPub?.id!==id||S.growPub.state==='error'||(force&&S.growPub.state!=='loading'))S.growPub=null;const u=me();if(u&&viewRole()==='parent'&&!S.admin){growClearHash();growFocusFind(id);return}go('g-route')}
 function growRemember(id){const t=S.growPub?.id===id?S.growPub.data?.title:'';ls.set('enivel_grow_route',{id,at:Date.now(),title:t||''})}
 function growBook(id){if(!GROW_RX.test(id))return;buzz();if(me()){if(viewRole()==='parent')return growFocusFind(id);return}growRemember(id);go('landing',{authMode:'signup',signupRole:'parent'})}
 function growFocusFind(id){const r=routeOf(id);S.growFocus=id;if(r)S.filters.type=r.type==='private'?'private':'shared';go('p-find')}
@@ -5372,11 +5372,11 @@ const _growIntro=showIntro;showIntro=function(){if(growHashRoute()||S.route==='g
 /* leaving the route page drops the #route= part of the address */
 const _growGo=go;go=function(r,extra){if(r!=='g-route'&&growHashRoute())growClearHash();return _growGo(r,extra)};
 /* handle #route= and #ref= links */
-function growOnHash(){const id=growHashRoute();if(id){growOpenRoute(id);return true}
+function growOnHash(force){const id=growHashRoute();if(id){growOpenRoute(id,force);return true}
   const ref=growHashRef();if(ref){growClearHash();if(!me()){ls.set('enivel_grow_ref',{code:ref,at:Date.now()});go('landing',{authMode:'signup',signupRole:S.signupRole||'parent'})}else toast('Referral codes are for new accounts');return true}return false}
 (function growEarly(){const id=growHashRoute();if(id&&!S.session){S.growPubId=id;S.route='g-route'}})();
 (function growWaitHash(){const t=setInterval(()=>{if(!S.ready)return;clearInterval(t);growOnHash()},120);setTimeout(()=>clearInterval(t),30000)})();
-window.addEventListener('hashchange',()=>{if(S.ready)growOnHash()});
+window.addEventListener('hashchange',()=>{if(S.ready)growOnHash(true)});
 /* after the first sign-in: open the remembered route in Find */
 const _growRender=render;render=function(){_growRender();try{growAfterRender()}catch(e){console.warn('grow',e)}};
 function growAfterRender(){if(!S.ready)return;const u=me();if(!u)return;if(ls.get('enivel_grow_ref'))ls.set('enivel_grow_ref',null);
@@ -7003,5 +7003,105 @@ const _ownReviews=VIEWS.reviews;
 VIEWS.reviews=function(){const html=_ownReviews.apply(this,arguments);const d=Store.get('users',S.reviewDriver);if(!d)return html;const card=ownStrengthCard(d.id);
   const i=html.indexOf('<div class="card"',html.indexOf('<div class="card"')+1);return i>0?html.slice(0,i)+card+html.slice(i):html+card};
 </script>
+<!-- r10:sos -->
+<style>
+.sos-big{display:flex;align-items:center;gap:14px;width:100%;border:0;border-radius:20px;padding:16px 18px;background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;font:inherit;text-align:left;cursor:pointer;box-shadow:0 10px 26px -12px rgba(220,38,38,.7);margin-bottom:14px}
+.sos-big .ic{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.18);display:grid;place-items:center;font-size:1.4rem;flex:none}
+.sos-big b{font-size:1.15rem;display:block}.sos-big span{font-size:.85rem;opacity:.9}
+.sos-hd{background:#dc2626;color:#fff;border:0;border-radius:999px;font-weight:700;font-size:.8rem;padding:0 12px;height:36px;margin-right:6px;cursor:pointer}
+.sos-sheet textarea{width:100%;min-height:84px;font-size:16px}
+.sos-go{background:#dc2626!important;color:#fff!important;border-color:#dc2626!important;font-size:1.05rem;min-height:56px}
+.sos-live{border:2px solid #dc2626;border-radius:20px;padding:16px;margin-bottom:14px;background:rgba(220,38,38,.06)}
+.sos-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#dc2626;margin-right:6px;animation:sosP 1.2s infinite}
+@keyframes sosP{0%{box-shadow:0 0 0 0 rgba(220,38,38,.6)}70%{box-shadow:0 0 0 10px rgba(220,38,38,0)}100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}}
+.sos-banner{display:flex;gap:12px;align-items:center;background:#dc2626;color:#fff;border-radius:16px;padding:14px 16px;margin-bottom:14px;cursor:pointer;border:0;width:100%;font:inherit;text-align:left}
+.sos-banner b{display:block;font-size:1rem}
+.sos-msg{font-size:1.25rem;font-weight:700;line-height:1.35;padding:14px 16px;border-radius:14px;background:rgba(220,38,38,.08);border-left:4px solid #dc2626;margin:12px 0;word-break:break-word}
+#sos-map{height:260px;border-radius:16px;overflow:hidden;margin:10px 0;background:rgba(127,127,127,.12)}
+@media (prefers-reduced-motion:reduce){.sos-dot{animation:none}}
+</style>
+<script>
+/* ===== Kid Emergency button: confirm → optional details → "Skip — send now" / "Send"; live location to the parent for 30 min; never to the driver ===== */
+const SOS_SHARE_MS=30*60*1000,SOS_EVERY_MS=20000;
+let sosWatch=null,sosLast=0,sosStop=null,sosPoll=null;
+function sosParentName(k){const p=k&&Store.get('users',k.parentId);return kcFirst(p?.name)||'your parent'}
+function sosMine(){const k=myKidProfile();if(!k)return null;const u=me();return Store.all('events').filter(e=>e.type==='kid-sos'&&e.kidId===k.id&&e.by===u?.id&&e.status==='open'&&Date.now()-e.ts<SOS_SHARE_MS*2).sort((a,b)=>b.ts-a.ts)[0]||null}
+function sosAckFor(id){return Store.all('events').filter(e=>e.type==='sos-ack'&&e.sosId===id).sort((a,b)=>a.ts-b.ts)[0]||null}
+function sosGps(timeout){return new Promise(res=>{if(!navigator.geolocation)return res(null);let done=false;const t=setTimeout(()=>{if(!done){done=true;res(null)}},timeout||8000);
+  navigator.geolocation.getCurrentPosition(p=>{if(done)return;done=true;clearTimeout(t);res({lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),acc:Math.round(p.coords.accuracy||0),ts:Date.now()})},()=>{if(done)return;done=true;clearTimeout(t);res(null)},{enableHighAccuracy:true,timeout:timeout||8000,maximumAge:5000})})}
+function sosAsk(){const k=myKidProfile();if(!k)return toast('No child profile');buzz(30);const who=sosParentName(k);
+  modal(`<div class="sos-sheet"><h3 style="color:#dc2626">Emergency</h3><p class="small" style="margin:6px 0 12px">Send your location to <b>${h(who)}</b> right now?</p>
+   <button class="btn wide sos-go" id="sos-skip">Skip — send now</button>
+   <div class="field" style="margin-top:14px"><label for="sos-txt">Add details (optional)</label><textarea id="sos-txt" maxlength="280" placeholder="e.g. Car broke down, please fetch me"></textarea></div>
+   <div class="row" style="margin-top:4px"><button class="btn" id="sos-send">Send with message</button><button class="btn ghost" id="sos-no">Cancel</button></div>
+   <p class="tiny muted" style="margin-top:12px">In danger? Also call <a href="tel:10111">10111</a> or <a href="tel:112">112</a>.</p></div>`,m=>{
+   $('#sos-skip',m).onclick=()=>sosSend('');$('#sos-send',m).onclick=()=>{const t=($('#sos-txt',m).value||'').trim();if(!t)return toast('Type a message, or press Skip — send now');sosSend(t)};$('#sos-no',m).onclick=closeModal})}
+async function sosSend(msg){const k=myKidProfile();const u=me();if(!k||!u)return;closeModal();buzz([60,40,60]);toast('Sending…');
+  const id='sos'+uid();const gps=await sosGps(8000);const b=kidBookings(k)[0];
+  const ev={type:'kid-sos',sos:true,by:u.id,kidId:k.id,parentId:k.parentId,status:'open',message:msg||'',gps:gps||null,trail:gps?[gps]:[],noGps:!gps,ts:Date.now(),
+    text:`🚨 ${k.name} pressed EMERGENCY${msg?': "'+msg+'"':' (no message — sent in a hurry)'}`,...(b?{rideDriverId:b.driverId,routeId:b.routeId}:{})};
+  try{await Store.put('events',id,ev)}catch(e){return toast('Could not send. Call 10111 or your parent now.')}
+  const where=gps?` Location: https://maps.google.com/?q=${gps.lat},${gps.lng}`:' Location not available.';
+  const txt=`🚨 ${k.name} pressed EMERGENCY at ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}.${msg?' Message: "'+msg+'".':' No message — sent in a hurry.'}${where}`;
+  try{await notify(k.parentId,txt,'kid-sos','p-emergency')}catch(e){}
+  try{await notify('admin',txt,'kid-sos','a-safety')}catch(e){}
+  ls.set('enivel_sos_'+u.id,{id,until:Date.now()+SOS_SHARE_MS});sosShare(id);go('k-home');toast('Sent to '+sosParentName(k))}
+function sosShare(id){sosEnd(false);const u=me();if(!u||!navigator.geolocation)return;const until=(ls.get('enivel_sos_'+u.id)||{}).until||Date.now()+SOS_SHARE_MS;
+  const push=async(g,force)=>{if(!g)return;if(Date.now()>until)return sosEnd(true);if(!force&&Date.now()-sosLast<SOS_EVERY_MS)return;sosLast=Date.now();
+    const e=Store.get('events',id);if(!e||e.status!=='open')return sosEnd(false);const trail=[...(e.trail||[]),g].slice(-120);try{S.silent=true;await Store.patch('events',id,{gps:g,trail,noGps:false})}catch(err){}finally{S.silent=false}};
+  sosWatch=navigator.geolocation.watchPosition(p=>push({lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),acc:Math.round(p.coords.accuracy||0),ts:Date.now()}),()=>{},{enableHighAccuracy:true,maximumAge:10000});
+  sosPoll=setInterval(async()=>{if(Date.now()-sosLast>=SOS_EVERY_MS)push(await sosGps(8000),true)},SOS_EVERY_MS);
+  sosStop=setTimeout(()=>sosEnd(true),Math.max(0,until-Date.now()))}
+function sosEnd(clear){if(sosWatch!=null&&navigator.geolocation)navigator.geolocation.clearWatch(sosWatch);sosWatch=null;clearTimeout(sosStop);clearInterval(sosPoll);sosPoll=null;if(clear){const u=me();if(u)ls.set('enivel_sos_'+u.id,null)}}
+async function sosSafe(){const e=sosMine();if(!e)return;const k=myKidProfile();sosEnd(true);await Store.patch('events',e.id,{status:'safe',safeAt:Date.now()});try{await notify(k.parentId,`✅ ${k.name} says they are safe now.`,'kid-sos','p-emergency')}catch(x){}try{await notify('admin',`✅ ${k.name} marked their emergency as safe.`,'info','a-safety')}catch(x){}toast('Told '+sosParentName(k)+' you are safe')}
+function sosKidCard(){const k=myKidProfile();if(!k)return '';const e=sosMine();
+  if(!e)return `<button class="sos-big" onclick="sosAsk()"><span class="ic">🚨</span><span><b>Emergency</b><span>Sends your location to ${h(sosParentName(k))}</span></span></button>`;
+  const ack=sosAckFor(e.id);const sharing=sosWatch!=null;
+  return `<div class="sos-live"><b><span class="sos-dot"></span>Sent to ${h(sosParentName(k))} ✓</b><p class="small" style="margin:6px 0">${sharing?'Sharing your location (30 min).':e.gps?'Location sent.':'Location could not be found — your parent still got your alert.'}${e.message?` Message: “${h(e.message)}”`:''}</p>
+   ${ack?`<p class="small"><b>${h(kcFirst(userName(ack.by))||'Your parent')} has seen your alert.</b></p>`:'<p class="tiny muted">Waiting for them to see it…</p>'}
+   <div class="row" style="margin-top:10px"><button class="btn" onclick="sosSafe()">I'm safe now</button><a class="btn ghost" href="tel:10111">Call 10111</a></div></div>`}
+['k-home'].forEach(r=>{const prev=VIEWS[r];if(typeof prev!=='function')return;VIEWS[r]=function(){const html=prev.apply(this,arguments);if(!myKidProfile())return html;return sosKidCard()+html}});
+/* small red button in the header on every kid screen */
+const _sosRender=render;render=function(){const r=_sosRender.apply(this,arguments);try{if(isKidView()&&myKidProfile()){const top=$('.top');if(top&&!top.querySelector('.sos-hd')){const b=document.createElement('button');b.className='sos-hd';b.textContent='SOS';b.setAttribute('aria-label','Emergency');b.onclick=sosAsk;const sp=top.querySelector('.sp');sp?sp.after(b):top.appendChild(b)}}}catch(e){}return r};
+/* resume live sharing after a reload */
+setInterval(()=>{try{const u=me();if(!u||!isKidView())return;const st=ls.get('enivel_sos_'+u.id);if(st&&st.until>Date.now()&&sosWatch==null&&Store.get('events',st.id)?.status==='open')sosShare(st.id)}catch(e){}},5000);
+
+/* ---------- parent side ---------- */
+function sosOpenForParent(){const u=me();if(!u)return [];const ids=new Set(kidsOf(u.id).map(k=>k.id));return Store.all('events').filter(e=>e.type==='kid-sos'&&ids.has(e.kidId)&&Date.now()-e.ts<24*3600e3).sort((a,b)=>b.ts-a.ts)}
+function sosAgo(ts){const s=Math.max(0,Math.round((Date.now()-ts)/1000));return s<60?s+' s ago':s<3600?Math.round(s/60)+' min ago':Math.round(s/3600)+' h ago'}
+function sosBanner(){if(viewRole()!=='parent')return '';const e=sosOpenForParent().find(x=>x.status==='open');if(!e||S.route==='p-emergency')return '';const k=Store.get('kids',e.kidId);
+  return `<button class="sos-banner" onclick="go('p-emergency',{sosId:'${h(e.id)}'})"><span style="font-size:1.6rem">🚨</span><span><b>${h((k?.name||'Your child').toUpperCase())} PRESSED EMERGENCY</b><span class="small">${new Date(e.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${e.message?'“'+h(e.message.slice(0,60))+'”':'No message'} · tap to see location</span></span></button>`}
+const _sosRender2=render;render=function(){const r=_sosRender2.apply(this,arguments);try{const b=sosBanner();const m=$('#app main');if(b&&m&&!m.querySelector('.sos-banner'))m.insertAdjacentHTML('afterbegin',b)}catch(e){}return r};
+let sosMapObj=null;
+VIEWS['p-emergency']=()=>{const list=sosOpenForParent();const e=(S.sosId&&Store.get('events',S.sosId))||list[0];if(!e)return pageHead('Emergency','')+`<div class="card">${empty('No emergency alerts in the last 24 hours.')}</div>`;
+  const k=Store.get('kids',e.kidId);const ack=sosAckFor(e.id);const drv=e.rideDriverId&&Store.get('users',e.rideDriverId);const g=e.gps;
+  setTimeout(sosDrawMap,60);
+  return pageHead(e.status==='open'?'🚨 Emergency':'Emergency','')+`<div class="card">
+   <div class="row between"><b style="font-size:1.1rem">${h(k?.name||'Your child')} pressed Emergency</b><span class="pill tiny" style="${e.status==='open'?'background:#dc2626;color:#fff':''}">${e.status==='open'?'Open':'Safe ✓'}</span></div>
+   <p class="small muted">${new Date(e.ts).toLocaleString([],{weekday:'short',hour:'2-digit',minute:'2-digit'})} · ${sosAgo(e.ts)}</p>
+   <div class="sos-msg">${e.message?'“'+h(e.message)+'”':'No message — sent in a hurry'}</div>
+   ${g?`<div id="sos-map"></div><p class="small"><b>Location</b> · updated ${sosAgo(g.ts)} · accurate to ~${g.acc||'?'} m${(e.trail||[]).length>1?` · ${e.trail.length} points`:''}</p><a class="btn wide" style="margin-top:10px" target="_blank" rel="noopener" href="https://maps.google.com/?q=${g.lat},${g.lng}">Open in Google Maps</a>`:'<p class="small" style="margin-top:8px"><b>Location not available</b> — their phone could not get GPS. Call them now.</p>'}
+   <div class="grid g2" style="margin-top:10px"><a class="btn sos-go" href="tel:10111">Call 10111</a>${drv?.phone?`<a class="btn ghost" href="tel:${h(String(drv.phone).replace(/[^+\d]/g,''))}">Call driver</a>`:`<a class="btn ghost" href="tel:112">Call 112</a>`}</div>
+   ${ack?`<p class="small muted" style="margin-top:12px">You saw this ${sosAgo(ack.ts)}.</p>`:`<button class="btn wide" style="margin-top:12px" id="sos-ack" data-sos="${h(e.id)}">I've seen it — tell ${h(kcFirst(k?.name)||'them')}</button>`}
+   ${e.status==='safe'?`<p class="small" style="margin-top:10px"><b>${h(kcFirst(k?.name))} said they are safe</b> ${e.safeAt?sosAgo(e.safeAt):''}.</p>`:''}
+  </div>`+(list.length>1?`<div class="card" style="margin-top:12px"><b class="small">Earlier today</b>${list.filter(x=>x.id!==e.id).map(x=>`<div class="row between" style="margin-top:8px"><span class="small">${new Date(x.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${h(Store.get('kids',x.kidId)?.name||'')}</span><button class="btn sm ghost" data-sosgo="${h(x.id)}">Open</button></div>`).join('')}</div>`:'')};
+function sosDrawMap(){const el=document.getElementById('sos-map');if(!el||typeof L==='undefined')return;const e=(S.sosId&&Store.get('events',S.sosId))||sosOpenForParent()[0];const g=e?.gps;if(!g)return;
+  try{if(sosMapObj){try{sosMapObj.remove()}catch(x){}sosMapObj=null}const m=L.map(el,{zoomControl:true,attributionControl:true}).setView([g.lat,g.lng],16);sosMapObj=m;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(m);
+    const tr=(e.trail||[]).map(p=>[p.lat,p.lng]);if(tr.length>1)L.polyline(tr,{color:'#dc2626',weight:4,opacity:.7}).addTo(m);
+    if(g.acc)L.circle([g.lat,g.lng],{radius:g.acc,color:'#dc2626',weight:1,fillOpacity:.12}).addTo(m);L.circleMarker([g.lat,g.lng],{radius:9,color:'#fff',weight:3,fillColor:'#dc2626',fillOpacity:1}).addTo(m)}catch(x){console.warn('sos map',x)}}
+document.addEventListener('click',async ev=>{const a=ev.target.closest&&ev.target.closest('#sos-ack');if(a){a.disabled=true;const e=Store.get('events',a.dataset.sos);if(!e)return;const u=me();const k=Store.get('kids',e.kidId);
+    await Store.put('events','ack'+uid(),{type:'sos-ack',sosId:e.id,kidId:e.kidId,parentId:u.id,by:u.id,ts:Date.now()});const acc=k?.accountId||(typeof kidAccountOf==='function'?kidAccountOf(e.kidId)?.id:null);
+    if(acc)try{await notify(acc,`${kcFirst(u.name)} has seen your emergency alert.`,'kid-sos','k-home')}catch(x){}toast('Sent');render();return}
+  const o=ev.target.closest&&ev.target.closest('[data-sosgo]');if(o)go('p-emergency',{sosId:o.dataset.sosgo})});
+/* while an alert is open: refresh every 5 s */
+setInterval(()=>{try{if(!S.session||document.hidden)return;const open=viewRole()==='parent'?sosOpenForParent().some(e=>e.status==='open'):isKidView()&&!!sosMine();if(!open)return;if(S.cloud&&typeof cloudPull==='function')cloudPull(false).then(()=>{if(S.route==='p-emergency'&&!$('.overlay'))render()});else if(S.route==='p-emergency'&&!$('.overlay'))render()}catch(e){}},5000);
+</script>
+<!-- r10:fixes -->
+<style>
+/* thumb-friendly: every segment toggle and the search button reach 44 px */
+#app .seg button{min-height:44px}
+#app .btn.sm{min-height:44px}
+</style>
 
 </body></html>
