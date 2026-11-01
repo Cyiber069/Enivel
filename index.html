@@ -7104,5 +7104,19 @@ setInterval(()=>{try{if(!S.session||document.hidden)return;const open=viewRole()
 #app .seg button{min-height:44px}
 #app .btn.sm{min-height:44px}
 </style>
+<!-- r10:nosms -->
+<style>.twofa[data-v="sms"]{display:none!important}</style>
+<script>
+/* ===== SMS switched off (owner's choice): no phone codes anywhere; two-step uses the PIN ===== */
+const SMS_ON=false;
+const _nsOtp=otpModal;
+otpModal=function(phone,title,onOk){if(SMS_ON)return _nsOtp(phone,title,onOk);
+  if(/confirm your phone/i.test(String(title||''))){toast('SMS codes are off. Use a security PIN instead.');return enableTwoFa('pin')}
+  /* sign-up, sign-in second step and kid setup carry on without a text message; the phone is saved as not verified */
+  Promise.resolve(onOk()).then(()=>setTimeout(async()=>{try{const u=me();if(u&&u.phoneVerified)await Store.patch('users',u.id,{phoneVerified:false})}catch(e){}},1500))};
+const _nsTwoFa=twoFaPrompt;twoFaPrompt=function(){_nsTwoFa();setTimeout(()=>{const pin=document.querySelector('.twofa[data-v="pin"]');if(pin)pin.click()},30)};
+if(typeof admStatusRows==='function'){const _nsRows=admStatusRows;admStatusRows=function(){return _nsRows().map(r=>r[0]==='sms'?['sms','SMS codes',{st:'ok',v:'Switched off',fix:'Not used. Two-step sign-in uses a PIN.'}]:r)}}
+if(typeof OWN_GUIDES!=='undefined')OWN_GUIDES.sms={t:'SMS codes',why:'SMS is switched off by choice, so nothing in Enivel sends text messages. Sign-up doesn\'t ask for a phone code and two-step sign-in uses a 4-digit PIN.',steps:['Nothing to do.','To switch SMS on later: ask for it to be turned back on, then add BULKSMS_TOKEN to the Worker.']};
+</script>
 
 </body></html>
