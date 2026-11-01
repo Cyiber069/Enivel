@@ -7118,5 +7118,31 @@ const _nsTwoFa=twoFaPrompt;twoFaPrompt=function(){_nsTwoFa();setTimeout(()=>{con
 if(typeof admStatusRows==='function'){const _nsRows=admStatusRows;admStatusRows=function(){return _nsRows().map(r=>r[0]==='sms'?['sms','SMS codes',{st:'ok',v:'Switched off',fix:'Not used. Two-step sign-in uses a PIN.'}]:r)}}
 if(typeof OWN_GUIDES!=='undefined')OWN_GUIDES.sms={t:'SMS codes',why:'SMS is switched off by choice, so nothing in Enivel sends text messages. Sign-up doesn\'t ask for a phone code and two-step sign-in uses a 4-digit PIN.',steps:['Nothing to do.','To switch SMS on later: ask for it to be turned back on, then add BULKSMS_TOKEN to the Worker.']};
 </script>
+<!-- r10:status2 -->
+<style>
+.st2-h{display:flex;align-items:center;justify-content:space-between;margin:18px 4px 8px}
+.st2-h b{font-size:1rem}
+.st2-h .pill{font-size:.78rem}
+.st2-ok .adm-st{padding-top:10px;padding-bottom:10px}
+.st2-empty{padding:14px 4px;text-align:center}
+</style>
+<script>
+/* ===== System status: "Needs attention" and "Working" in separate sections; no "?" on working rows; SMS chip removed ===== */
+const _st2Row=admStatusRow;
+admStatusRow=function(row){let html=_st2Row(row);
+  html=html.replace(/<span class="adm-chip[^"]*">[✓✗] SMS<\/span>/g,'');
+  if(row[2]&&row[2].st==='ok')html=html.replace(/<button class="own-q"[^>]*>\?<\/button>/g,'');
+  return html};
+const _st2View=VIEWS['a-status'];
+VIEWS['a-status']=function(){const html=_st2View.apply(this,arguments);if(!S.admin)return html;
+  const cut=html.lastIndexOf('<div class="card">');if(cut<0)return html;
+  const rows=admStatusRows();const rank={bad:0,warn:1,wait:2};
+  const todo=rows.filter(r=>r[2].st!=='ok').sort((a,b)=>(rank[a[2].st]??3)-(rank[b[2].st]??3));
+  const good=rows.filter(r=>r[2].st==='ok');
+  return html.slice(0,cut)+
+   `<div class="st2-h"><b>Needs attention</b><span class="pill ${todo.length?'':'live'}">${todo.length}</span></div>`+
+   `<div class="card">${todo.length?todo.map(admStatusRow).join(''):'<div class="st2-empty small muted">Nothing to fix 🎉</div>'}</div>`+
+   (good.length?`<div class="st2-h"><b>Working</b><span class="pill live">${good.length}</span></div><div class="card st2-ok">${good.map(admStatusRow).join('')}</div>`:'')};
+</script>
 
 </body></html>
