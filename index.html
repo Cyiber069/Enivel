@@ -7144,5 +7144,1062 @@ VIEWS['a-status']=function(){const html=_st2View.apply(this,arguments);if(!S.adm
    `<div class="card">${todo.length?todo.map(admStatusRow).join(''):'<div class="st2-empty small muted">Nothing to fix 🎉</div>'}</div>`+
    (good.length?`<div class="st2-h"><b>Working</b><span class="pill live">${good.length}</span></div><div class="card st2-ok">${good.map(admStatusRow).join('')}</div>`:'')};
 </script>
+<!-- r10:maps2 -->
+<style>
+/* ===== r10-maps2: Uber-style maps (CARTO light/dark), road turns, trip progress, Photon addresses, seat filter ===== */
+.rmap{min-height:260px;border-radius:18px;border:1px solid var(--line);background:#f2f2f0;isolation:isolate}
+:root[data-theme="dark"] .rmap{background:#0b0b0b}
+.rmap .leaflet-tile-pane,:root[data-theme="dark"] .rmap .leaflet-tile-pane{filter:none!important}
+.leaflet-container{background:#f2f2f0}
+:root[data-theme="dark"] .leaflet-container{background:#0b0b0b}
+.leaflet-control-attribution{font-size:9px!important;background:color-mix(in srgb,var(--bg) 72%,transparent)!important;color:var(--fg3)!important;border-radius:8px 0 0 0;padding:1px 6px!important}
+.leaflet-control-attribution a{text-decoration:none}
+.leaflet-bar{border-radius:999px!important;box-shadow:0 4px 14px rgba(0,0,0,.14)!important;margin:10px!important;border:0!important;overflow:hidden}
+.leaflet-bar a{width:36px!important;height:36px!important;line-height:36px!important;border:0!important;background:var(--bg)!important;color:var(--fg)!important;font-weight:600!important;font-size:18px}
+@media(pointer:coarse){.leaflet-control-zoom{display:none}}
+.mapctl{gap:8px;top:auto;bottom:12px;left:10px;right:auto;flex-direction:row}
+.m2pin.flip .lb{left:auto;right:-14px}
+.m2pin.low .lb{bottom:auto;top:11px}
+.mapctl button{width:40px;height:40px;border-radius:50%;border:0;background:var(--bg);color:var(--fg);box-shadow:0 4px 14px rgba(0,0,0,.16)}
+.mapctl button.on{background:var(--ink);color:var(--ink-fg)}
+.mapchip{border:0;box-shadow:0 4px 14px rgba(0,0,0,.14);font-weight:700;color:var(--fg)}
+/* pins: a dot on the exact spot, a labelled pill above it */
+.m2pin{position:relative;width:0;height:0}
+.m2pin .pt{position:absolute;left:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:var(--acc);border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.4);box-sizing:border-box}
+.m2pin .lb{position:absolute;left:-14px;bottom:11px;display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px 0 5px;border-radius:999px;background:var(--bg);color:var(--fg);font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,.2);border:1px solid var(--line)}
+.m2pin .d{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;color:#fff;flex:none;background:var(--acc)}
+.m2pin .d svg{width:11px;height:11px}
+.m2pin.school .pt,.m2pin.school .d{background:var(--acc3)}.m2pin.stop .pt,.m2pin.stop .d{background:var(--acc2)}
+.m2pin .t{max-width:130px;overflow:hidden;text-overflow:ellipsis}
+/* the car */
+.m2car{width:40px;height:40px;display:grid;place-items:center;color:var(--ink);filter:drop-shadow(0 3px 6px rgba(0,0,0,.35))}
+:root[data-theme="dark"] .m2car{filter:drop-shadow(0 0 4px rgba(255,255,255,.35))}
+.m2car i{display:block;width:30px;height:30px;transition:transform .5s ease}
+.m2car i svg{width:30px;height:30px;display:block}
+/* next-turn card */
+.m2nav{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:14px;box-shadow:var(--shadow)}
+.m2nav .m2turn{display:flex;gap:12px;align-items:center}
+.m2nav .m2ic{width:52px;height:52px;border-radius:14px;background:var(--ink);color:var(--ink-fg);display:grid;place-items:center;flex:none}
+.m2nav .m2ic svg{width:30px;height:30px}
+.m2nav .m2do{font-size:1.05rem;font-weight:700;line-height:1.2}
+.m2nav .m2in{font-size:1.35rem;font-weight:800;letter-spacing:-.02em;margin-top:2px}
+.m2nav .m2sub{font-size:.8rem;color:var(--fg3)}
+.m2nav .m2eta{margin-top:10px;font-size:.92rem;font-weight:600}
+.m2nav .m2off{color:var(--warn)}
+.m2nav .m2meta{display:flex;justify-content:space-between;font-size:.75rem;color:var(--fg3);margin-top:5px}
+.m2nav.off .m2ic{background:var(--bg3);color:var(--fg2)}
+.m2nav.off b{font-size:.95rem}
+.tripmode .m2nav{background:#161616;color:#f5f5f3;border-color:#262626;box-shadow:none;margin:12px 0 0}
+.tripmode .m2nav .m2ic{background:#f5f5f3;color:#0a0a0a}
+.tripmode .m2nav .m2sub,.tripmode .m2nav .m2meta{color:#9a9a95}
+.tripmode .m2nav.big .m2do{font-size:1.25rem}.tripmode .m2nav.big .m2in{font-size:1.8rem}
+.tripmode .m2bar{background:#2a2a2a}
+/* progress bar */
+.m2bar{position:relative;height:10px;border-radius:5px;background:var(--bg3);overflow:hidden;margin-top:10px}
+.m2bar i{display:block;height:100%;border-radius:5px;background:var(--grad);transition:width .6s ease}
+.m2prog .m2pct{font-size:1.9rem;font-weight:800;letter-spacing:-.03em;line-height:1}
+.m2prog .m2eta{text-align:right;font-weight:700;font-size:.95rem}
+.m2prog .m2eta small{display:block;font-weight:500;color:var(--fg3);font-size:.75rem}
+/* seats filter */
+.m2need{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+.m2need .lab{font-size:.85rem;font-weight:600;color:var(--fg2)}
+.m2nc{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:5px 12px;font-weight:700;font-size:.85rem;cursor:pointer;min-width:36px}
+.m2need{gap:6px}
+.addrok svg{width:14px;height:14px}
+.m2nc.on{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.m2seats{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.m2chip{display:inline-flex;align-items:center;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--bg2);color:var(--fg2);border:1px solid var(--line)}
+.m2chip.fit{background:color-mix(in srgb,var(--live) 14%,transparent);color:var(--live);border-color:transparent}
+/* address suggestions: two lines */
+.sug .m2a b{display:block;font-size:.9rem}.sug .m2a small{display:block;color:var(--fg3);font-size:.75rem;margin-top:1px}
+.sug .m2a .pc{font-weight:700;color:var(--fg2)}
+</style>
+<script>
+/* ===== r10-maps2 ===== */
+const M2={tiles:[],plans:new Map(),nav:{},sug:new Map(),rerouteMs:30000,offM:120,
+  arrow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V5"/><path d="M6 11l6-6 6 6"/></svg>',
+  turnR:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20v-9a4 4 0 0 1 4-4h8"/><path d="M15 3l4 4-4 4"/></svg>',
+  uturn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20V9a4 4 0 0 0-8 0v11"/><path d="M4 16l4 4 4-4"/></svg>',
+  round:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="5"/><path d="M12 8V2"/><path d="M8 5l4-3 4 3"/></svg>',
+  car:'<svg viewBox="0 0 32 32"><path d="M16 3c-3 0-6 1.2-6 4v16c0 2.4 2.6 4 6 4s6-1.6 6-4V7c0-2.8-3-4-6-4z" fill="currentColor"/><path d="M11 10c1.4-1.2 8.6-1.2 10 0l-1 4.5H12z" fill="#7fd1ff"/><path d="M11.4 22c1.8.9 7.4.9 9.2 0l.8 2.5c-2.6 1.2-8.2 1.2-10.8 0z" fill="#ff6b6b"/><circle cx="12.5" cy="6.5" r="1.2" fill="#ffe28a"/><circle cx="19.5" cy="6.5" r="1.2" fill="#ffe28a"/></svg>'};
+function m2Theme(){return (typeof isDark==='function'?isDark():S.theme==='dark')?'dark':'light'}
+function m2TileUrl(theme){return `https://{s}.basemaps.cartocdn.com/${(theme||m2Theme())==='dark'?'dark_all':'light_all'}/{z}/{x}/{y}{r}.png`}
+/* --- 1. every OpenStreetMap tile layer in the app becomes a CARTO layer for the current theme --- */
+if(typeof L!=='undefined'&&L.tileLayer&&!L.tileLayer._m2){
+  const _tl=L.tileLayer;
+  const wrapped=function(url,opts){if(typeof url==='string'&&/tile\.openstreetmap\.org/.test(url)){const o={...(opts||{}),subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap © CARTO'};const lay=_tl.call(L,m2TileUrl(),o);lay._m2carto=true;M2.tiles.push(lay);return lay}return _tl.apply(L,arguments)};
+  Object.assign(wrapped,_tl);wrapped._m2=true;L.tileLayer=wrapped;
+  const _lm=L.map;const wm=function(){const m=_lm.apply(L,arguments);try{if(m.attributionControl)m.attributionControl.setPrefix('')}catch(e){}return m};Object.assign(wm,_lm);L.map=wm;
+}
+function mapTiles(map){if(typeof L==='undefined'||!map)return null;const lay=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{});lay.addTo(map);return lay}
+function m2Retheme(){const url=m2TileUrl();M2.tiles=M2.tiles.filter(l=>l&&l._map);M2.tiles.forEach(l=>{if(l._url!==url)l.setUrl(url)});try{if(typeof MAPS==='object')for(const k in MAPS)m2Restyle(MAPS[k])}catch(e){}}
+const _m2SetTheme=setTheme;setTheme=function(){const r=_m2SetTheme.apply(this,arguments);try{m2Retheme()}catch(e){}return r};
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{try{m2Retheme()}catch(e){}})}catch(e){}
+/* --- 2. OSRM road route with turn-by-turn steps --- */
+function m2Cum(coords){const cum=[0];for(let i=1;i<coords.length;i++)cum.push(cum[i-1]+(distM({lat:coords[i-1][0],lng:coords[i-1][1]},{lat:coords[i][0],lng:coords[i][1]})||0));return cum}
+function m2Parse(rt){const coords=(rt.geometry?.coordinates||[]).map(([lng,lat])=>[lat,lng]);const steps=[],legs=[];let along=0;
+  (rt.legs||[]).forEach((leg,li)=>{const at=along;(leg.steps||[]).forEach(s=>{const m=s.maneuver||{};steps.push({type:m.type||'',modifier:m.modifier||'',name:s.name||'',distance:+s.distance||0,duration:+s.duration||0,at:along,leg:li,exit:m.exit,loc:m.location?[m.location[1],m.location[0]]:null});along+=(+s.distance||0)});legs.push({at,distance:+leg.distance||0,duration:+leg.duration||0})});
+  const cum=m2Cum(coords);const total=cum[cum.length-1]||0;const distance=+rt.distance||total;return {coords,km:distance/1000,min:Math.round((+rt.duration||0)/60),distance,duration:+rt.duration||0,steps,legs,cum,total,scale:distance?total/distance:1}}
+roadRoute=async function(pts){try{if(!pts||pts.length<2)return null;const c=pts.map(p=>(+p.lng).toFixed(6)+','+(+p.lat).toFixed(6)).join(';');const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${c}?overview=full&geometries=geojson&steps=true&annotations=false`);if(!r.ok)return null;const j=await r.json();const rt=j.routes?.[0];if(!rt)return null;return m2Parse(rt)}catch(e){return null}};
+function m2Snap(plan,p){const c=plan?.coords,cum=plan?.cum;if(!c||c.length<2||!p||p.lat==null)return null;const cosL=Math.cos(p.lat*Math.PI/180);const X=q=>[(q[1]-p.lng)*cosL*111320,(q[0]-p.lat)*110540];let best=null;
+  for(let i=0;i<c.length-1;i++){const a=X(c[i]),b=X(c[i+1]);const dx=b[0]-a[0],dy=b[1]-a[1];const L2=dx*dx+dy*dy;let t=L2?-(a[0]*dx+a[1]*dy)/L2:0;t=Math.max(0,Math.min(1,t));const d=Math.hypot(a[0]+t*dx,a[1]+t*dy);if(!best||d<best.off)best={off:d,idx:i,t,along:cum[i]+t*(cum[i+1]-cum[i]),pt:[c[i][0]+t*(c[i+1][0]-c[i][0]),c[i][1]+t*(c[i+1][1]-c[i][1])]}}
+  return best}
+function m2NextTurn(plan,along){const st=plan.steps,f=plan.scale;if(!st.length)return {type:'arrive',name:'',dist:Math.max(0,plan.total-along)};let k=0;for(let i=0;i<st.length;i++){if(st[i].at*f<=along+1)k=i;else break}
+  let nx=null;for(let i=k+1;i<st.length;i++){if(st[i].type!=='depart'){nx=st[i];break}}const cur=st[k];
+  if(!nx)return {type:'arrive',name:cur.name,dist:Math.max(0,plan.total-along),leg:cur.leg};
+  return {type:nx.type,modifier:nx.modifier,name:nx.name,dist:Math.max(0,nx.at*f-along),exit:nx.exit,leg:nx.leg,curName:cur.name}}
+function m2Fmt(m){if(m==null||isNaN(m))return '';return m<950?Math.max(10,Math.round(m/10)*10)+' m':(m/1000).toFixed(1)+' km'}
+function m2TurnText(t){const mod=t.modifier||'';const dir=/left/.test(mod)?'left':/right/.test(mod)?'right':'';const slight=/slight/.test(mod),sharp=/sharp/.test(mod);
+  switch(t.type){case 'arrive':return 'Arrive';case 'depart':return 'Head out';case 'roundabout':case 'rotary':case 'roundabout turn':case 'exit roundabout':case 'exit rotary':return 'Roundabout'+(t.exit?', take exit '+t.exit:'');case 'merge':return 'Merge '+(dir||'ahead');case 'on ramp':return 'Take the on-ramp';case 'off ramp':return 'Take the exit';case 'fork':return 'Keep '+(dir||'ahead');case 'continue':case 'new name':case 'notification':return mod==='uturn'?'Make a U-turn':'Continue straight';
+    default:if(mod==='uturn')return 'Make a U-turn';if(!dir||mod==='straight')return 'Continue straight';return (slight?'Slight ':sharp?'Sharp ':'Turn ')+dir}}
+function m2Arrow(t){const mod=t.modifier||'';if(t.type==='arrive')return ICON.pin;if(/roundabout|rotary/.test(t.type||''))return M2.round;if(mod==='uturn')return M2.uturn;const left=/left/.test(mod);
+  if(/^(left|right)$/.test(mod)||/sharp/.test(mod))return left?M2.turnR.replace('<svg ','<svg style="transform:scaleX(-1)" '):M2.turnR;
+  if(/slight/.test(mod))return M2.arrow.replace('<svg ',`<svg style="transform:rotate(${left?-40:40}deg)" `);return M2.arrow}
+/* plans (pickup → school) cached by coordinates; fetched in the background, the view re-renders when ready */
+function m2PlanKey(pts){return pts.map(p=>(+p.lat).toFixed(5)+','+(+p.lng).toFixed(5)).join(';')}
+function m2Rerender(){try{const a=document.activeElement;const typing=a&&a.closest&&a.closest('#app')&&/INPUT|TEXTAREA|SELECT/.test(a.tagName);if(typing||(typeof FORM_ROUTES!=='undefined'&&FORM_ROUTES.includes(S.route)))return (typeof cloudRender==='function'?cloudRender:render)();render()}catch(e){}}
+function m2Plan(pts){if(!pts||pts.length<2||pts.some(p=>!p||p.lat==null))return null;const key=m2PlanKey(pts);const e=M2.plans.get(key);if(e?.plan)return e.plan;if(e&&(e.busy||(e.failAt&&Date.now()-e.failAt<60000)))return null;const ent={busy:true,failAt:0};M2.plans.set(key,ent);
+  roadRoute(pts).then(pl=>{ent.busy=false;if(pl){ent.plan=pl;m2Rerender()}else ent.failAt=Date.now()}).catch(()=>{ent.busy=false;ent.failAt=Date.now()});return null}
+/* --- 3. progress along the road, not as the crow flies --- */
+const _m2TripProgress=tripProgress;
+tripProgress=function(b,k){const base=_m2TripProgress(b,k);if(!base)return base;try{const r=routeOf(b.routeId);const live=r.live;const st=kidStatus(k);const pu=st.today.find(e=>e.type==='pickup');const start=pu?.geo?.lat?pu.geo:(k.geo||null);const parent=Store.get('users',k.parentId);const end=b.toGeo||k.schoolGeo||parent?.journey?.dropoffGeo||r.schoolGeo;
+  const plan=m2Plan([start,end]);if(!plan||!plan.total)return {...base,road:false};const sn=m2Snap(plan,{lat:+live.lat,lng:+live.lng});if(!sn||sn.off>400)return {...base,road:false,offM:sn?.off};
+  const remain=Math.max(0,plan.total-sn.along);const pct=Math.max(0,Math.min(1,sn.along/plan.total));const speed=plan.distance&&plan.duration?plan.distance/plan.duration:25/3.6;
+  return {...base,pct,remainKm:remain/1000,etaMin:Math.max(1,Math.round(remain/speed/60)),road:true,offM:sn.off,totalKm:plan.total/1000,plan}}catch(e){console.warn('m2 progress',e);return base}};
+function m2ProgCard(pr,label,live){const pct=pr?Math.round(pr.pct*100):0;
+  return `<div class="card m2prog"><div class="row between" style="align-items:flex-start"><div><div class="eyebrow">Trip progress</div><b class="m2pct">${pr?pct+'%':'—'}</b></div><div class="m2eta">${pr?`${pr.remainKm.toFixed(1)} km · ~${pr.etaMin} min<small>to ${h(label)}</small>`:`<small>Waiting for driver location</small>`}</div></div>
+  <div class="m2bar"><i style="width:${pct}%"></i></div>
+  <div class="tiny muted" style="margin-top:6px">${pr?(pr.road?'Distance and time along the road route':'Straight-line estimate · road route not available right now')+(live?.ts?' · updated '+fmtT(live.ts):''):(live?.active?'Driver has location sharing off.':'Driver has not started the trip.')}</div></div>`}
+const _m2PTrack=VIEWS['p-track'];VIEWS['p-track']=function(){let html=_m2PTrack.apply(this,arguments);try{const k=Store.get('kids',S.trackKid);const b=k&&bookingOf(k);if(!b||!kidStatus(k).onboard)return html;const r=routeOf(b.routeId);if(!r)return html;const pr=tripProgress(b,k);
+  const re=/<div class="card"><div class="row between"><b>(?:\d+% of the way|Waiting for driver location)<\/b>[\s\S]*?<div class="tiny muted" style="margin-top:6px">[\s\S]*?<\/div><\/div>/;const card=m2ProgCard(pr,k.school||r.schools||'school',r.live);
+  html=re.test(html)?html.replace(re,card):html.replace('<div class="stack"><div data-mount="rmap"',card+'<div class="stack"><div data-mount="rmap"')}catch(e){console.warn('m2 track',e)}return html};
+/* --- driver navigation: route from the live position through the remaining stops --- */
+function m2NavTargets(routeId){const r=routeOf(routeId);if(!r)return [];const ns=nextStop(routeId);if(!ns)return [];const live=r.live||{};const pts=[];const bs=activeBookings(b=>b.routeId===routeId);const schoolOf=()=>bs.map(b=>Store.get('kids',b.kidId)).find(k=>k?.schoolGeo)?.schoolGeo||r.schoolGeo||null;
+  if(ns.kind==='pickup'){if(ns.k.geo)pts.push({lat:+ns.k.geo.lat,lng:+ns.k.geo.lng,label:ns.k.name+"'s pickup",kind:'pickup',bid:ns.b.id});
+    const rest=[];for(const b of bs){if(b.id===ns.b.id)continue;const k=Store.get('kids',b.kidId);if(!k||!k.geo||isAbsent(k))continue;const st=kidStatus(k);if(st.onboard||st.today.some(e=>e.type==='dropoff'))continue;rest.push({lat:+k.geo.lat,lng:+k.geo.lng,label:k.name+"'s pickup",kind:'pickup',bid:b.id})}
+    let cur=pts[0]||(live.lat!=null?{lat:+live.lat,lng:+live.lng}:null);while(rest.length&&pts.length<7){let bi=0;if(cur){let bd=Infinity;rest.forEach((p,i)=>{const d=distM(cur,p);if(d<bd){bd=d;bi=i}})}const n=rest.splice(bi,1)[0];pts.push(n);cur=n}
+    const sg=schoolOf();if(sg)pts.push({lat:+sg.lat,lng:+sg.lng,label:ns.k.school||r.schools||'School',kind:'school'})}
+  else{const end=ns.k.schoolGeo||r.schoolGeo;if(end)pts.push({lat:+end.lat,lng:+end.lng,label:ns.k.school||r.schools||'School',kind:'school'})}
+  return pts.filter(p=>!isNaN(p.lat)&&!isNaN(p.lng)).slice(0,8)}
+function m2NavFetch(N,pos,targets){N.busy=true;const sig=N.sig;roadRoute([pos,...targets]).then(pl=>{N.busy=false;if(N.sig!==sig)return;N.planAt=Date.now();if(pl){N.plan=pl;N.from=pos;N.failAt=0;N.snap=m2Snap(pl,pos);m2Rerender()}else N.failAt=Date.now()}).catch(()=>{N.busy=false;N.failAt=Date.now()})}
+function m2Nav(routeId){const r=routeOf(routeId);const live=r?.live;if(!live?.active||!live.gps||live.lat==null)return null;const pos={lat:+live.lat,lng:+live.lng};const targets=m2NavTargets(routeId);if(!targets.length)return null;const sig=targets.map(t=>t.lat.toFixed(5)+','+t.lng.toFixed(5)).join(';');
+  let N=M2.nav[routeId];if(!N||N.sig!==sig){const covered=N?.plan&&N.snap?N.coveredBefore+Math.min(N.snap.along,N.plan.total):0;N=M2.nav[routeId]={sig,plan:null,coveredBefore:covered,off:0,busy:false,planAt:0,failAt:0,lastTs:0,rerouted:N?.rerouted||0}}
+  N.targets=targets;N.pos=pos;
+  if(N.plan){const sn=m2Snap(N.plan,pos);N.snap=sn;const ts=live.ts||0;if(ts!==N.lastTs){N.lastTs=ts;if(sn&&sn.off>M2.offM)N.off++;else N.off=0;
+      if(N.off>=2&&Date.now()-N.planAt>=M2.rerouteMs){N.coveredBefore+=sn?Math.min(sn.along,N.plan.total):0;N.plan=null;N.snap=null;N.off=0;N.rerouted++}}}
+  if(!N.plan&&!N.busy&&(!N.failAt||Date.now()-N.failAt>30000))m2NavFetch(N,pos,targets);
+  return N}
+function m2NavInfo(N){const plan=N.plan;const sn=N.snap||m2Snap(plan,N.pos);if(!sn)return null;const along=sn.along;const remain=Math.max(0,plan.total-along);const turn=m2NextTurn(plan,along);
+  let li=0;for(let i=0;i<plan.legs.length;i++){if(plan.legs[i].at*plan.scale<=along+1)li=i}const leg=plan.legs[li]||{at:0,distance:plan.distance};const stopEnd=(leg.at+leg.distance)*plan.scale;const toStop=Math.max(0,stopEnd-along);const speed=plan.distance&&plan.duration?plan.distance/plan.duration:25/3.6;
+  const stop=N.targets[li]||N.targets[N.targets.length-1];const covered=N.coveredBefore+along;const tripTotal=N.coveredBefore+plan.total;
+  return {along,remain,turn,toStop,etaMin:Math.max(1,Math.round(toStop/speed/60)),stop,pct:tripTotal?Math.max(0,Math.min(100,Math.round(100*covered/tripTotal))):0,off:sn.off,remainEtaMin:Math.max(1,Math.round(remain/speed/60))}}
+function m2TurnLine(turn,stop){const t=m2TurnText(turn);if(turn.type==='arrive')return t+' · '+h(stop?.label||'next stop');if(/^(Continue|Head out)/.test(t))return turn.name?t.replace('straight','')+' on '+h(turn.name):t;return turn.name?t+' onto '+h(turn.name):t}
+function m2NavCard(routeId,big){try{const r=routeOf(routeId);const live=r?.live||{};if(!live.active)return '';const cls='m2nav'+(big?' big':'');
+  if(!live.gps||live.lat==null)return `<div class="${cls} off"><div class="m2turn"><div class="m2ic">${ICON.pin}</div><div class="grow"><b>Turn on location for turn-by-turn</b><div class="m2sub">Next turn, distance and time to each stop show once GPS is on.</div></div></div></div>`;
+  const N=m2Nav(routeId);if(!N)return '';
+  if(!N.plan){const t=N.targets[0];const d=distM(live,t);return `<div class="${cls} off"><div class="m2turn"><div class="m2ic">${ICON.car}</div><div class="grow"><b>${N.busy?'Finding the road route…':'Road routing is not available right now'}</b><div class="m2sub">${h(t.label)} · ${m2Fmt(d)} in a straight line${N.busy?'':' · will retry'}</div></div></div></div>`}
+  const I=m2NavInfo(N);if(!I)return '';
+  return `<div class="${cls}" data-pct="${I.pct}"><div class="m2turn"><div class="m2ic">${m2Arrow(I.turn)}</div><div class="grow"><div class="m2do">${m2TurnLine(I.turn,I.stop)}</div><div class="m2in">${I.turn.type==='arrive'?'in '+m2Fmt(I.turn.dist):'in '+m2Fmt(I.turn.dist)}</div></div></div>
+  <div class="m2eta">${(I.toStop/1000).toFixed(1)} km · ~${I.etaMin} min to ${h(I.stop?.label||'next stop')}${I.off>M2.offM?' · <span class="m2off">off route, finding a new way</span>':''}</div>
+  <div class="m2bar"><i style="width:${I.pct}%"></i></div><div class="m2meta"><span>${I.pct}% of the trip done</span><span>${(I.remain/1000).toFixed(1)} km · ~${I.remainEtaMin} min left${N.rerouted?' · re-routed':''}</span></div></div>`}catch(e){console.warn('m2 nav',e);return ''}}
+const _m2DTrip=VIEWS['d-trip'];VIEWS['d-trip']=function(){let html=_m2DTrip.apply(this,arguments);try{const r=routeOf(S.tripRoute);if(!r||!r.live?.active)return html;const card=m2NavCard(r.id,false);if(!card)return html;const mk='<div class="grid g2"><div class="stack">';const i=html.indexOf(mk);if(i>=0)html=html.slice(0,i)+card+html.slice(i)}catch(e){console.warn('m2 dtrip',e)}return html};
+const _m2Draw=drawTripMode;drawTripMode=function(){const res=_m2Draw.apply(this,arguments);try{const d=document.querySelector('.tripmode');const rid=S.tripModeRoute;if(d&&rid){d.querySelector('.m2nav')?.remove();const card=m2NavCard(rid,true);const next=d.querySelector('.next');if(card&&next)next.insertAdjacentHTML('beforebegin',card)}}catch(e){console.warn('m2 tripmode',e)}return res};
+/* --- 4. map polish: pills, rotated car with smooth movement, themed route line --- */
+function m2Css(n,fb){try{return getComputedStyle(document.documentElement).getPropertyValue(n).trim()||fb}catch(e){return fb}}
+function m2Bearing(a,b){const toR=x=>x*Math.PI/180,toD=x=>x*180/Math.PI;const y=Math.sin(toR(b.lng-a.lng))*Math.cos(toR(b.lat));const x=Math.cos(toR(a.lat))*Math.sin(toR(b.lat))-Math.sin(toR(a.lat))*Math.cos(toR(b.lat))*Math.cos(toR(b.lng-a.lng));return (toD(Math.atan2(y,x))+360)%360}
+function m2Rotate(M){try{const el=M.car?.getElement?.();const i=el&&el.querySelector('.m2car i');if(i)i.style.transform=`rotate(${Math.round(M.m2bearing||0)}deg)`}catch(e){}}
+function m2Tween(M,from,to){if(M.m2anim)cancelAnimationFrame(M.m2anim);const t0=performance.now(),dur=900;const step=now=>{const k=Math.min(1,(now-t0)/dur);const e=k<.5?2*k*k:-1+(4-2*k)*k;M.car.setLatLng([from.lat+(to.lat-from.lat)*e,from.lng+(to.lng-from.lng)*e]);if(k<1)M.m2anim=requestAnimationFrame(step);else M.m2anim=null};M.car.setLatLng([from.lat,from.lng]);M.m2anim=requestAnimationFrame(step)}
+function m2Restyle(M){try{if(!M?.route)return;const acc=m2Css('--acc','#6d5dfc'),bg=m2Css('--bg','#fff');M.route.eachLayer(l=>{if(!l.setStyle)return;if((l.options.weight||0)>=9)l.setStyle({color:bg,opacity:.95});else l.setStyle({color:acc,opacity:.95})})}catch(e){}}
+function m2Pins(M){if(!M?.pins)return;if(!M.m2flipOn){M.m2flipOn=true;M.map.on('moveend zoomend',()=>m2Flip(M))}if(M.m2pinSig===M.sig){m2Flip(M);return}M.m2pinSig=M.sig;const pts=M.pts||[];let i=0;M.pins.eachLayer(mk=>{const p=pts[i++];if(!p||!mk.setIcon)return;try{mk.unbindTooltip&&mk.unbindTooltip()}catch(e){}const ic=p.kind==='home'?ICON.home:p.kind==='school'?ICON.school:ICON.pin;mk.setIcon(L.divIcon({className:'',html:`<div class="m2pin ${h(p.kind||'')}"><i class="pt"></i><span class="lb"><span class="d">${ic}</span><span class="t">${h(p.label||'')}</span></span></div>`,iconSize:[0,0],iconAnchor:[0,0]}))});setTimeout(()=>m2Flip(M),60)}
+const M2_FIT={paddingTopLeft:[28,90],paddingBottomRight:[28,66]};
+function m2Flip(M){try{if(!M?.pins||!M.box?.isConnected)return;const w=M.box.clientWidth||1;M.pins.eachLayer(mk=>{const el=mk.getElement&&mk.getElement();const d=el&&el.querySelector('.m2pin');if(!d)return;const pt=M.map.latLngToContainerPoint(mk.getLatLng());d.classList.toggle('flip',pt.x>w*.58);d.classList.toggle('low',pt.y<78)})}catch(e){}}
+fitMap=function(M){if(!M.box.isConnected||M.box.clientWidth<140||M.box.clientHeight<90){M.needFit=true;return}M.map.invalidateSize();M.needFit=false;const all=(M.pts||[]).map(p=>[p.lat,p.lng]).concat(M.car?[[M.car.getLatLng().lat,M.car.getLatLng().lng]]:[]);if(all.length>1)M.map.fitBounds(all,M2_FIT);else if(all.length)M.map.setView(all[0],15);else M.map.setView([-26.2041,28.0473],11)};
+function m2DrawNav(M,routeId){const N=M2.nav[routeId];if(!N?.plan){M.m2planRef=null;return}if(M.m2planRef===N.plan&&M.m2planSig===M.sig)return;M.m2planRef=N.plan;M.m2planSig=M.sig;M.route.clearLayers();L.polyline(N.plan.coords,{color:m2Css('--bg','#fff'),weight:9,opacity:.95}).addTo(M.route);L.polyline(N.plan.coords,{color:m2Css('--acc','#6d5dfc'),weight:5,opacity:.95}).addTo(M.route);const chip=M.box.querySelector('.mapchip');if(chip)chip.textContent=`${N.plan.km.toFixed(1)} km · about ${N.plan.min} min`;if(!M.m2fitted){M.m2fitted=true;try{M.map.fitBounds(N.plan.coords,M2_FIT)}catch(e){}}}
+function m2Polish(M,car,mode,routeId){m2Pins(M);m2Restyle(M);
+  if(M.car){if(!M.car._m2){M.car.setIcon(L.divIcon({className:'',html:`<div class="m2car"><i>${M2.car}</i></div>`,iconSize:[40,40],iconAnchor:[20,20]}));M.car._m2=true;M.m2pos=car}
+    else if(car&&M.m2pos&&(M.m2pos.lat!==car.lat||M.m2pos.lng!==car.lng)){const from=M.m2pos;if(distM(from,car)>3)M.m2bearing=m2Bearing(from,car);m2Tween(M,from,car)}
+    M.m2pos=car;m2Rotate(M)}else{M.m2pos=null}
+  if(mode==='driver'&&routeId)m2DrawNav(M,routeId);
+  M2.tiles.forEach(l=>{if(l._map===M.map&&l._url!==m2TileUrl())l.setUrl(m2TileUrl())})}
+const _m2Rmap=MOUNT.rmap;MOUNT.rmap=async function(el){const mode=el.dataset.mode,rid=el.dataset.route||'';const key=[mode,rid,el.dataset.kid||''].join(':');const r=routeOf(rid);const live=r?.live;const car=live?.gps&&live.active&&live.lat!=null?{lat:+live.lat,lng:+live.lng}:null;
+  const res=await _m2Rmap.call(this,el);try{const M=typeof MAPS==='object'?MAPS[key]:null;if(M&&M.box?.isConnected)m2Polish(M,car,mode,rid)}catch(e){console.warn('m2 map',e)}return res};
+/* --- 5. address autocomplete: Photon (South Africa box) first, Nominatim as fallback; two lines with the postal code --- */
+const M2_PHOTON='https://photon.komoot.io/api/?lang=en&limit=6&bbox=16.3,-34.9,32.9,-22.1&q=';
+function m2PhAddr(p){const a={house_number:p.housenumber,road:p.street,suburb:p.district||p.locality,city:p.city||p.town||p.village||p.county,state:p.state,postcode:p.postcode,country:p.country};if(p.name&&['amenity','shop','office','leisure','tourism','building'].includes(p.osm_key))a[p.osm_key==='amenity'?'amenity':'building']=p.name;for(const k in a)if(!a[k])delete a[k];return a}
+function m2Line1(p){if(p.name)return p.name;const s=[p.housenumber,p.street].filter(Boolean).join(' ');return s||p.district||p.locality||p.city||''}
+function m2Line2(p){return [p.district||p.locality,p.city||p.town||p.village||p.county,p.state,p.postcode].filter((x,i,a)=>x&&a.indexOf(x)===i).join(', ')}
+async function photonSuggest(q,extra){const key=q.trim().toLowerCase()+'|'+(extra||'');if(M2.sug.has(key))return M2.sug.get(key);
+  const pr=fetch(M2_PHOTON+encodeURIComponent(q)+(extra||''),{headers:{'Accept':'application/json'}}).then(r=>r.ok?r.json():null).then(j=>{if(!j)return null;return (j.features||[]).filter(f=>f.properties&&f.geometry?.coordinates&&(!f.properties.countrycode||f.properties.countrycode==='ZA')).map(f=>{const p=f.properties;const [lng,lat]=f.geometry.coordinates;const l1=m2Line1(p),l2=m2Line2(p);return {lat:+lat,lng:+lng,name:l1,loc:l2,postcode:p.postcode||'',type:p.osm_value||'',category:p.osm_key||'',osm_type:p.osm_type||'',osm_id:p.osm_id,address:m2PhAddr(p),full:[l1,l2].filter(Boolean).join(', '),display:[l1,l2].filter(Boolean).join(', '),src:'photon'}}).filter(x=>x.name)}).catch(()=>null);
+  M2.sug.set(key,pr);const res=await pr;if(res===null)M2.sug.delete(key);return res}
+const _m2SuggestPlaces=suggestPlaces;
+suggestPlaces=async function(q){const ph=await photonSuggest(q);if(ph&&ph.length)return ph;const n=await _m2SuggestPlaces(q);if(n&&n.length)return n.map(x=>({...x,loc:[placeLoc(x.address),x.address?.postcode].filter(Boolean).join(', '),postcode:x.address?.postcode||'',src:'nominatim'}));if(n===null&&ph===null)return null;return n||[]};
+const _m2Nomi=nomi;
+nomi=async function(q){const ph=await photonSuggest(q);if(ph&&ph.length)return ph.map(x=>({...x,lat:String(x.lat),lon:String(x.lng),display_name:x.full,addresstype:x.category}));return _m2Nomi(q)};
+attachSuggest=function(input){if(input.dataset.sug)return;if((typeof SCHOOL_IDS!=='undefined'&&SCHOOL_IDS.includes(input.id))||input.dataset.school)return attachSchoolSuggest(input,'field');
+  input.dataset.sug='1';input.autocomplete='off';const wrap=document.createElement('div');wrap.className='sugwrap';input.parentNode.insertBefore(wrap,input);wrap.appendChild(input);const box=document.createElement('div');box.className='sug';box.hidden=true;box.setAttribute('role','listbox');wrap.appendChild(box);let t,seq=0,items=[],idx=-1;
+  const close=()=>{box.hidden=true;idx=-1};
+  const pick=it=>{input.value=it.full;input.dataset.geo=JSON.stringify({lat:it.lat,lng:it.lng,label:it.full,address:it.address,postcode:it.postcode||it.address?.postcode||'',src:it.src||''});input.dataset.postcode=it.postcode||it.address?.postcode||'';close();let ok=wrap.querySelector('.addrok');if(!ok){ok=document.createElement('span');ok.className='addrok';wrap.appendChild(ok)}ok.innerHTML=ICON.check+' Pinned on the map';input.dispatchEvent(new Event('change'))};
+  const draw=()=>{if(items===null)return box.innerHTML='<div class="st">Address search is not reachable right now. You can still type the address.</div>',box.hidden=false;if(!items.length)return box.innerHTML='<div class="st">No match yet. Keep typing the street name or suburb.</div>',box.hidden=false;
+    box.innerHTML=items.map((it,i)=>{const l2=it.loc||'';const pc=it.postcode||it.address?.postcode||'';const l2h=pc&&l2.endsWith(pc)?h(l2.slice(0,-pc.length))+'<span class="pc">'+h(pc)+'</span>':h(l2);return `<div class="m2a ${i===idx?'on':''}" data-i="${i}" role="option"><b>${h(it.name)}${it.type&&!/yes|residential|house|street|road/.test(it.type)?' <small style="display:inline;color:var(--fg3)">'+h(String(it.type).replace(/_/g,' '))+'</small>':''}</b>${l2?`<small>${l2h}</small>`:''}</div>`}).join('');box.hidden=false;box.querySelectorAll('[data-i]').forEach(el=>el.onmousedown=e=>{e.preventDefault();pick(items[+el.dataset.i])})};
+  input.addEventListener('input',()=>{delete input.dataset.geo;delete input.dataset.postcode;wrap.querySelector('.addrok')?.remove();const q=input.value.trim();clearTimeout(t);if(q.length<3)return close();box.innerHTML='<div class="st">Searching…</div>';box.hidden=false;const my=++seq;t=setTimeout(async()=>{const res=await suggestPlaces(q);if(my!==seq)return;items=res;idx=-1;draw()},250)});
+  input.addEventListener('keydown',e=>{if(box.hidden||!items?.length)return;if(e.key==='ArrowDown'){idx=Math.min(items.length-1,idx+1);draw();e.preventDefault()}else if(e.key==='ArrowUp'){idx=Math.max(0,idx-1);draw();e.preventDefault()}else if(e.key==='Enter'&&idx>=0){pick(items[idx]);e.preventDefault()}else if(e.key==='Escape')close()});
+  input.addEventListener('blur',()=>setTimeout(close,150))};
+/* --- 6. Find: seats needed --- */
+function m2Need(){const f=S.filters||{};if(f.need)return Math.max(1,+f.need);const u=me();if(!u)return 1;try{return Math.max(1,kidsOf(u.id).filter(k=>!bookingOf(k)).length)}catch(e){return 1}}
+const _m2RouteCard=routeCard;routeCard=function(r,kids){let html=_m2RouteCard(r,kids);try{if(S.route!=='p-find'||!html)return html;const free=Math.max(0,(+r.seats||0)-routeSeatsUsed(r.id));const need=m2Need();if(need>1&&free<need)return '';
+  const tag=`<div class="m2seats"><span class="m2chip">${free?free+' seat'+(free===1?'':'s')+' free':'Full'}</span>${need>1&&free>=need?`<span class="m2chip fit">fits ${need} kids</span>`:''}</div>`;const mk='<div style="margin-top:12px"><b>';const i=html.indexOf(mk);html=i>=0?html.slice(0,i)+tag+html.slice(i):html}catch(e){}return html};
+const _m2PFind=VIEWS['p-find'];VIEWS['p-find']=function(){let html=_m2PFind.apply(this,arguments);try{const need=m2Need();const chips=`<div class="m2need"><span class="lab">Seats needed</span>${[1,2,3,4].map(n=>`<button class="m2nc ${(n<4&&need===n)||(n===4&&need>=4)?'on':''}" onclick="S.filters.need=${n};render()">${n===4?'4+':n}</button>`).join('')}</div>`;
+  const mk='<label class="row small" style="margin-top:12px;gap:8px"><input id="f-seats"';const i=html.indexOf(mk);if(i>=0)html=html.slice(0,i)+chips+html.slice(i);
+  if(need>1&&/<div class="grid g2">\s*<\/div>/.test(html))html=html.replace(/<div class="grid g2">\s*<\/div>/,empty(`No routes with ${need} free seats right now. Pick fewer seats, or <a href="#" onclick="event.preventDefault();go('p-requests')">post a request</a> so drivers can offer.`))}catch(e){console.warn('m2 find',e)}return html};
+</script>
+<!-- r10:ux2 -->
+<style>
+/* ===================== Round 10 ux2: email ghost, biometric by device, log out at the end, pop-up row, admin verified, police step, calendar empty state, referral line ===================== */
+.eg-ghost{position:absolute;pointer-events:none;white-space:pre;overflow:hidden;display:flex;align-items:center;box-sizing:border-box;color:var(--fg3);z-index:2;background:transparent}
+.eg-ghost .t{visibility:hidden}
+.eg-ghost .s{opacity:.9}
+.eg-chip{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;margin-top:2px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg2);color:var(--fg);font:inherit;font-size:.82rem!important;font-weight:600;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eg-chip:active{transform:scale(.97)}
+.ux-logout{display:flex;width:100%;margin-top:22px;background:transparent!important;color:#d6382b!important;border:1.5px solid #d6382b!important;border-radius:16px;min-height:50px;font-weight:700}
+.ux-logout:hover{background:rgba(214,56,43,.08)!important}
+.ux-poprow{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--fg2);padding:4px 2px;flex-wrap:wrap}
+.ux-poprow .grow{flex:1;min-width:0}
+.ux-pop-ic{width:20px;height:20px;flex:none;display:inline-flex;color:var(--live)}
+.ux-poprow svg,.ux-pop-ic svg,.countdown svg,.tp-pcard svg{width:20px!important;height:20px!important;max-width:20px;max-height:20px;flex:none}
+.ux-poprow a{color:var(--fg3);font-weight:600;text-decoration:underline;white-space:nowrap}
+.ux-police{display:inline-flex;align-items:center;gap:8px;background:#dc2626;color:#fff;border-radius:12px;padding:8px 12px;font-weight:800;letter-spacing:.02em;margin:0 0 10px;font-size:.9rem}
+.ux-police-note{font-size:1rem;font-weight:600;padding:10px 14px;border-radius:12px;background:rgba(220,38,38,.08);border-left:4px solid #dc2626;margin:0 0 12px;word-break:break-word}
+.ux-yn{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.ux-yn .btn{min-height:68px;font-size:1.35rem;font-weight:800;border-radius:18px}
+.ux-yes{background:#dc2626!important;border-color:#dc2626!important;color:#fff!important}
+.ux-no{border:2px solid var(--line)!important}
+.ux-calempty{text-align:center;padding:10px 0 4px}
+.ux-calempty p{margin:10px 0 14px;color:var(--fg2)}
+</style>
+<script>
+/* ---------- 1. email ghost suggestion ---------- */
+const UX2_DOMS=['gmail.com','outlook.com','icloud.com','yahoo.com','hotmail.com','live.com','webmail.co.za','mweb.co.za','telkomsa.net','vodamail.co.za'];
+const UX2_SEL='input[type="email"],input[autocomplete^="username"]';
+const ux2Touch=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(matchMedia&&matchMedia('(pointer:coarse)').matches);
+function ux2EmailSug(v){v=String(v||'').trim();if(!v||/\s/.test(v))return null;const at=v.indexOf('@');
+  if(at<0){if(!/^[a-z0-9._%+-]+$/i.test(v))return null;return {full:v+'@gmail.com',rest:'@gmail.com',auto:true}}
+  if(v.indexOf('@',at+1)>=0||at===0)return null;const dom=v.slice(at+1).toLowerCase();if(!dom)return {full:v+'gmail.com',rest:'gmail.com',auto:false};
+  const m=UX2_DOMS.find(d=>d.startsWith(dom));if(!m||m===dom)return null;return {full:v.slice(0,at+1)+m,rest:m.slice(dom.length),auto:false}}
+function ux2EgEls(el){const p=el.parentElement;if(!p)return {};return {ghost:p.querySelector(':scope > .eg-ghost[data-for="'+el.id+'"]'),chip:p.querySelector(':scope > .eg-chip[data-for="'+el.id+'"]')}}
+function ux2EgClear(el){const {ghost,chip}=ux2EgEls(el);ghost&&ghost.remove();chip&&chip.remove()}
+function ux2EgAccept(el){const s=ux2EmailSug(el.value);if(!s)return false;el.value=s.full;el.dispatchEvent(new Event('input',{bubbles:true}));try{el.setSelectionRange(el.value.length,el.value.length)}catch(e){}ux2EgClear(el);return true}
+function ux2EgShow(el){if(!el||!el.isConnected||document.activeElement!==el)return ux2EgClear(el);const s=ux2EmailSug(el.value);if(!s)return ux2EgClear(el);
+  const p=el.parentElement;if(!p)return;if(!el.id)el.id='eg'+uid();if(getComputedStyle(p).position==='static')p.style.position='relative';
+  let {ghost,chip}=ux2EgEls(el);const cs=getComputedStyle(el);
+  if(!ghost){ghost=document.createElement('span');ghost.className='eg-ghost';ghost.setAttribute('aria-hidden','true');ghost.dataset.for=el.id;el.after(ghost)}
+  Object.assign(ghost.style,{left:el.offsetLeft+'px',top:el.offsetTop+'px',width:el.offsetWidth+'px',height:el.offsetHeight+'px',paddingLeft:cs.paddingLeft,paddingRight:cs.paddingRight,paddingTop:cs.paddingTop,paddingBottom:cs.paddingBottom,
+    borderStyle:'solid',borderColor:'transparent',borderTopWidth:cs.borderTopWidth,borderBottomWidth:cs.borderBottomWidth,borderLeftWidth:cs.borderLeftWidth,borderRightWidth:cs.borderRightWidth,
+    fontFamily:cs.fontFamily,fontSize:cs.fontSize,fontWeight:cs.fontWeight,fontStyle:cs.fontStyle,letterSpacing:cs.letterSpacing,lineHeight:cs.lineHeight,textIndent:cs.textIndent,textAlign:cs.textAlign,borderRadius:cs.borderRadius});
+  ghost.innerHTML=`<span class="t">${h(el.value)}</span><span class="s">${h(s.rest)}</span>`;
+  if(ux2Touch){if(!chip){chip=document.createElement('button');chip.type='button';chip.className='eg-chip';chip.dataset.for=el.id;chip.addEventListener('pointerdown',e=>{e.preventDefault();ux2EgAccept(el);el.focus()});chip.addEventListener('click',e=>{e.preventDefault();ux2EgAccept(el);el.focus()});ghost.after(chip)}
+    chip.textContent='Use '+s.full}else if(chip)chip.remove()}
+document.addEventListener('focusin',e=>{const el=e.target;if(el&&el.matches&&el.matches(UX2_SEL))setTimeout(()=>ux2EgShow(el),0)});
+document.addEventListener('input',e=>{const el=e.target;if(el&&el.matches&&el.matches(UX2_SEL))ux2EgShow(el)});
+document.addEventListener('keydown',e=>{const el=e.target;if(!el||!el.matches||!el.matches(UX2_SEL))return;
+  if(e.key==='Tab'&&!e.shiftKey){if(ux2EmailSug(el.value))ux2EgAccept(el)}
+  else if(e.key==='ArrowRight'){let end=true;try{end=el.selectionStart==null||el.selectionStart===el.value.length}catch(x){}if(end&&ux2EgAccept(el))e.preventDefault()}});
+document.addEventListener('focusout',e=>{const el=e.target;if(!el||!el.matches||!el.matches(UX2_SEL))return;const s=ux2EmailSug(el.value);if(s&&s.auto){el.value=s.full;el.dispatchEvent(new Event('input',{bubbles:true}))}ux2EgClear(el)});
+window.addEventListener('resize',()=>{const el=document.activeElement;if(el&&el.matches&&el.matches(UX2_SEL))ux2EgShow(el)});
+
+/* ---------- 2. biometric wording and icon per device; hidden where the device has none ---------- */
+function ux2Platform(){const ua=navigator.userAgent||'';if(/iPad|iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1))return 'ios';if(/Android/i.test(ua))return 'android';if(/Windows/i.test(ua))return 'windows';if(/Macintosh|Mac OS X/i.test(ua))return 'mac';return 'other'}
+ICON.hello='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 10v1M16 10v1"/><path d="M8.5 15a4.5 4.5 0 0 0 7 0"/></svg>';
+bioLabel=function(){const p=ux2Platform();return p==='ios'?'Face ID / Touch ID':p==='android'?'Fingerprint':p==='windows'?'Windows Hello':p==='mac'?'Touch ID':'Face ID or fingerprint'};
+bioIcon=function(){const p=ux2Platform();return p==='ios'?ICON.face:p==='windows'?ICON.hello:ICON.finger};
+const _ux2FaceCard=faceCard;faceCard=function(){if(!bioAvail)return '';return _ux2FaceCard.apply(this,arguments)};
+bioReady().then(v=>{if(v&&me()&&/-more$/.test(S.route||'')&&!$('.overlay'))render()});
+
+/* ---------- 3. one red Log out at the very end of every Settings page ---------- */
+function ux2LogoutAsk(){confirmBox('Log out of Enivel?','You can log back in any time with your email and password.',()=>logout())}
+const UX2_MORE=['p-more','d-more','a-more','k-more'];
+const _ux2RenderLogout=render;render=function(){const r=_ux2RenderLogout.apply(this,arguments);try{if(UX2_MORE.includes(S.route)&&me()){const m=$('#app main');if(m){m.querySelectorAll('button[onclick="logout()"]').forEach(b=>b.remove());m.querySelectorAll('.ux-logout').forEach(b=>b.remove());
+  const b=document.createElement('button');b.type='button';b.className='btn ux-logout';b.setAttribute('onclick','ux2LogoutAsk()');b.innerHTML=((typeof KC_ICON!=='undefined'&&KC_ICON.out)||ICON.out||'')+' Log out';m.appendChild(b)}}}catch(e){}return r};
+
+/* ---------- 4. driver home: compact pop-ups row (no oversized tick) ---------- */
+ICON.checkCircle='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.3 2.3L15.5 10"/></svg>';
+countdownCard=(function(orig){return function(){let html=orig.apply(this,arguments);if(!html)return html;
+  return html.replace(/<div class="tiny muted" style="display:flex;align-items:center;gap:6px">[\s\S]*?Phone pop-ups on, even when Enivel is closed\.[\s\S]*?<\/div>/,
+    `<div class="ux-poprow"><span class="ux-pop-ic">${ICON.checkCircle}</span><span class="grow">Pop-ups on · you'll get pickup reminders even when Enivel is closed</span><a href="#" onclick="event.preventDefault();disablePush()">Turn off</a></div>`)}})(countdownCard);
+
+/* ---------- 5. the admin's own profile counts as verified in every mode ---------- */
+const _ux2NeedsPid=needsParentId;needsParentId=function(u){if(S.admin&&u&&me()&&u.id===me().id)return false;return _ux2NeedsPid.apply(this,arguments)};
+function ux2AdminVerify(){if(!S.admin||S.adminApp!=='parent')return;const u=me();if(!u||S._ux2AdminPatched===u.id)return;if(u.idStatus==='approved'&&u.phoneVerified&&u.adminVerified)return;S._ux2AdminPatched=u.id;
+  Store.patch('users',u.id,{idStatus:'approved',phoneVerified:true,adminVerified:true}).catch(()=>{})}
+const _ux2RenderAdmin=render;render=function(){const r=_ux2RenderAdmin.apply(this,arguments);try{ux2AdminVerify()}catch(e){}return r};
+const _ux2SecCard=securityCard;securityCard=function(){let html=_ux2SecCard.apply(this,arguments);
+  if(S.admin)html=html.replace(/<div class="item small"><div class="grow">Phone [\s\S]*?(?:Verify<\/button>|✓<\/span>)<\/div>/,'');
+  return html.replace('You both get R50 credit when a friend joins.','Share your code. When a friend signs up with it, you both get R50 Enivel credit on your next payment.')};
+
+/* ---------- 6. kid emergency: after the location is sent, ask about the police ---------- */
+function ux2PoliceAsk(id){const e=Store.get('events',id);if(!e||e.status!=='open')return;const k=myKidProfile();if(!k)return;buzz(20);
+  modal(`<div class="sos-sheet"><h3 style="color:#dc2626">Notify the police too?</h3><p class="small" style="margin:6px 0 4px">Your location is on its way to <b>${h(sosParentName(k))}</b>. Do you want the police as well?</p>
+   <div class="ux-yn"><button class="btn ux-yes" id="ux-pol-yes">YES</button><button class="btn ghost ux-no" id="ux-pol-no">NO</button></div>
+   <div class="field" style="margin-top:14px"><label for="ux-pol-txt">Tell them what's wrong (optional)</label><textarea id="ux-pol-txt" maxlength="280" placeholder="e.g. A stranger is following me"></textarea></div></div>`,m=>{
+   $('#ux-pol-yes',m).onclick=()=>ux2PoliceYes(id,($('#ux-pol-txt',m).value||'').trim());$('#ux-pol-no',m).onclick=()=>ux2PoliceNo(id)})}
+async function ux2PoliceYes(id,note){const e=Store.get('events',id);const k=myKidProfile();if(!e||!k)return closeModal();const b=$('#ux-pol-yes');if(b)b.disabled=true;buzz([60,40,60]);
+  try{S.silent=true;await Store.patch('events',id,{police:true,policeNote:note||'',policeAt:Date.now()})}catch(x){}finally{S.silent=false}
+  const txt=`🚨 ${k.name} asked for the POLICE${note?': "'+note+'"':''}`;
+  try{await notify(k.parentId,txt,'kid-sos','p-emergency')}catch(x){}try{await notify('admin',txt,'kid-sos','a-safety')}catch(x){}
+  modal(`<div class="sos-sheet"><h3 style="color:#dc2626">Call the police now</h3><p style="margin:8px 0 14px;font-weight:600;font-size:1.05rem">We've told your parent you want the police. Call 10111 now if you can.</p>
+   <a class="btn wide sos-go" href="tel:10111">Call 10111</a><a class="btn wide ghost" style="margin-top:8px" href="tel:112">Call 112</a>
+   <button class="btn ghost wide" style="margin-top:8px" onclick="closeModal()">Close</button></div>`);render()}
+async function ux2PoliceNo(id){closeModal();const k=myKidProfile();try{S.silent=true;await Store.patch('events',id,{police:false})}catch(x){}finally{S.silent=false}toast('OK — still sharing your location with '+(k?sosParentName(k):'your parent'));render()}
+const _ux2SosSend=sosSend;sosSend=async function(msg){const r=await _ux2SosSend.apply(this,arguments);
+  try{const u=me();const st=u&&ls.get('enivel_sos_'+u.id);const e=st&&Store.get('events',st.id);if(e&&e.status==='open'&&e.police===undefined&&Date.now()-e.ts<120000)setTimeout(()=>ux2PoliceAsk(e.id),150)}catch(x){}return r};
+const _ux2SosKid=sosKidCard;sosKidCard=function(){let html=_ux2SosKid.apply(this,arguments);const e=typeof sosMine==='function'&&sosMine();
+  if(e&&e.police)html=html.replace('<p class="small" style="margin:6px 0">','<p class="small" style="margin:6px 0"><b style="color:#dc2626">You asked for the police ✓</b> ');return html};
+const _ux2PEmerg=VIEWS['p-emergency'];VIEWS['p-emergency']=function(){let html=_ux2PEmerg.apply(this,arguments);try{const list=sosOpenForParent();const e=(S.sosId&&Store.get('events',S.sosId))||list[0];
+  if(e&&e.police){const k=Store.get('kids',e.kidId);html=html.replace(/(<div class="sos-msg">[\s\S]*?<\/div>)/,`$1<div class="ux-police">🚔 ASKED FOR POLICE</div>${e.policeNote?`<div class="ux-police-note">“${h(e.policeNote)}”</div>`:''}<p class="small" style="margin:0 0 10px"><b>${h(kcFirst(k?.name)||'Your child')} wants the police.</b> Call 10111 now and go to their location.</p>`)}}catch(x){}return html};
+const _ux2SosBanner=sosBanner;sosBanner=function(){let html=_ux2SosBanner.apply(this,arguments);try{if(html){const e=sosOpenForParent().find(x=>x.status==='open');if(e&&e.police)html=html.replace('PRESSED EMERGENCY</b>','PRESSED EMERGENCY · ASKED FOR POLICE</b>')}}catch(x){}return html};
+
+/* ---------- 7. calendar: empty state ---------- */
+const _ux2CalModal=exCalModal;exCalModal=function(){const u=me();if(!u)return;let rides=[];try{rides=exRides()}catch(e){}if(rides.length)return _ux2CalModal.apply(this,arguments);const drv=exRole()==='driver';
+  modal(`<div class="row" style="gap:12px;flex-wrap:nowrap"><span class="ex-ic cool">${EX_IC.cal}</span><div><h3>Rides in your calendar</h3><p class="tiny muted">Next 4 weeks · South African time</p></div></div>
+   <div class="ux-calempty">${empty(drv?'No booked rides yet. When a parent books a seat on one of your routes, the rides appear here.':'No booked rides yet. Book a child onto a route and your rides appear here.','pin')}
+   ${drv?`<button class="btn wide" onclick="closeModal();go('d-routes')">My routes</button>`:`<button class="btn wide" id="ux-cal-find" onclick="closeModal();go('p-find')">Find transport</button>`}</div>`)};
+
+/* ---------- 8. referral line on the invite page too ---------- */
+const _ux2Invite=VIEWS['invite'];VIEWS['invite']=function(){let html=_ux2Invite.apply(this,arguments);return html.replace(/(<button class="gw-code"[\s\S]*?<\/button>)/,'$1<p class="tiny muted" style="margin-top:8px">Share your code. When a friend signs up with it, you both get R50 Enivel credit on your next payment.</p>')};
+</script>
+<!-- r10:family -->
+<style>
+/* ===== Round 10 · family members + help centre ===== */
+.fm-pill{display:flex;gap:10px;align-items:center;padding:10px 14px;border-radius:14px;background:color-mix(in srgb,var(--acc) 12%,var(--bg));border:1px solid var(--line);font-size:.85rem;margin-bottom:14px;line-height:1.35}
+.fm-pill svg{width:18px;height:18px;flex-shrink:0}
+.fm-off{opacity:.45}
+.fm-link{word-break:break-all;font-family:ui-monospace,monospace;font-size:.76rem;background:var(--bg2);padding:10px 12px;border-radius:10px;margin:10px 0;user-select:all}
+.fm-share{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fm-share .btn{min-width:0}
+.fm-rels{display:flex;flex-wrap:wrap;gap:6px}
+.fm-rels button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 12px;font-weight:600;font-size:.82rem;cursor:pointer;min-height:40px;color:var(--fg2)}
+.fm-rels button.on{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.hc-topics{display:flex;gap:6px;flex-wrap:wrap;padding:2px 0}
+.hc-topics button{flex:0 0 auto;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 12px;font-weight:600;font-size:.8rem;cursor:pointer;min-height:40px;color:var(--fg2);max-width:100%}
+.hc-topics button.on{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.hc-topics button .n{opacity:.6;font-weight:500;margin-left:4px}
+.hc-faq details{border-bottom:1px solid var(--line)}
+.hc-faq details:last-of-type{border-bottom:0}
+.hc-faq summary{list-style:none;cursor:pointer;display:flex;gap:12px;align-items:center;padding:12px 0;min-height:52px;font-weight:700}
+.hc-faq summary::-webkit-details-marker{display:none}
+.hc-faq summary .q{flex:1;min-width:0;overflow-wrap:anywhere}
+.hc-faq summary .ic{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;background:var(--bg2);color:var(--fg2)}
+.hc-faq summary .ic svg{width:15px;height:15px}
+.hc-faq summary::after{content:"";width:9px;height:9px;border-right:2px solid var(--fg3);border-bottom:2px solid var(--fg3);transform:rotate(45deg);transition:transform .2s;flex-shrink:0;margin:0 6px 5px 0}
+.hc-faq details[open] summary::after{transform:rotate(225deg);margin:5px 6px 0 0}
+.hc-faq .a{padding:0 0 14px 40px;color:var(--fg2);font-size:.92rem;line-height:1.5}
+.hc-faq .a .btn{margin-top:10px}
+.hc-faq .a .topic{display:block;margin-top:8px;font-size:.72rem;color:var(--fg3)}
+.hc-popular{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hc-popular button{text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:12px;cursor:pointer;font-weight:600;font-size:.84rem;min-height:56px;color:var(--fg);display:flex;gap:8px;align-items:center}
+.hc-popular button svg{width:18px;height:18px;flex-shrink:0;color:var(--acc)}
+.hc-bug textarea{min-height:90px}
+.hc-kid .hc-faq summary{font-size:1rem}
+@media(max-width:360px){.hc-popular{grid-template-columns:1fr}.hc-faq .a{padding-left:0}.fm-share{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.hc-faq summary::after{transition:none}}
+</style>
+<script>
+/* =====================================================================
+   Round 10 · family members (co-parents)
+   A parent (the "owner") adds a mom, dad, gran or guardian by email from Settings → Family.
+   The server (supabase/r10-family.sql) keeps family_members / family_invites and lets a member
+   read the owner's children, bookings, ride events, driver chats and alerts (copied to them).
+   Client: the owner's kids/bookings arrive with parentId = owner; for a member we relabel them
+   to parentId = member (+ familyOwner) when they land, so every parent screen just works.
+   Members may chat to the drivers, mark "not riding" (family_absent) and send a note to the
+   driver (family_note). Pay / book / cancel / change children are blocked here and on the server.
+   ===================================================================== */
+const FM_RELS=['Mom','Dad','Gran','Grandpa','Aunt','Uncle','Guardian','Other'];
+function fmMember(){const u=me();return !!(u&&u.role==='parent'&&typeof u.familyOf==='string'&&u.familyOf&&!S.admin)}
+function familyOwnerId(){const u=me();return u?(fmMember()?u.familyOf:u.id):null}
+function fmOwner(){return fmMember()?Store.get('users',me().familyOf):null}
+function fmOwnerFirst(){const o=fmOwner();return kcFirst(o?.name||me()?.familyOwnerName||'')||'the parent'}
+function fmOnly(){toast(`Only ${fmOwnerFirst()} can do this`);buzz(8);return false}
+function fmFamKid(id){const k=id&&Store.get('kids',id);return !!(k&&k.familyOwner)}
+function fmFamBooking(id){const b=id&&Store.get('bookings',id);return !!(b&&b.familyOwner)}
+function fmJoin(a){a=a.filter(Boolean);return a.length<=1?a.join(''):a.slice(0,-1).join(', ')+' & '+a[a.length-1]}
+function fmKids(){return fmMember()?kidsOf(me().id).filter(k=>k.familyOwner):[]}
+/* relabel the owner's documents for a member (runs after every sync) */
+function fmApply(){if(!fmMember())return 0;const u=me();const o=u.familyOf;let n=0;
+  for(const c of ['kids','bookings','waitlist','events']){const col=S.data[c]||{};for(const id in col){const d=col[id];if(d&&d.parentId===o&&d.familyOwner!==o){col[id]={...d,parentId:u.id,familyOwner:o};n++}}}
+  return n}
+/* a full pull that really runs (cloudPull is a no-op while another pull is busy) */
+async function fmFullPull(){for(let i=0;i<40&&pulling;i++)await new Promise(r=>setTimeout(r,150));await cloudPull(true)}
+const _fmPull=cloudPull;cloudPull=async function(full){await _fmPull.apply(this,arguments);try{const u=me();const now=u&&u.role==='parent'&&u.familyOf||null;if(S.fmWas!==undefined&&S.fmWas!==now&&!full){S.fmWas=now;setTimeout(fmFullPull,50);return}S.fmWas=now;if(fmApply()&&typeof cloudRender==='function')cloudRender()}catch(e){console.warn('family',e)}};
+/* a member's own actions that must go through the family RPCs */
+const _fmToggleAbsent=toggleAbsent;toggleAbsent=async function(kidId){const k=Store.get('kids',kidId);
+  if(fmMember()&&k&&k.familyOwner){if(!S.cloud||!sb)return fmOnly();const day=todayKey();const {data,error}=await sb.rpc('family_absent',{p_kid:kidId,p_day:day});if(error)return toast(error.message);
+    const a=new Set(k.absences||[]);data?a.add(day):a.delete(day);S.data.kids[kidId]={...k,absences:[...a]};toast(data?`${k.name} marked not riding today. ${fmOwnerFirst()} and the driver are told.`:`${k.name} is riding today.`);buzz();render();try{schedulePull()}catch(e){}return}
+  return _fmToggleAbsent.apply(this,arguments)};
+const _fmOpsPut=opsPut;opsPut=async function(c,id,doc){if(c==='bookings'&&fmMember()&&S.cloud&&sb){const cur=Store.get('bookings',id);
+    if(cur&&cur.familyOwner){const old=cur.notes||{},nw=doc.notes||{};const days=new Set([...Object.keys(old),...Object.keys(nw)]);
+      for(const d of days){if((old[d]||'')!==(nw[d]||'')){const {error}=await sb.rpc('family_note',{p_booking:id,p_day:d,p_text:nw[d]||''});if(error)throw new Error(error.message)}}
+      S.data.bookings[id]={...cur,notes:nw};try{schedulePull()}catch(e){}render();return S.data.bookings[id]}}
+  return _fmOpsPut.apply(this,arguments)};
+/* the server already told the driver about a member's note (with "from Thandi (Thabo's gran)") */
+const _fmNotify=notify;notify=async function(userId,text,type,link){if(fmMember()&&type==='note'&&S.cloud)return;return _fmNotify.apply(this,arguments)};
+/* owner-only actions: blocked for a member (the server refuses them too) */
+(function fmGuards(){const list=[['bookRoute',null],['onceTrip',null],['newRequest',null],['payMonth',null],['payModal',null],['joinWaitlist',null],['leaveWaitlist',null],['acceptOffer',null],['addGuardian',null],['removeGuardian',null],['kidSetupStart',null],
+  ['addKid',id=>!id||fmFamKid(id)],['removeKid',fmFamKid],['handoverModal',fmFamKid],['termModal',fmFamKid],['kidPermsModal',fmFamKid],['dayOffModal',fmFamKid],['removeDayOff',fmFamKid],['cancelBooking',fmFamBooking],['scheduleModal',fmFamBooking]];
+  for(const [name,chk] of list){try{const f=window[name];if(typeof f!=='function')continue;window[name]=function(...a){if(fmMember()&&(!chk||chk(a[0])))return fmOnly();return f.apply(this,a)}}catch(e){}}})();
+const FM_OFF_RE=/^(bookRoute|onceTrip|newRequest|payMonth|payModal|joinWaitlist|leaveWaitlist|acceptOffer|addGuardian|removeGuardian|addKid|removeKid|handoverModal|termModal|kidPermsModal|dayOffModal|removeDayOff|cancelBooking|scheduleModal)\(/;
+const FM_SEL='.tp-km button,[data-kc-give],[data-kc-perms],[data-kc-off],[data-kc-sw],[data-ops-note]';
+function fmDim(){if(!fmMember())return;const t=`Only ${fmOwnerFirst()} can do this`;const off=b=>{b.classList.add('fm-off');b.title=t;b.setAttribute('aria-disabled','true')};
+  document.querySelectorAll('#app [onclick]').forEach(b=>{if(FM_OFF_RE.test(b.getAttribute('onclick')||''))off(b)});
+  document.querySelectorAll('#app '+FM_SEL.split(',').join(',#app ')).forEach(b=>{if(b.matches('[data-ops-note]'))return;off(b)})}
+/* taps on those dimmed controls (bound by other layers through data attributes) are stopped before they fire */
+document.addEventListener('click',e=>{if(!fmMember())return;const b=e.target.closest&&e.target.closest('.fm-off');if(!b||!b.matches(FM_SEL))return;e.preventDefault();e.stopImmediatePropagation();fmOnly()},true);
+/* how a driver sees a family member */
+function fmLabel(id){const u=Store.get('users',id);if(!u)return '';if(!(u.familyOf&&u.familyRel))return u.name||'';const o=Store.get('users',u.familyOf);const f=kcFirst(o?.name||'');return f?`${u.name} (${f}'s ${String(u.familyRel).toLowerCase()})`:`${u.name} (family)`}
+const _fmUserName=userName;userName=function(id){const n=_fmUserName.apply(this,arguments);try{if(viewRole()==='driver'){const u=Store.get('users',id);if(u&&u.familyOf&&u.familyRel)return fmLabel(id)}}catch(e){}return n};
+const _fmChatView=chatView;chatView=function(){let html=_fmChatView.apply(this,arguments);try{if(viewRole()!=='driver')return html;
+  Store.all('users').filter(x=>x.familyOf&&x.familyRel&&x.role==='parent').forEach(x=>{const lab=h(fmLabel(x.id));html=html.split(`<b>${h(x.name)}</b><span class="pill tiny">parent</span>`).join(`<b>${lab}</b><span class="pill tiny">family</span>`).split(`<div class="t">${h(x.name)} <span class="tiny muted">parent</span>`).join(`<div class="t">${lab} <span class="tiny muted">family</span>`)})}catch(e){}return html};
+VIEWS['p-chat']=chatView;VIEWS['d-chat']=chatView;
+/* ---------- invites and the Family card ---------- */
+function fmLink(tok){return location.origin+location.pathname+'#family='+tok}
+async function fmLoad(){if(!S.cloud||!sb||!me())return;try{const {data,error}=await sb.rpc('family_list');if(!error&&data)S.fm=data}catch(e){console.warn('family list',e)}}
+function fmCard(){const u=me();if(!u||viewRole()!=='parent')return '';
+  if(fmMember()){const o=fmOwner();return `<div class="card fm-card" style="margin-top:14px"><div class="row between"><h3>Family</h3><span class="pill">${h(u.familyRel||'Member')}</span></div><p class="small muted" style="margin:4px 0 10px">You are in <b>${h(o?.name||u.familyOwnerName||'a parent')}</b>'s family as ${h(u.familyRel||'a member')}. You see their children's rides, driver chats and alerts. Only ${h(fmOwnerFirst())} can pay, book, cancel or change children.</p><button class="btn sm ghost" onclick="fmLeave()">Leave this family</button></div>`}
+  const fm=S.fm||{};const ms=fm.members||[],inv=fm.invites||[];
+  return `<div class="card fm-card" style="margin-top:14px" data-mount="fmCard"><div class="row between"><h3>Family</h3><button class="btn sm ghost" onclick="fmInviteModal()">Add</button></div><p class="tiny muted" style="margin:4px 0 8px">Add a mom, dad, gran or guardian. They sign in with their own email and see your children's rides, driver chats and alerts. They can't pay, book or change children.</p>
+  <div class="list">${ms.map(m=>`<div class="item small"><div class="grow" style="min-width:0"><b>${h(m.name||m.email)}</b> · ${h(m.relation)}<div class="tiny muted" style="overflow-wrap:anywhere">${h(m.email||'')}</div></div><button class="btn sm ghost" onclick="fmRemove('${h(m.id)}','${h(m.name||m.email||'')}')">Remove</button></div>`).join('')}${inv.map(i=>`<div class="item small"><div class="grow" style="min-width:0"><b style="overflow-wrap:anywhere">${h(i.email)}</b> · ${h(i.relation)}<div class="tiny muted">Invited · link works until ${new Date(i.expiresAt).toLocaleDateString('en-ZA',{day:'numeric',month:'short'})}</div></div><span class="pill">Waiting</span></div>`).join('')}${!ms.length&&!inv.length?`<p class="muted small">${S.cloud?'No family members yet.':'Family members work on the live Enivel app.'}</p>`:''}</div></div>`}
+MOUNT.fmCard=el=>{if(S.cloud&&!S.fmLoaded){S.fmLoaded=true;fmLoad().then(()=>{if(S.route==='p-more'&&$('.fm-card')){const c=$('.fm-card');const d=document.createElement('div');d.innerHTML=fmCard();if(d.firstElementChild)c.replaceWith(d.firstElementChild)}})}};
+const _fmPMore=VIEWS['p-more'];VIEWS['p-more']=function(){let html=_fmPMore.apply(this,arguments);try{if(viewRole()!=='parent')return html;const mk='<div class="card" style="margin-top:14px"><div class="row between"><h3>Trusted guardians</h3>';const i=html.indexOf(mk);html=i>=0?html.slice(0,i)+fmCard()+html.slice(i):html+fmCard()}catch(e){console.warn('family card',e)}return html};
+function fmInviteModal(){const u=me();if(!u)return;if(!S.cloud||!sb)return toast('Family members work on the live Enivel app');if(fmMember())return fmOnly();let rel='Gran';
+  modal(`<h3>Add a family member</h3><p class="muted small" style="margin:6px 0 12px">They get a link. They sign up (or log in) as a parent with this email and then see your children's rides.</p>
+  <div class="stack"><div class="field"><label for="fm-e">Their email</label><input id="fm-e" type="email" inputmode="email" autocomplete="off" placeholder="gran@example.com"></div>
+  <div class="field"><label>They are the children's</label><div class="fm-rels" role="group" aria-label="Relationship">${FM_RELS.map(r=>`<button type="button" data-rel="${r}" class="${r===rel?'on':''}" aria-pressed="${r===rel}">${r}</button>`).join('')}</div></div>
+  <button class="btn wide" id="fm-go">Create invite link</button><button class="btn ghost wide" onclick="closeModal()">Cancel</button></div>`,m=>{
+    m.querySelectorAll('[data-rel]').forEach(b=>b.onclick=()=>{rel=b.dataset.rel;m.querySelectorAll('[data-rel]').forEach(x=>{x.classList.toggle('on',x===b);x.setAttribute('aria-pressed',x===b)})});
+    $('#fm-go',m).onclick=async()=>{const em=val(m,'fm-e').trim().toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(em))return toast('Enter their email address');const btn=$('#fm-go',m);btn.disabled=true;
+      const {data,error}=await sb.rpc('family_invite',{p_email:em,p_relation:rel});if(error){btn.disabled=false;return toast(error.message)}
+      S.fmLoaded=false;fmLoad().then(()=>{if(S.route==='p-more')render()});fmShareModal(data,em,rel)}})}
+function fmShareText(tok,em,rel){const u=me();const names=fmJoin(kidsOf(u.id).map(k=>kcFirst(k.name)));return `${kcFirst(u.name)} added you as ${rel} on Enivel so you can follow ${names||'the children'}'s school transport. Open this link and sign up or log in with ${em}: ${fmLink(tok)}`}
+function fmShareModal(tok,em,rel){const link=fmLink(tok);const text=fmShareText(tok,em,rel);const canShare=!!navigator.share;
+  modal(`<h3>Share the family link</h3><p class="muted small" style="margin:6px 0 4px">Send this to <b>${h(em)}</b>. It works once and expires in 7 days.</p><div class="fm-link" id="fm-l">${h(link)}</div>
+  <div class="fm-share"><a class="btn" href="https://wa.me/?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">WhatsApp</a>${canShare?'<button class="btn ghost" id="fm-sh">Share…</button>':''}<button class="btn ghost" id="fm-cp">Copy link</button><a class="btn ghost" href="mailto:${encodeURIComponent(em)}?subject=${encodeURIComponent('Join my family on Enivel')}&body=${encodeURIComponent(text)}">Email</a></div>
+  <button class="btn ghost wide" style="margin-top:12px" onclick="closeModal()">Done</button>`,m=>{
+    const cp=$('#fm-cp',m);cp.onclick=async()=>{try{await navigator.clipboard.writeText(link);toast('Link copied')}catch(e){const r=document.createRange();r.selectNodeContents($('#fm-l',m));const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Select and copy the link')}};
+    const sh=$('#fm-sh',m);if(sh)sh.onclick=()=>navigator.share({title:'Join my family on Enivel',text,url:link}).catch(()=>{})})}
+function fmRemove(id,name){if(!S.cloud||!sb)return;confirmBox(`Remove ${name||'this family member'}?`,'They will no longer see your children\'s rides, chats or alerts.',async()=>{const {error}=await sb.rpc('family_remove',{p_member:id});if(error)return toast(error.message);S.fmLoaded=false;await fmLoad();toast('Family member removed');render()})}
+function fmLeave(){if(!S.cloud||!sb)return;confirmBox('Leave this family?','You will no longer see their children\'s rides or alerts.',async()=>{const {error}=await sb.rpc('family_leave');if(error)return toast(error.message);S.fm=null;S.fmLoaded=false;await fmFullPull();toast('You left the family');go('p-home')})}
+/* ---------- the #family=<token> link ---------- */
+function fmHashToken(){const m=(location.hash||'').match(/^#family=([A-Za-z0-9]{32,128})$/);return m?m[1]:null}
+function fmPending(){const t=ls.get('enivel_family_token');return t&&t.token&&Date.now()-(t.at||0)<8*864e5?t.token:null}
+function fmClearHash(){try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}}
+(function fmEarly(){const t=fmHashToken();if(t){ls.set('enivel_family_token',{token:t,at:Date.now()});fmClearHash();S.authMode='signup';S.signupRole='parent'}})();
+let fmBusy=false;
+async function fmAcceptPending(){const tok=fmPending();const u=me();if(!tok||!u||fmBusy||!S.cloud||!sb)return;fmBusy=true;
+  try{if(u.role!=='parent'||S.admin){ls.set('enivel_family_token',null);return toast('Family links are for parent accounts')}
+    const {data,error}=await sb.rpc('family_accept',{p_token:tok});
+    if(error){ls.set('enivel_family_token',null);return modal(`<h3>Could not join the family</h3><p class="muted small" style="margin:8px 0 14px">${h(error.message)}</p><button class="btn wide" onclick="closeModal()">OK</button>`)}
+    ls.set('enivel_family_token',null);S.fm=null;S.fmLoaded=false;await fmFullPull();const names=fmJoin((data?.kids||[]).map(n=>kcFirst(n)));
+    modal(`<h3>You're in 🎉</h3><p class="muted small" style="margin:8px 0 14px">You now see ${h(names||'the children')}'s rides as <b>${h(data?.relation||'family')}</b> in ${h(kcFirst(data?.ownerName||'')||'the parent')}'s family. You get the same pickup, drop-off and emergency alerts, and you can chat to the drivers. Only ${h(kcFirst(data?.ownerName||'')||'the parent')} can pay, book or change children.</p><button class="btn wide" onclick="closeModal();go('p-home')">See the rides</button>`);buzz()}
+  finally{fmBusy=false}}
+const _fmLanding=VIEWS.landing;VIEWS.landing=function(){let html=_fmLanding.apply(this,arguments);try{if(!me()&&fmPending()){html=html.replace('<div class="seg">',`<div class="notice" style="margin-bottom:12px">You were invited to join a family on Enivel. Sign up as a <b>parent</b> (or log in) with the email the invite was sent to.</div><div class="seg">`)}}catch(e){}return html};
+const _fmRender=render;render=function(){const r=_fmRender.apply(this,arguments);try{fmDim();if(S.ready&&me()&&fmPending())setTimeout(fmAcceptPending,400)}catch(e){console.warn('family render',e)}return r};
+const _fmPHome=VIEWS['p-home'];VIEWS['p-home']=function(){let html=_fmPHome.apply(this,arguments);try{if(!fmMember())return html;const names=fmJoin(fmKids().map(k=>kcFirst(k.name)));
+  try{if(typeof growChecklistCard==='function'){const gc=growChecklistCard();if(gc)html=html.split(gc).join('')}}catch(e){}
+  html=html.replace(/<div class="notice"><b>Add your ID<\/b> before your first booking\. <a [^>]*>Add now<\/a><\/div>/,'');
+  html=`<div class="fm-pill" role="status">${ICON.users}<span><b>Viewing ${h(names||fmOwnerFirst()+"'s children")}</b> as ${h(me().familyRel||'family')}. Only ${h(fmOwnerFirst())} can pay, book or change children.</span></div>`+html}catch(e){}return html};
+/* ---------- help text for the family feature in the kid/parent docs ---------- */
+</script>
+<script>
+/* =====================================================================
+   Round 10 · Help centre: search, topics, 60+ answers written from the app, "Go there"
+   buttons, "Report a bug" (events type 'report' with bug:true → admin Reports / Safety centre),
+   and a short friendly kid version. Replaces VIEWS['help-centre'] from the extras layer.
+   ===================================================================== */
+const HC_TOPICS=[['start','Getting started'],['ride','Booking & routes'],['money','Payments & fees'],['safe','Safety & emergency'],['kid','Kid accounts'],['alert','Alerts & pop-ups'],['docs','Documents & roadblock card'],['earn','Earnings'],['acct','Account & sign-in'],['family','Family members'],['legal','Legal & privacy']];
+const HC_IC={start:ICON.home,ride:ICON.car,money:ICON.gift,safe:ICON.shield,kid:ICON.kid||ICON.users,alert:ICON.bell,docs:ICON.list||ICON.check,earn:ICON.star,acct:ICON.user||ICON.lock,family:ICON.users,legal:ICON.lock};
+const hcGo=(r,l)=>({go:r,label:l});
+/* r: 'p' parents, 'd' drivers, 'b' both. c: topic. go: route name or a function call. */
+const HC_FAQ=[
+ /* getting started */
+ {r:'p',c:'start',q:'How do I start using Enivel?',a:'Add your child on the Kids tab (name, age, grade, school and pickup pin) and add your SA ID once in Settings. Then open Find, pick a route and tap Choose. You pay the first month to confirm the seat.',k:'begin new first time setup',go:hcGo('p-kids','Open Kids')},
+ {r:'p',c:'start',q:'Why must I add my ID?',a:'Every parent adds an SA ID number and a photo of it once, before the first booking. Enivel checks it so that only real, traceable adults book transport for children. Drivers never see your ID.',k:'identity document verify parent',go:hcGo('p-more','Add my ID')},
+ {r:'p',c:'start',q:'Shared or private transport?',a:'Shared transport is a driver\'s route with other children, paid monthly. A private chauffeur drives only your children. Both are on Find; the price is per child per month.',k:'chauffeur difference type',go:hcGo('p-find','Open Find')},
+ {r:'p',c:'start',q:'What is Best match on Find?',a:'Pick a child at the top of Find. Routes are then sorted by same school, distance from your pickup pin, open seats, rating, on-time record and price. The badge on each route shows the real reasons.',k:'smart match ranking sort nearest',go:hcGo('p-find','Open Find')},
+ {r:'p',c:'start',q:'Can I share a route with other parents?',a:'Yes. Every route has a public page you can share (the link looks like #route=…). It shows the driver\'s verification, schools, seats and price, but never any child\'s details.',k:'share link public page route',go:hcGo('p-find','Open Find')},
+ {r:'d',c:'start',q:'How do I get verified?',a:'Settings → Verification documents. Upload all 10 photos (ID, licence, PrDP, police clearance, roadworthy, operating licence, insurance, licence disc, proof of address and a selfie), plus your PrDP expiry and police clearance date. Enivel reviews them and tells you if a photo must be redone.',k:'verify approved documents upload',go:hcGo('d-verify','Verification documents')},
+ {r:'d',c:'start',q:'How do I add a vehicle?',a:'Vehicles → Add vehicle. Take photos of all sides and the number plate, then scan the seats so parents know how many seats you have. Your first 3 vehicles are free.',k:'car taxi add photos plate',go:hcGo('d-vehicles','Open Vehicles')},
+ {r:'d',c:'start',q:'How do I list a route?',a:'Routes → New route. Pick the area and school from the suggestions so nearby parents see how close you are, set the monthly price, seats and times. Only active routes of verified drivers show on Find.',k:'new route list create',go:hcGo('d-routes','Open Routes')},
+ {r:'d',c:'start',q:'How do parents find me?',a:'Verified drivers with active routes show on Find. Parents see your rating, on-time record, badges and pre-trip check record. Keep your area, schools and seats accurate, and your documents in date, or your routes are hidden.',k:'visible listing',go:hcGo('d-routes','Open Routes')},
+ /* booking & routes */
+ {r:'p',c:'ride',q:'How do I book transport?',a:'Open Find, choose a route and tap Choose. Pick the child, confirm the first month and you are booked from today. The driver is told at once and appears in your Chat.',k:'book booking choose',go:hcGo('p-find','Open Find')},
+ {r:'p',c:'ride',q:'The route I want is full',a:'Join the waiting list on that route. When a seat opens you are told first and have 24 hours to book before it goes to the next person. It does not guarantee a seat.',k:'full waitlist waiting list seat',go:hcGo('p-find','Open Find')},
+ {r:'p',c:'ride',q:'Can I book a once-off trip?',a:'Yes. On Home tap Once-off trip and say where, when and for whom. Drivers send offers with a price; you pay when you accept one. See them under Settings → My transport requests.',k:'once off single trip request offer',go:hcGo('p-requests','My requests')},
+ {r:'p',c:'ride',q:'Can I change times or add exam times?',a:'Open the booking (Details) → Times & exam schedule. Set regular pickup and drop-off times, a second drop-off or exam times. Your driver must accept before the new times apply.',k:'schedule times exam afternoon change',go:hcGo('p-kids','Open Kids')},
+ {r:'p',c:'ride',q:'My child isn\'t riding today',a:'On Home tap Not riding today under the child, or Schedule a day off for a future date. For school holidays use Holidays on the Kids tab. Your driver is told straight away. Family members can do this too.',k:'absent sick day off holiday not riding',go:hcGo('p-home','Open Home')},
+ {r:'p',c:'ride',q:'Can I send my driver a note for the day?',a:'Yes. On Home or the booking, tap Note to driver: for example "Has sport kit" or "Someone else collects: Gogo". The driver sees it on the trip screen. Notes are 140 characters and only kept for today and future days.',k:'note message driver today sport kit collects',go:hcGo('p-home','Open Home')},
+ {r:'p',c:'ride',q:'Where will my child sit?',a:'Your driver can assign each child a seat. Open the booking to see your child\'s seat on the seat map. You only ever see your own child\'s name, never other children\'s.',k:'seat map sit seating',go:hcGo('p-kids','Open Kids')},
+ {r:'b',c:'ride',q:'How do I get my rides into my calendar?',a:'Settings → Rides in my calendar. Download the next 4 weeks as a calendar file for Google, Apple or Outlook. Weekends, public holidays and days off are left out. Download again after times change.',k:'calendar ics google apple outlook',go:{fn:'exCalModal()',label:'Open calendar'}},
+ {r:'b',c:'ride',q:'Are there rides on public holidays?',a:'No. There is no school transport on South African public holidays. The app warns you a week before and skips them in reminders and calendar files.',k:'holiday public holiday school closed'},
+ {r:'b',c:'ride',q:'Something was left in the car',a:'Settings → Lost & found. Parents tell the driver (add a photo if you have one). Drivers tell the parent when they find something. Both sides get a message and an alert.',k:'lost found forgot bag jersey lunchbox item',go:hcGo('lost-found','Open Lost & found')},
+ {r:'p',c:'ride',q:'How do I cancel transport?',a:'Kids → Cancel transport, or Cancel on the booking. Your driver is told at once and the seat is freed from next month. The month you have paid is still driven.',k:'cancel stop end booking',go:hcGo('p-kids','Open Kids')},
+ {r:'d',c:'ride',q:'How do I mark pickups and drop-offs?',a:'Start the trip from Routes → Trip. Tap Pick up and Drop off at each stop; you must be close to the stop with GPS on. Automatic pickup can mark it for you, with 10 seconds to undo. Parents get an alert for each one.',k:'pickup drop off mark trip gps automatic',go:hcGo('d-routes','Open Routes')},
+ {r:'d',c:'ride',q:'What is the best pickup order?',a:'Routes → Trip → Pickup order. Suggest best order uses your passengers\' pins; you can move stops up or down. Parents then see their stop number on Home.',k:'order stops optimise sequence',go:hcGo('d-routes','Open Routes')},
+ {r:'d',c:'ride',q:'How do I assign seats?',a:'Routes → Seats. Tap a seat, then a child. Parents only see free and taken seats and their own child\'s seat. Keep a seat empty if its belt does not work.',k:'seat map assign seats',go:hcGo('d-routes','Open Routes')},
+ {r:'d',c:'ride',q:'I can\'t drive one day',a:'Home → Not driving a day. Pick the date and a short reason. Every parent on your routes is told immediately and the day is skipped in their reminders and calendars.',k:'off day sick not driving',go:{fn:'driverOffModal()',label:'Not driving a day'}},
+ {r:'d',c:'ride',q:'A parent asked for new times',a:'You get a notification and the request shows on the booking. Accept it or decline with a short note. Until you accept, the old times apply.',k:'schedule request times accept decline',go:hcGo('d-home','Open Home')},
+ /* payments & fees */
+ {r:'b',c:'money',q:'What does Enivel cost?',a:'Parents pay the driver\'s monthly price plus a 2% Enivel fee (R1 000 + R20 = R1 020). Drivers pay R100 a month, only in months with a paying passenger, plus R49.99 a month for each vehicle after the first 3.',k:'fees price 2% r100 r49.99 cost'},
+ {r:'p',c:'money',q:'How do monthly payments work?',a:'Each month is paid in advance from Settings → Payments and invoices. Enivel credit is used first. Card payments go through PayFast; Enivel never sees or stores your card. If the app says test mode, no money moves.',k:'pay payment monthly card payfast',go:hcGo('p-pay','Payments and invoices')},
+ {r:'b',c:'money',q:'How do referral credits work?',a:'Share your code from Settings → Security or Invite friends. When a friend signs up with it, you both get R50 Enivel credit. Credit is used automatically on your next Enivel payment and cannot be cashed out.',k:'referral code credit r50 invite friend',go:hcGo('p-more','Open Settings')},
+ {r:'b',c:'money',q:'Where are my statements and invoices?',a:'Parents: Settings → Payments and invoices. Drivers: Settings → Earnings and fees. Tap Statement (CSV) to download every payment for your records.',k:'receipt invoice statement csv history'},
+ {r:'p',c:'money',q:'Do I get money back when my child is absent?',a:'No. Absences, days off and school holidays do not lower the price, because the driver keeps the seat for you. If the driver stops service in the middle of a paid month, you get a pro-rata refund.',k:'refund absent money back'},
+ {r:'b',c:'money',q:'What is Enivel Pays?',a:'Every month Enivel picks families at random and pays their school transport for them. Parents who are booked and in good standing are in the draw automatically; winners get a certificate in the app and appear on the winners wall by first name. Drivers and Enivel staff cannot win.',k:'enivel pays giveaway draw win free month certificate',go:hcGo('pays','Enivel Pays')},
+ {r:'d',c:'money',q:'When do I pay the R100 fee?',a:'Only in a month where you have at least one active paying passenger. No passengers, no fee. The fee comes off before Enivel pays you out.',k:'r100 fee driver fee monthly',go:hcGo('d-billing','Earnings and fees')},
+ {r:'d',c:'money',q:'What are parking slots?',a:'Your first 3 vehicles are free. Each extra vehicle costs R49.99 a month while it is listed. Remove a vehicle you no longer use to stop the slot fee.',k:'parking slot vehicle r49.99 extra',go:hcGo('d-vehicles','Open Vehicles')},
+ /* safety & emergency */
+ {r:'b',c:'safe',q:'What does the Emergency button do?',a:'Parents find it on the live tracking screen, drivers on the trip screen. It shows Police 10111, Ambulance 10177 and 112 first, then "Alert Enivel now" sends your account, the trip and the time to the Enivel safety team. In danger, always call the police first.',k:'sos panic police ambulance 10111 112 emergency button'},
+ {r:'p',c:'safe',q:'My child pressed their Emergency button',a:'You get a 🚨 alert and the Emergency screen shows their live location for 30 minutes, their message, the ride and the driver. Tap "I\'m on it" so the child sees you saw it. The driver never sees the child\'s emergency location.',k:'kid sos child emergency location',go:hcGo('p-emergency','Emergency screen')},
+ {r:'b',c:'safe',q:'Who can see where the car is?',a:'Only parents (and their family members) whose child is on board, and only while the trip is running. Other parents, drivers and strangers never see it.',k:'location gps live map privacy tracking'},
+ {r:'p',c:'safe',q:'How do I track the car?',a:'While your child is on board, Home shows Track live. The map follows the car until drop-off and shows the stops. Before pickup you see "Driver on the way" and whether they are running late.',k:'track live map where is the car',go:hcGo('p-home','Open Home')},
+ {r:'p',c:'safe',q:'What is the handover code?',a:'A 4 to 6 digit code you set per child (Kids → Handover code). At home drop-off the driver must enter it before marking your child dropped off. Give it only to adults who may receive your child, never to the driver. After 5 wrong codes it locks for 15 minutes and the driver can ask you to confirm in the app instead.',k:'handover code pin drop off safety',go:hcGo('p-kids','Open Kids')},
+ {r:'b',c:'safe',q:'How does Enivel check drivers?',a:'Every driver uploads their ID, licence, PrDP, police clearance, roadworthy, operating licence, insurance, licence disc, proof of address and a selfie. Enivel reviews them before any parent can book. Expired licences hide a driver\'s routes from Find; police clearances older than 6 months are flagged.',k:'verification verified documents prdp police clearance'},
+ {r:'b',c:'safe',q:'What is a pre-trip vehicle check?',a:'Before a trip the driver ticks 8 items in the app: tyres, lights, brakes, seatbelts, child locks, first-aid kit, fire extinguisher and a clean, undamaged car. Parents see a "Checked today" badge on the ride. It is the driver\'s own declaration, not an inspection.',k:'pre-trip check vehicle tyres brakes belts checked today'},
+ {r:'p',c:'safe',q:'What is the weekly report?',a:'Home → Weekly report shows each child\'s rides for the week: pickups and drop-offs, on-time record, who drove, pre-trip checks and any late or missed days. It is built from the ride records in the app.',k:'weekly report summary week on time',go:hcGo('p-report','Weekly report')},
+ {r:'p',c:'safe',q:'Who are trusted guardians?',a:'People you name in Settings (for example a grandparent or a helper). Their names appear on your pickup and drop-off alerts so the driver knows who may receive your child. They do not get their own login; for that, add a family member.',k:'guardian granny helper',go:hcGo('p-more','Open Settings')},
+ {r:'p',c:'safe',q:'How do I report a problem with a driver?',a:'Open the booking → Report an issue, and say what happened. Enivel reviews every report in the Safety centre and may pause the driver\'s routes. In an emergency call 10111 first.',k:'report complaint problem issue unsafe',go:hcGo('p-kids','Open Kids')},
+ {r:'d',c:'safe',q:'A child has a handover code',a:'At home drop-off ask the adult for the code and enter it. If nobody has it, tap Ask parent to confirm and the parent answers in the app. After 5 wrong codes it locks for 15 minutes. Never hand over a child to someone without the code or the parent\'s confirmation.',k:'handover code drop off',go:hcGo('d-routes','Open Routes')},
+ {r:'d',c:'safe',q:'How do I do the pre-trip check?',a:'Home → Pre-trip check (or Routes → Trip). Tick the 8 items honestly; a failed item tells you what to do before you drive. One check per vehicle per day. Ticking items you did not check is a permanent ban.',k:'pre-trip check tyres brakes belts first aid',go:hcGo('d-home','Open Home')},
+ {r:'d',c:'safe',q:'What is a ride check?',a:'When a trip looks different from the plan (for example a drop-off far from the usual place) the parent is asked to confirm it was fine. Keep your pickups and drop-offs accurate and this rarely happens.',k:'ride check mismatch confirm'},
+ /* kid accounts */
+ {r:'p',c:'kid',q:'Can my child have their own login?',a:'Yes. Kids → Set up a login for the child. You enter their email and get a one-time code that is valid for 15 minutes; the child signs up with it. They see their own ride only, and you stay in control from your parent account.',k:'kid account child login own phone',go:hcGo('p-kids','Open Kids')},
+ {r:'p',c:'kid',q:'What can my child see and do?',a:'By default: the map while on board, "driver nearby" alerts, Face ID and the look of the app. Chat with the driver and "I\'m not riding" are off until you switch them on under the child\'s permissions. A child can never pay, book or accept terms.',k:'permissions kid track chat absent switch',go:hcGo('p-kids','Open Kids')},
+ {r:'p',c:'kid',q:'How do I switch a kid login off?',a:'Kids → the child\'s login → Switch off. They are signed out at once and their Face ID and pop-ups are removed. You can set it up again later with a new code.',k:'remove kid login unlink switch off',go:hcGo('p-kids','Open Kids')},
+ {r:'p',c:'kid',q:'Does my child have an Emergency button?',a:'Yes, always, on their Home screen. It sends their live location to you for 30 minutes, with an optional message. It never goes to the driver. You see it on your Emergency screen.',k:'kid sos emergency button child'},
+ {r:'d',c:'kid',q:'Can a child message me?',a:'Only if their parent switched chat on for them. You then see the child in Chat with their parent\'s name next to it. Keep it short and about the ride; the parent can read every message.',k:'kid chat child message'},
+ /* alerts & pop-ups */
+ {r:'p',c:'alert',q:'What alerts will I get?',a:'Driver nearby (when the driver is 1 km from your pickup pin; set it to 0.5, 1 or 2 km on the Kids tab), Picked up, Dropped off, Driver outside, Running late, handover and emergency alerts, plus payments and messages. Family members get the ride alerts too.',k:'notification alert pickup dropoff nearby late',go:hcGo('notifs','Open Notifications')},
+ {r:'b',c:'alert',q:'How do I get pop-ups when Enivel is closed?',a:'Settings → Phone pop-ups → Turn on, then allow notifications. On iPhone first add Enivel to your Home Screen (Share → Add to Home Screen). Pop-ups only work on the live Enivel site.',k:'push pop-up lock screen iphone home screen notifications',go:{fn:'enablePush()',label:'Turn on pop-ups'}},
+ {r:'p',c:'alert',q:'Can I change the "driver nearby" distance?',a:'Yes. On the Kids tab each child has "Alert me when the driver is 0.5 / 1 / 2 km" away. The default is 1 km. The alert uses the driver\'s live GPS, so it can be a minute early or late.',k:'nearby distance km approach alert',go:hcGo('p-kids','Open Kids')},
+ {r:'d',c:'alert',q:'How do reminders work?',a:'Enivel reminds you 30 and 10 minutes before each pickup. Turn on phone pop-ups on Home so they reach you even when Enivel is closed. Days off and public holidays are skipped.',k:'reminder notification push countdown',go:hcGo('d-home','Open Home')},
+ {r:'d',c:'alert',q:'How do I tell parents I am late or outside?',a:'On the trip screen tap Running late and pick a reason, or I am outside at a stop. Every parent on the trip gets an alert and sees it on Home. Back on time clears it.',k:'late hoot outside alert parents',go:hcGo('d-routes','Open Routes')},
+ /* documents & roadblock card (drivers) */
+ {r:'d',c:'docs',q:'What is the roadblock card?',a:'A screen with your Enivel verification, your vehicle and your document dates to show a traffic officer at a roadblock. It has a QR code the officer can scan to see a live check from Enivel. It is not a licence, PrDP or operating licence: carry the real ones.',k:'roadblock traffic officer police stop qr card',go:hcGo('d-roadblock','Open roadblock card')},
+ {r:'d',c:'docs',q:'Someone has a screenshot of my QR code',a:'Open the roadblock card and tap Reset QR code. Old codes and screenshots stop working straight away and a new code is made.',k:'reset qr code screenshot',go:hcGo('d-roadblock','Open roadblock card')},
+ {r:'d',c:'docs',q:'My licence or PrDP is expiring',a:'Settings → My documents shows each document with its date and marks it Expiring soon from 30 days before. Once a licence or PrDP has expired your routes are hidden from Find until you upload the new one and Enivel approves it.',k:'expiry expired licence prdp hidden routes documents',go:hcGo('d-docs','My documents')},
+ {r:'d',c:'docs',q:'A photo was rejected',a:'Enivel tells you which photo and why (blurry, cut off, too old, or already used on another account). Retake it in good light with the whole document in frame and upload again from Verification documents.',k:'rejected photo blurry redo upload',go:hcGo('d-verify','Verification documents')},
+ /* earnings (drivers) */
+ {r:'d',c:'earn',q:'What will I earn this month?',a:'Home and Earnings and fees show expected income from your bookings, money received so far, Enivel fees and your monthly goal. Set a goal and track it on Home.',k:'earnings forecast goal income',go:hcGo('d-billing','Earnings and fees')},
+ {r:'d',c:'earn',q:'How do I track fuel and other costs?',a:'Earnings and fees → Add an expense (fuel, tyres, service, licence). Your profit after expenses is shown next to your income, and you can download it with your statement.',k:'expenses fuel profit costs',go:{fn:'addExpense()',label:'Add an expense'}},
+ {r:'d',c:'earn',q:'When and how am I paid?',a:'Parents pay Enivel monthly in advance for their seat. Earnings and fees shows what was paid for each booking, your R100 monthly fee and any slot fees, and the Statement (CSV) has the full history for your records.',k:'payout paid when bank',go:hcGo('d-billing','Earnings and fees')},
+ /* account & sign-in */
+ {r:'b',c:'acct',q:'How do I make my account safer?',a:'Settings → Security: turn on two-step sign-in with a PIN or an SMS code. On the live app you can also add Face ID or a fingerprint, so you sign in without a password on this phone.',k:'security 2fa pin sms password two step',go:{fn:'twoFaPrompt()',label:'Turn on two-step'}},
+ {r:'b',c:'acct',q:'How does Face ID sign-in work?',a:'Settings → Face ID / fingerprint → Turn on. Your phone keeps the key; Enivel only gets a signed proof, never your face. Each phone is added separately and you can remove it in Settings.',k:'face id fingerprint passkey biometric',go:{fn:'enableFaceId()',label:'Set up Face ID'}},
+ {r:'b',c:'acct',q:'How do I sign out or move to a new phone?',a:'Settings → Log out at the bottom. On a shared phone also remove Face ID for that phone under Settings → Security. On a new phone just log in with your email and password; your children, bookings and chats are on the Enivel database, not the phone.',k:'log out sign out new phone switch'},
+ {r:'b',c:'acct',q:'How do I change the look or text size?',a:'Settings → Appearance: Light or Dark, and Normal, Large or Extra large text. Text size is saved on this phone only.',k:'dark mode theme text size font bigger',go:hcGo('p-more','Open Settings')},
+ {r:'b',c:'acct',q:'Can I install Enivel on my phone?',a:'Yes. Open enivel in your browser and tap Add to Home Screen (iPhone: Share → Add to Home Screen; Android: the Install banner or menu → Install app). It then opens full screen and can show pop-ups.',k:'install app home screen android iphone pwa'},
+ {r:'b',c:'acct',q:'How do I contact Enivel?',a:'Tap Chat to Enivel at the bottom of this page. Parents can also use Report an issue on a booking. Found something broken? Use Report a bug below.',k:'support contact help chat email'},
+ /* family members */
+ {r:'p',c:'family',q:'Can my husband, wife or gran use my account too?',a:'Yes. Settings → Family → Add. Enter their email and how they are related (Mom, Dad, Gran, Guardian…). Send them the link; they sign up as a parent with that email and see your children\'s rides, driver chats and alerts.',k:'family member co-parent husband wife gran dad mom share account',go:hcGo('p-more','Open Settings')},
+ {r:'p',c:'family',q:'What can a family member do?',a:'See the children, bookings, live tracking and trip history, chat to the drivers, mark a child "not riding today" and send a note to the driver, and get every ride alert. They cannot pay, book, cancel, change children or add other family members.',k:'family member permissions can do'},
+ {r:'p',c:'family',q:'How do I remove a family member?',a:'Settings → Family → Remove next to their name. They lose access at once and are told. A family member can also leave from their own Settings.',k:'remove family member leave',go:hcGo('p-more','Open Settings')},
+ {r:'p',c:'family',q:'The family link does not work',a:'A link works once and for 7 days, and only for the email it was sent to. The person must sign up or log in as a parent with that exact email. Create a new link from Settings → Family if it expired.',k:'family link expired invalid wrong email',go:hcGo('p-more','Open Settings')},
+ {r:'d',c:'family',q:'Who is "Thandi (Thabo\'s gran)" in my chat?',a:'A family member the parent added. They see the same rides and alerts as the parent and may chat to you, send day notes and mark a child not riding. Payments and bookings still come from the parent.',k:'family member gran chat who'},
+ /* legal & privacy */
+ {r:'b',c:'legal',q:'Can I see or delete my data?',a:'Yes. Under POPIA you can see, correct or delete your information. Ask us with Chat to Enivel. The Privacy Policy in the Legal centre says what we keep and for how long.',k:'privacy popia delete account data',go:hcGo('legal','Legal centre')},
+ {r:'b',c:'legal',q:'Where are the terms and policies?',a:'Settings → Legal centre has the Terms, Privacy Policy, Safety standards, the Children\'s Accounts and Family terms, Enivel Pays rules and more, with a What\'s new list when they change.',k:'terms policy legal centre privacy',go:hcGo('legal','Legal centre')},
+ {r:'b',c:'legal',q:'Why was I asked to accept the terms again?',a:'When the terms change, everyone accepts the new version once at sign-in. The What\'s new box shows what changed; you can read the full document before you tick the box.',k:'accept terms again updated version',go:hcGo('legal','Legal centre')},
+ {r:'p',c:'legal',q:'Is my child\'s information safe?',a:'Drivers only see a child\'s name, school, pickup pin and notes while the child is booked on their route. ID numbers, documents and emergency locations are never shown to drivers. Enivel keeps trip records for safety for a limited time, as set out in the Privacy Policy.',k:'child data privacy driver sees',go:hcGo('legal','Legal centre')}];
+/* a short, friendly version for kid logins */
+const HC_KID=[
+ {q:'Where is my driver?',a:'Open Home. When the car is on the way you see it on the map, and a "driver nearby" pop-up tells you to get ready.',go:hcGo('k-home','Open Home')},
+ {q:'I don\'t feel safe',a:'Press the red Emergency button on Home. Your parent gets your location right away. In real danger also call 10111 or 112.'},
+ {q:'I\'m not riding today',a:'If your parent switched it on, tap "Not riding today" on Home. Your parent and driver are told. Otherwise ask your parent to do it.',go:hcGo('k-home','Open Home')},
+ {q:'Can I chat to my driver?',a:'Only if your parent switched chat on. Keep it about the ride, like "I\'m at the gate". Your parent can read the messages.',go:hcGo('k-chat','Open Chat')},
+ {q:'What are the ride rules?',a:'Be ready on time, check the number plate, seatbelt on every ride, be kind to your driver, and press Emergency if you feel unsafe.',go:hcGo('k-more','Open Settings')},
+ {q:'Can I change how the app looks?',a:'Settings → Look lets you pick Light or Dark, if your parent allows it.',go:hcGo('k-more','Open Settings')},
+ {q:'Why can\'t I see something?',a:'Your parent chooses what is switched on for you, like chat, tracking and pop-ups. Ask them to change it in their Kids tab.'}];
+function hcRole(){return exRole()}
+function hcHome(){const r=hcRole();return r==='driver'?'d-more':r==='admin'?'a-more':r==='kid'?'k-more':'p-more'}
+function hcFor(role){const want=role==='driver'?'d':role==='admin'?null:'p';return HC_FAQ.filter(f=>f.r==='b'||!want||f.r===want)}
+function hcCount(list,c){return c==='all'?list.length:list.filter(f=>f.c===c).length}
+function hcGoAttr(g){if(!g)return '';if(g.fn)return `onclick="${h(g.fn)}"`;const r=safeRoute(g.go);return r?`onclick="go('${r}')"`:''}
+function hcItem(f,i){const ga=hcGoAttr(f.go);const topic=HC_TOPICS.find(t=>t[0]===f.c);return `<details data-c="${f.c||''}" data-t="${h(exNorm(f.q+' '+f.a+' '+(f.k||'')))}" id="hc-${i}"><summary><span class="ic">${HC_IC[f.c]||ICON.check}</span><span class="q">${h(f.q)}</span></summary><div class="a">${h(f.a)}${ga?`<div><button type="button" class="btn sm ghost" ${ga}>${h(f.go.label||'Go there')} ›</button></div>`:''}${topic?`<span class="topic">${h(topic[1])}</span>`:''}</div></details>`}
+function hcFilter(){const words=exNorm(S.hcQ||'').split(' ').filter(Boolean);const cat=S.hcCat||'all';let n=0,first=null;
+  document.querySelectorAll('.hc-faq details').forEach(d=>{const ok=(cat==='all'||d.dataset.c===cat)&&words.every(w=>d.dataset.t.includes(w));d.hidden=!ok;if(ok){n++;first=first||d}});
+  if(words.length&&first)first.open=true;const c=$('#hc-n');if(c)c.textContent=n+' answer'+(n===1?'':'s')+(words.length?' for “'+(S.hcQ||'').trim()+'”':'');const z=$('#hc-0');if(z)z.hidden=n>0;const pop=$('#hc-pop');if(pop)pop.hidden=!!(words.length||cat!=='all')}
+function hcOpen(i){S.hcQ='';S.hcCat='all';const q=$('#hc-q');if(q)q.value='';hcFilter();const d=document.getElementById('hc-'+i);if(d){d.open=true;d.scrollIntoView({behavior:'smooth',block:'center'})}}
+const HC_POPULAR={p:['What does Enivel cost?','What alerts will I get?','What is the handover code?','Can my husband, wife or gran use my account too?','My child isn\'t riding today','What does the Emergency button do?'],d:['How do I get verified?','What is the roadblock card?','When do I pay the R100 fee?','How do I mark pickups and drop-offs?','My licence or PrDP is expiring','How do I do the pre-trip check?']};
+function hcBugModal(){const u=me();if(!u)return;modal(`<h3>Report a bug</h3><p class="muted small" style="margin:6px 0 12px">Tell us what you tapped, what you expected and what happened. The Enivel team sees it in the Safety centre.</p><div class="stack hc-bug"><div class="field"><label for="hc-bt">What went wrong?</label><textarea id="hc-bt" maxlength="600" placeholder="e.g. The Pay button does nothing on the Payments page"></textarea></div><label class="row small" style="gap:8px;align-items:center"><input type="checkbox" id="hc-bd" checked> Include my phone and screen details</label><button class="btn wide" id="hc-bgo">Send report</button><button class="btn ghost wide" onclick="closeModal()">Cancel</button></div>`,m=>{
+  $('#hc-bgo',m).onclick=async()=>{const text=$('#hc-bt',m).value.replace(/\s+/g,' ').trim();if(text.length<8)return toast('Tell us a bit more');const btn=$('#hc-bgo',m);btn.disabled=true;const det=$('#hc-bd',m).checked;const id='bug'+uid();
+    const doc={type:'report',bug:true,by:u.id,text:'🐞 Bug: '+text,ts:Date.now(),screen:S.hcFrom||'help-centre',role:viewRole()||u.role,status:'open'};if(det){doc.ua=navigator.userAgent.slice(0,200);doc.viewport=innerWidth+'x'+innerHeight;doc.version=typeof APP_VERSION!=='undefined'?APP_VERSION:''}
+    try{await Store.put('events',id,doc);try{await notify('admin',`🐞 Bug report from ${u.name}: ${text.slice(0,120)}`,'report','a-safety')}catch(e){}closeModal();buzz();toast('Thanks! Your report reached the Enivel team.')}catch(e){btn.disabled=false;toast('Could not send: '+(e.message||e))}}})}
+VIEWS['help-centre']=()=>{const u=me();if(!u)return VIEWS.landing();const role=hcRole();
+  if(role==='kid'){return `<div class="stack hc-kid" style="gap:16px">${pageHead('Help','',`<button class="btn sm ghost" onclick="go('k-more')">Back</button>`)}<div class="ex-hero"><h2>Need a hand?</h2><p class="small muted">Quick answers for you. Your parent can help with the rest.</p></div><div class="card hc-faq">${HC_KID.map((f,i)=>hcItem({...f,c:'kid'},i)).join('')}</div><div class="card soft"><b>Still stuck?</b><p class="small muted" style="margin:4px 0 10px">Ask your parent, or press Emergency on Home if you feel unsafe.</p><button class="btn sm ghost" onclick="go('k-home')">Go to Home</button></div></div>`}
+  const list=hcFor(role);const cat=S.hcCat||'all';const who=role==='driver'?'drivers':role==='admin'?'everyone':'parents';const pop=(HC_POPULAR[role==='driver'?'d':'p']||[]).map(q=>list.findIndex(f=>f.q===q)).filter(i=>i>=0);
+  return `<div class="stack" style="gap:16px">${pageHead('Help centre','',`<button class="btn sm ghost" onclick="go('${hcHome()}')">Back</button>`)}
+  <div class="ex-hero"><h2>How can we help?</h2><p class="small muted">${list.length} answers for ${who}, written from how Enivel works today.</p><div class="searchbar">${ICON.search}<input id="hc-q" type="search" enterkeyhint="search" placeholder="Search fees, handover, family, roadblock…" value="${h(S.hcQ||'')}" autocomplete="off" aria-label="Search help"></div></div>
+  <div class="hc-topics" role="group" aria-label="Topics"><button type="button" data-hccat="all" class="${cat==='all'?'on':''}" aria-pressed="${cat==='all'}">All<span class="n">${list.length}</span></button>${HC_TOPICS.filter(([k])=>hcCount(list,k)).map(([k,l])=>`<button type="button" data-hccat="${k}" class="${cat===k?'on':''}" aria-pressed="${cat===k}">${l}<span class="n">${hcCount(list,k)}</span></button>`).join('')}</div>
+  ${pop.length?`<div id="hc-pop"><div class="eyebrow" style="margin-bottom:8px">Popular</div><div class="hc-popular">${pop.map(i=>`<button type="button" onclick="hcOpen(${i})">${HC_IC[list[i].c]||ICON.check}<span>${h(list[i].q)}</span></button>`).join('')}</div></div>`:''}
+  <div class="card hc-faq" data-mount="hcHelp"><div class="tiny muted" id="hc-n" aria-live="polite"></div>${list.map(hcItem).join('')}<div class="empty" id="hc-0" hidden>${ICON.search}<p>No answer found. Ask us below.</p></div></div>
+  <div class="card ink"><div class="row between" style="gap:12px"><div style="min-width:0"><h3>Still stuck?</h3><p class="small" style="opacity:.75;margin-top:4px">Chat to the Enivel team, or tell us about a bug.</p></div></div><div class="row" style="margin-top:12px;gap:8px"><button class="btn" id="hc-chat" style="background:var(--ink-fg);color:var(--ink);border-color:var(--ink-fg)" onclick="exChatEnivel()">${ICON.chat} Chat to Enivel</button><button class="btn ghost" id="hc-bug" style="color:var(--ink-fg);border-color:color-mix(in srgb,var(--ink-fg) 40%,transparent)" onclick="hcBugModal()">Report a bug</button></div></div></div>`};
+MOUNT.hcHelp=el=>{const q=$('#hc-q');if(q)q.oninput=()=>{S.hcQ=q.value;hcFilter()};document.querySelectorAll('[data-hccat]').forEach(b=>b.onclick=()=>{S.hcCat=b.dataset.hccat;document.querySelectorAll('[data-hccat]').forEach(x=>{x.classList.toggle('on',x===b);x.setAttribute('aria-pressed',x===b)});buzz(8);hcFilter()});hcFilter()};
+/* remember which screen the person came from (for bug reports) and give kids a Help row */
+const _hcGo=go;go=function(r,extra){if(r==='help-centre'&&S.route!=='help-centre')S.hcFrom=S.route;return _hcGo.apply(this,arguments)};
+const _hcKMore=VIEWS['k-more'];if(typeof _hcKMore==='function')VIEWS['k-more']=function(){let html=_hcKMore.apply(this,arguments);try{const mk=`<button class="kc-row" onclick="go('notifs')">`;if(html.includes(mk)&&!html.includes("go('help-centre')"))html=html.replace(mk,`<button class="kc-row" onclick="go('help-centre')"><span class="kc-sq">${ICON.search}</span><span class="grow"><b>Help</b></span><span class="chev">${typeof KC_ICON!=='undefined'?KC_ICON.chev:'›'}</span></button>`+mk)}catch(e){}return html};
+</script>
+<!-- r10:growth2 -->
+<style>
+/* ===================== r10 growth2: ad landing, admin superpowers, conversion ===================== */
+.g2-land{max-width:720px;margin:0 auto;padding:4px 0 0}
+.g2-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 0 14px}
+.g2-mark{font-family:var(--display);font-weight:800;font-size:1.5rem;letter-spacing:-.05em}
+.g2-topbar .btn.sm{min-height:38px}
+.g2-hero{padding:14px 0 22px;text-align:left}
+.g2-topbar .kick{display:inline-flex;align-items:center;gap:8px;font-size:.76rem;font-weight:700;color:var(--fg2);background:var(--bg2);border-radius:999px;padding:5px 12px}
+.g2-topbar .kick i{width:8px;height:8px;border-radius:50%;background:var(--live);display:inline-block}
+.g2-hero h1{font-size:clamp(2rem,8vw,3.1rem);line-height:1.02;letter-spacing:-.045em;margin-top:4px;font-weight:800}
+.g2-hero h1 em{font-style:normal;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.g2-hero p.lead{margin-top:12px;font-size:1.02rem;color:var(--fg2);max-width:520px}
+.g2-hero .acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.g2-hero .acts .btn{flex:1 1 150px}
+.g2-sec{padding:20px 0 6px}
+.g2-sec h2{font-size:1.3rem;letter-spacing:-.025em}
+.g2-sec .sub{color:var(--fg3);font-size:.88rem;margin-top:4px}
+.g2-vals{display:grid;gap:12px;margin-top:14px}
+.g2-val{display:flex;gap:14px;align-items:flex-start;padding:16px;border-radius:var(--r);background:var(--bg2)}
+.g2-val .ic{width:42px;height:42px;border-radius:14px;flex-shrink:0;display:grid;place-items:center;color:#fff}
+.g2-val .ic svg{width:22px;height:22px}
+.g2-val b{display:block;font-size:1rem}
+.g2-val span{font-size:.86rem;color:var(--fg2)}
+.g2-ic-a{background:linear-gradient(135deg,#1db954,#0e7490)}
+.g2-ic-b{background:linear-gradient(135deg,#6d5dfc,#22d3ee)}
+.g2-ic-c{background:linear-gradient(135deg,#d6382b,#f59e0b)}
+.g2-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px;margin-top:14px}
+.g2-step{padding:16px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg)}
+.g2-step .n{width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--ink-fg);display:grid;place-items:center;font-weight:800;font-size:.85rem}
+.g2-step b{display:block;margin-top:10px}
+.g2-step span{font-size:.85rem;color:var(--fg2)}
+.g2-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:10px;margin-top:14px}
+.g2-stat{padding:14px;border-radius:16px;background:var(--bg2);text-align:center}
+.g2-stat .num{font-size:1.7rem}
+.g2-stat span{display:block;font-size:.76rem;color:var(--fg3);margin-top:4px;font-weight:600}
+.g2-launch{margin-top:14px;padding:16px;border-radius:var(--r);background:var(--ink);color:var(--ink-fg);display:flex;align-items:center;gap:12px}
+.g2-launch b{font-size:1.05rem}
+.g2-launch span{display:block;font-size:.82rem;opacity:.8}
+.g2-revs{display:grid;gap:10px;margin-top:14px}
+.g2-rev{padding:14px 16px;border-radius:16px;border:1px solid var(--line);background:var(--bg)}
+.g2-rev .stars{color:#f59e0b;letter-spacing:1px;font-size:.9rem}
+.g2-rev p{margin-top:6px;font-size:.92rem}
+.g2-rev .who{font-size:.76rem;color:var(--fg3);margin-top:6px}
+.g2-ravg{display:flex;align-items:center;gap:10px;margin-top:10px}
+.g2-ravg .num{font-size:1.6rem}
+.g2-price{margin-top:14px;padding:18px;border-radius:var(--r);border:1px solid var(--line);background:var(--bg)}
+.g2-price .big{font-family:var(--display);font-weight:800;font-size:2rem;letter-spacing:-.04em;line-height:1}
+.g2-price ul{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:8px;font-size:.9rem}
+.g2-price li{display:flex;gap:8px;align-items:flex-start}
+.g2-price li svg{width:16px;height:16px;flex-shrink:0;margin-top:3px;color:var(--live)}
+.g2-faq{margin-top:12px;display:grid;gap:8px}
+.g2-faq details{border:1px solid var(--line);border-radius:14px;background:var(--bg);padding:0 16px}
+.g2-faq summary{cursor:pointer;font-weight:600;padding:14px 0;list-style:none;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.g2-faq summary::-webkit-details-marker{display:none}
+.g2-faq summary::after{content:"+";font-size:1.3rem;color:var(--fg3);flex-shrink:0}
+.g2-faq details[open] summary::after{content:"–"}
+.g2-faq details p{padding:0 0 14px;font-size:.9rem;color:var(--fg2)}
+.g2-drv{margin-top:22px;padding:20px;border-radius:var(--r);background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 14%,var(--bg)),color-mix(in srgb,var(--acc2) 14%,var(--bg)));border:1px solid var(--line)}
+.g2-drv h2{font-size:1.2rem}
+.g2-drv p{font-size:.9rem;color:var(--fg2);margin-top:6px}
+.g2-foot{margin-top:28px;padding:18px 0 8px;border-top:1px solid var(--line);font-size:.8rem;color:var(--fg3);display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:center}
+.g2-foot button{background:none;border:0;padding:0;color:inherit;cursor:pointer;font:inherit;text-decoration:underline;text-underline-offset:3px}
+.g2-auth-head{text-align:center;padding:26px 0 0}
+.g2-auth-head h2{font-size:1.35rem}
+.g2-auth-head p{color:var(--fg3);font-size:.88rem;margin-top:4px}
+#g2-auth .auth{min-height:0}
+#g2-auth .auth .brand{display:none}
+.g2-cta{position:fixed;left:0;right:0;bottom:0;z-index:8;padding:10px max(16px,env(safe-area-inset-left,0px)) max(12px,env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;transition:transform .25s,opacity .25s}
+.g2-cta .btn{flex:1}
+.g2-cta.hide{transform:translateY(110%);opacity:0;pointer-events:none}
+.g2-wa{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:84px;z-index:8;width:52px;height:52px;border-radius:50%;background:#25d366;color:#fff;display:grid;place-items:center;box-shadow:0 10px 24px rgba(0,0,0,.2);text-decoration:none;transition:transform .15s}
+.g2-wa:active{transform:scale(.94)}
+.g2-wa svg{width:28px;height:28px}
+.g2-wa.up{bottom:150px}
+/* banner + view-as bars */
+.g2-banner{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:14px;background:var(--ink);color:var(--ink-fg);margin-bottom:14px;font-size:.9rem;animation:gwUp .3s both}
+.g2-banner .grow{flex:1;min-width:0}
+.g2-banner button{background:none;border:0;color:inherit;opacity:.8;cursor:pointer;font-size:1.2rem;line-height:1;padding:4px 6px;border-radius:8px}
+.g2-banner button:hover{opacity:1;background:rgba(127,127,127,.2)}
+.g2-banner a{color:inherit;font-weight:700}
+.g2-viewas{position:sticky;top:60px;z-index:8;display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:12px;background:#d6382b;color:#fff;margin-bottom:14px;font-size:.88rem;font-weight:600;box-shadow:0 8px 24px rgba(214,56,43,.35)}
+.g2-viewas .grow{flex:1;min-width:0}
+.g2-viewas .btn{min-height:34px;padding:6px 12px;font-size:.8rem;background:#fff;color:#d6382b;border-color:#fff}
+/* route card: trust panel + guarantee */
+.g2-trust{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,96px),1fr));gap:6px;margin-top:12px}
+.g2-trust div{padding:8px 10px;border-radius:12px;background:var(--bg2);font-size:.72rem;color:var(--fg3);line-height:1.3}
+.g2-trust b{display:block;font-size:.9rem;color:var(--fg);font-variant-numeric:tabular-nums}
+.g2-trust .ok b{color:var(--live)}
+.g2-guar{display:flex;gap:8px;align-items:center;margin-top:10px;padding:8px 12px;border-radius:12px;background:color-mix(in srgb,var(--live) 12%,var(--bg));font-size:.8rem;color:var(--fg2)}
+.g2-guar svg{width:16px;height:16px;color:var(--live);flex-shrink:0}
+/* reserved seat */
+.g2-resv{border-left:3px solid var(--acc);}
+/* admin */
+.g2-sw{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.g2-sw:last-child{border-bottom:0}
+.g2-sw .grow{flex:1;min-width:0}
+.g2-sw .grow b{display:block;font-size:.92rem}
+.g2-sw .grow span{font-size:.78rem;color:var(--fg3)}
+.g2-tog{position:relative;width:46px;height:26px;flex-shrink:0;appearance:none;-webkit-appearance:none;background:var(--bg3);border-radius:999px;cursor:pointer;transition:background .2s;border:0;margin:0}
+.g2-tog::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
+.g2-tog:checked{background:var(--live)}
+.g2-tog:checked::after{transform:translateX(20px)}
+.g2-warn{border-left:3px solid var(--bad);background:color-mix(in srgb,var(--bad) 8%,var(--bg2));padding:10px 14px;border-radius:0 12px 12px 0;font-size:.86rem}
+.g2-qa{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px;margin-top:10px}
+.g2-qa button{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--bg);cursor:pointer;text-align:left;font:inherit;color:var(--fg);min-height:72px;transition:transform .15s,border-color .2s}
+.g2-qa button:active{transform:scale(.97)}
+.g2-qa button b{font-size:.88rem}
+.g2-qa button span{font-size:.74rem;color:var(--fg3)}
+.g2-qa button svg{width:18px;height:18px}
+.g2-src{display:grid;gap:6px;margin-top:8px}
+.g2-src div{display:flex;align-items:center;gap:10px;font-size:.86rem}
+.g2-src div .bar{flex:1;height:8px;border-radius:999px;background:var(--bg3);overflow:hidden}
+.g2-src div .bar i{display:block;height:100%;background:var(--grad);border-radius:999px}
+.g2-src div b{min-width:28px;text-align:right;font-variant-numeric:tabular-nums}
+.g2-src div span{min-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g2-pill-src{font-size:.68rem;padding:2px 7px;background:var(--bg2);border-radius:999px;white-space:nowrap}
+.g2-pay-row{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:.86rem}
+.g2-pay-row:last-child{border-bottom:0}
+.g2-pay-row .r{text-align:right;font-variant-numeric:tabular-nums}
+.g2-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:10px;margin-top:10px}
+.g2-fields input,.g2-fields select,.g2-fields textarea,.g2-in{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);min-width:0}
+.g2-promo{display:flex;gap:8px;margin-top:10px}
+.g2-promo input{flex:1;min-width:0;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);text-transform:uppercase}
+@media(max-width:360px){.g2-hero .acts .btn{flex-basis:100%}.g2-cta{flex-direction:column}.g2-cta .btn{width:100%}}
+@media(min-width:900px){.g2-land{max-width:760px}}
+</style>
+<script>
+/* ===================== r10 growth2: ad landing, admin superpowers, conversion ===================== */
+const G2_ICON={
+  shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>',
+  bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21h4"/></svg>',
+  sos:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>',
+  wa:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 12 12 0 0 0 4.6 4c.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.5-.6 1.7-1.2s.2-1.1.2-1.2-.3-.2-.5-.3z"/></svg>',
+  money:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>',
+  pause:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5v14M15 5v14"/></svg>',
+  mega:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4a1 1 0 0 0 1 1h3l6 4V5L7 9H4a1 1 0 0 0-1 1z"/><path d="M17 8a5 5 0 0 1 0 8"/></svg>',
+  gift:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 13h18M12 8c-2-4-6-3-6-1s3 1 6 1zm0 0c2-4 6-3 6-1s-3 1-6 1z"/></svg>',
+  sliders:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>',
+  sheet:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg>'};
+const G2_DEF_FLAGS={pays:true,chauffeur:true,waitlist:true,kids:true,family:true,seatmap:true,lostfound:true,help:true,landingReviews:true,guarantee:false};
+const G2_FLAG_LABELS=[
+  ['pays','Enivel Pays public page','The #pays giveaway wall, certificates and home cards'],
+  ['chauffeur','Private chauffeur','Private routes in Find transport and driver route types'],
+  ['waitlist','Waiting list','"Join the waiting list" on full routes'],
+  ['kids','Kid accounts','"I\'m a kid" on the landing page and "Give … their own login"'],
+  ['family','Family members','Trusted guardians card in parent settings'],
+  ['seatmap','Seat map','Driver seat assignment and the parent seat card'],
+  ['lostfound','Lost & found','Lost & found page and "Found an item"'],
+  ['help','Help centre','Help centre page and FAQ'],
+  ['landingReviews','Landing page reviews','Latest parent reviews on the ad landing page'],
+  ['guarantee','First-week guarantee','"Not happy after the first week? Enivel credits your fee" on route cards. You honour it by giving credit.']];
+function g2Flags(){let s={};try{s=(S.data&&S.data.settings&&Store.get('settings','flags'))||{}}catch(e){}const pub=(S.g2Pub&&S.g2Pub.flags)||{};const out={...G2_DEF_FLAGS};for(const k in pub)if(typeof pub[k]==='boolean')out[k]=pub[k];for(const k in s)if(typeof s[k]==='boolean')out[k]=s[k];return out}
+function flagOn(k){return g2Flags()[k]!==false}
+/* ---------- pricing: one helper, every reader goes through it ---------- */
+const G2_DEF_PRICING={feePct:2,driverFee:100,parkingFee:49.99,freeVehicles:3,referralCredit:50};
+function pricing(){let s={};try{s=Store.get('settings','pricing')||{}}catch(e){}const n=(k,d)=>{const v=+s[k];return Number.isFinite(v)&&v>=0?v:d};const feePct=n('feePct',2);
+  return {feePct,feeRate:feePct/100,driverFee:n('driverFee',100),parkingFee:n('parkingFee',49.99),freeVehicles:Math.round(n('freeVehicles',3)),referralCredit:n('referralCredit',50)}}
+function g2PricingChanged(){const p=pricing();return Object.keys(G2_DEF_PRICING).some(k=>p[k]!==G2_DEF_PRICING[k])}
+feeFor=function(amount){return Math.round((+amount||0)*pricing().feeRate*100)/100};
+parkingSlotsNeeded=function(driverId){return Math.max(0,Store.all('vehicles').filter(v=>v.driverId===driverId).length-pricing().freeVehicles)};
+chargeDriverFeeIfDue=async function(driverId){const u=me();if(!u||u.id!==driverId||u.role!=='driver')return;const p=pricing();const m=monthKey();const txs=Store.all('transactions').filter(t=>t.from===driverId&&t.month===m);let charged=0;
+  if(driverPassengers(driverId)>=1&&!txs.some(t=>t.type==='driver_fee')&&p.driverFee>0){await pushTx({type:'driver_fee',amount:p.driverFee,from:driverId,to:'enivel',note:'Monthly driver platform fee (first passenger active)'});await notify(driverId,`Your ${money(p.driverFee).replace('.00','')} monthly Enivel fee for ${m} is now active because you have a paying passenger.`,'pay','d-billing');charged+=p.driverFee}
+  const slots=parkingSlotsNeeded(driverId);const paidSlots=txs.filter(t=>t.type==='parking_slot').reduce((s,t)=>s+(t.slots||1),0);if(slots>paidSlots&&p.parkingFee>0){const n=slots-paidSlots;const amt=Math.round(n*p.parkingFee*100)/100;await pushTx({type:'parking_slot',amount:amt,slots:n,from:driverId,to:'enivel',note:`Parking slot${n>1?'s':''} × ${n} for ${m}`});charged+=amt}
+  const cr=Math.min(u.credit||0,charged);if(cr>0&&typeof recordCredit==='function')await recordCredit(cr)};
+/* code that still uses the old constants in arithmetic (vehicle slot payment) is corrected here */
+const _g2PushTx=pushTx;pushTx=function(t){try{const p=pricing();if(t&&t.type==='driver_fee'&&t.amount===DRIVER_FEE)t={...t,amount:p.driverFee};if(t&&t.type==='parking_slot'&&Math.abs(t.amount-(t.slots||1)*PARKING_FEE)<0.005)t={...t,amount:Math.round((t.slots||1)*p.parkingFee*100)/100}}catch(e){}return _g2PushTx(t)};
+const _g2PayModal=payModal;payModal=function(total,done){try{if(S.route==='d-vehicles'&&Math.abs(total-PARKING_FEE)<0.005)total=pricing().parkingFee}catch(e){}return _g2PayModal(total,done)};
+function g2Pct(){const p=pricing().feePct;return (Math.round(p*100)/100)+'%'}
+function g2ShortMoney(n){return money(n).replace(/\.00$/,'')}
+/* copy that spells out "2%", "R100" or "R49.99" follows the live pricing */
+function g2PriceText(root){if(!g2PricingChanged())return;const p=pricing();root=root||$('#app main');if(!root)return;const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const todo=[];let n;while((n=w.nextNode())){const t=n.nodeValue;if(!t||!/2%|R100|R49\.99/.test(t))continue;todo.push(n)}
+  for(const n of todo){let t=n.nodeValue;if(p.feePct!==2)t=t.replace(/\b2%/g,g2Pct());if(p.driverFee!==100)t=t.replace(/\bR100(?:\.00)?(?!\d)/g,g2ShortMoney(p.driverFee));if(p.parkingFee!==49.99)t=t.replace(/\bR49\.99\b/g,money(p.parkingFee));if(t!==n.nodeValue)n.nodeValue=t}}
+/* pop-ups (booking, payment) are drawn outside <main>; fix their copy too */
+try{new MutationObserver(()=>{if(!g2PricingChanged())return;document.querySelectorAll('.modal').forEach(m=>g2PriceText(m))}).observe(document.body,{childList:true,subtree:true})}catch(e){}
+
+/* ---------- UTM: remember where a visitor came from, save it on the profile at sign-up ---------- */
+(function(){try{const q=new URLSearchParams(location.search);const src=q.get('utm_source'),cmp=q.get('utm_campaign');if(src||cmp){const c=v=>String(v||'').slice(0,60).replace(/[^\w .-]/g,'');ls.set('enivel_utm',{source:c(src),campaign:c(cmp),medium:c(q.get('utm_medium')),content:c(q.get('utm_content')),at:Date.now()})}}catch(e){}})();
+function g2UtmStored(){const u=ls.get('enivel_utm');if(!u||(!u.source&&!u.campaign))return null;if(Date.now()-(u.at||0)>90*864e5)return null;return {source:u.source||'',campaign:u.campaign||'',medium:u.medium||'',content:u.content||'',at:u.at||Date.now()}}
+const _g2PutUtm=Store.put;Store.put=async function(c,id,doc){try{if(c==='users'&&doc&&!doc.utm&&S.session&&id===S.session.userId&&!(S.data.users||{})[id]&&(doc.role==='parent'||doc.role==='driver')){const utm=g2UtmStored();if(utm)doc={...doc,utm}}}catch(e){}return _g2PutUtm.call(this,c,id,doc)};
+function g2Source(u){const s=u&&u.utm;if(!s||(!s.source&&!s.campaign))return '';return (s.source||'?')+(s.campaign?' · '+s.campaign:'')}
+function g2SourceCard(){const us=Store.all('users').filter(u=>u.role!=='admin'&&!u.demo&&!u.anonymised);const by={};let tagged=0;for(const u of us){const k=u.utm&&(u.utm.source||u.utm.campaign)?(u.utm.source||'?'):'direct / unknown';if(k!=='direct / unknown')tagged++;by[k]=(by[k]||0)+1}
+  const rows=Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,8);const top=Math.max(1,...rows.map(r=>r[1]));const camp={};for(const u of us)if(u.utm&&u.utm.campaign)camp[u.utm.source+' · '+u.utm.campaign]=(camp[u.utm.source+' · '+u.utm.campaign]||0)+1;const cr=Object.entries(camp).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  return `<div class="card" style="margin-top:14px"><div class="row between"><h3>Sign-ups by source</h3><span class="tiny muted">${tagged} of ${us.length} tagged</span></div><p class="tiny muted" style="margin-top:4px">Add <code>?utm_source=facebook&amp;utm_campaign=jan-launch</code> to your ad links. Saved on the profile at sign-up.</p>
+  ${us.length?`<div class="g2-src">${rows.map(([k,n])=>`<div><span>${h(k)}</span><div class="bar"><i style="width:${Math.round(n/top*100)}%"></i></div><b>${n}</b></div>`).join('')}</div>`:'<p class="muted small" style="margin-top:8px">No sign-ups yet.</p>'}
+  ${cr.length?`<div class="eyebrow" style="margin-top:12px">Campaigns</div><div class="g2-src">${cr.map(([k,n])=>`<div><span>${h(k)}</span><div class="bar"><i style="width:${Math.round(n/Math.max(1,cr[0][1])*100)}%"></i></div><b>${n}</b></div>`).join('')}</div>`:''}</div>`}
+
+/* ---------- public numbers for the landing (anon RPC; local mode counts what is in this browser) ---------- */
+function g2LocalStats(){const us=Store.all('users');const m0=new Date();m0.setDate(1);m0.setHours(0,0,0,0);const rs=Store.all('ratings').filter(r=>r.stars>=1);
+  return {drivers_verified:us.filter(u=>u.role==='driver'&&isVerified(u)&&!u.banned&&!u.suspended&&!u.demo).length,families:us.filter(u=>u.role==='parent'&&!u.demo&&!u.anonymised).length,kids:Store.all('kids').length,rides_month:Store.all('events').filter(e=>e.type==='dropoff'&&e.ts>=m0.getTime()).length,reviews:rs.length,rating:rs.length?Math.round(rs.reduce((s,r)=>s+r.stars,0)/rs.length*10)/10:null,city:(Store.get('settings','landing')||{}).city||'',phone:(Store.get('settings','legal')||{}).phone||'',flags:g2Flags()}}
+function g2LocalReviews(){const us=S.data.users||{};return Store.all('ratings').filter(r=>r.stars>=4&&String(r.comment||'').trim().length>=12).sort((a,b)=>b.ts-a.ts).slice(0,3).map(r=>({stars:r.stars,comment:String(r.comment).trim().slice(0,220),name:String(us[r.parentId]?.name||'').split(' ')[0],driver:String(us[r.driverId]?.name||'').split(' ')[0],month:new Date(r.ts).toLocaleDateString('en-ZA',{month:'short',year:'numeric'})}))}
+async function g2LoadPublic(){if(S.g2PubBusy)return;S.g2PubBusy=true;S.g2PubAt=Date.now();try{
+  if(S.cloud&&sb){const [a,b]=await Promise.all([sb.rpc('public_stats'),sb.rpc('public_reviews')]);if(!a.error&&a.data)S.g2Pub=a.data;if(!b.error&&Array.isArray(b.data))S.g2Reviews=b.data}
+  else{S.g2Pub=g2LocalStats();S.g2Reviews=g2LocalReviews()}
+  }catch(e){console.warn('public stats',e)}finally{S.g2PubBusy=false;if((!me()||S.g2Preview)&&S.route==='landing')render()}}
+
+/* ---------- the ad landing page (signed-out visitors) ---------- */
+const G2_FAQ=[
+  ['How are drivers verified?','Every driver uploads their SA ID, driver\'s licence, PrDP (professional driving permit), police clearance, vehicle photos, operating licence and insurance. Enivel checks the documents and the ID number before a driver can list a route, and watches expiry dates afterwards.'],
+  ['What does it cost?','You pay the driver\'s monthly price plus a small Enivel fee on top. Drivers keep the full price. No sign-up fee, no contract, cancel any time.'],
+  ['How do I know my child is safe on the trip?','You get an alert when the driver is near your pickup, when your child is picked up, when they arrive at school and when they are dropped off. On trips you can see the vehicle live on a map. Your child has an Emergency button that sends their location straight to you.'],
+  ['Can I talk to the driver before I book?','Yes. Every route has an Ask button that opens a chat with the driver, plus photos of the vehicle and reviews from other parents.'],
+  ['What if the driver is sick or the car breaks down?','Drivers mark days off in the app and you are told straight away. You can report any issue from the booking screen and Enivel follows up. In an emergency you have the Emergency button and the national numbers in the app.'],
+  ['I\'m a driver. What do I need?','A valid licence, PrDP, police clearance, a roadworthy vehicle with insurance and an operating licence. Listing routes is free. Once you have a paying passenger you pay a small monthly fee, and you keep 100% of your transport price.']];
+function g2ToForm(mode,role){S.authMode=mode||'signup';if(role)S.signupRole=role;S.g2Scroll=true;render();requestAnimationFrame(()=>{const el=$('#g2-auth');if(el)el.scrollIntoView({behavior:'smooth',block:'start'})})}
+function g2WaLink(phone,text){const d=String(phone||'').replace(/[^\d+]/g,'');if(!d)return '';let n=d;if(typeof normPhone==='function'){const p=normPhone(d);if(p)n=p}n=n.replace(/^\+/,'');if(!/^\d{9,15}$/.test(n))return '';return 'https://wa.me/'+n+(text?'?text='+encodeURIComponent(text):'')}
+function g2StatsHtml(){const p=S.g2Pub||{};const tiles=[['drivers_verified','verified drivers'],['families','families'],['kids','children'],['rides_month','rides this month']].filter(([k])=>+p[k]>0);
+  if(!tiles.length)return `<div class="g2-launch"><span style="font-size:1.6rem">🚐</span><div><b>Just launched${p.city?' in '+h(p.city):''}</b><span>Be one of the first families on Enivel. The first drivers are being verified now.</span></div></div>`;
+  return `<div class="g2-stats">${tiles.map(([k,l])=>`<div class="g2-stat"><div class="num">${(+p[k]).toLocaleString('en-ZA')}</div><span>${l}</span></div>`).join('')}</div>`}
+function g2ReviewsHtml(){const rs=S.g2Reviews||[];if(!rs.length||!flagOn('landingReviews'))return '';const p=S.g2Pub||{};
+  return `<section class="g2-sec" id="g2-reviews"><h2>What parents say</h2>${p.rating?`<div class="g2-ravg"><span class="num">${(+p.rating).toFixed(1)}</span><div><div class="g2-rev-stars" style="color:#f59e0b">${'★'.repeat(Math.round(+p.rating))}${'☆'.repeat(5-Math.round(+p.rating))}</div><div class="tiny muted">from ${p.reviews} parent rating${p.reviews===1?'':'s'}</div></div></div>`:''}
+  <div class="g2-revs">${rs.map(r=>`<div class="g2-rev"><div class="stars">${'★'.repeat(Math.max(1,Math.min(5,+r.stars||0)))}</div><p>“${h(r.comment)}”</p><div class="who">${h(r.name||'A parent')}${r.driver?' · about '+h(r.driver):''}${r.month?' · '+h(r.month):''}</div></div>`).join('')}</div></section>`}
+function g2LandingTop(){const p=pricing();const last=ls.get('enivel_last');const pub=S.g2Pub||{};const first=last?.name?String(last.name).split(' ')[0]:'';
+  return `<div class="g2-land" id="g2-land"><div class="g2-topbar"><span class="kick"><i></i>School transport in South Africa</span><button class="btn sm ghost" onclick="g2ToForm('login')">${first?'Welcome back, '+h(first):'Log in'}</button></div>
+  <section class="g2-hero"><h1>Safe school transport, <em>verified drivers</em>, live alerts.</h1><p class="lead">Book a checked driver for your child's school run. Know the moment they are picked up, at school and home again.</p>
+  <div class="acts"><button class="btn" onclick="g2ToForm('signup','parent')">Get started — free</button><button class="btn ghost" onclick="g2ToForm('signup','driver')">${ICON.car} I'm a driver</button></div></section>
+  <section class="g2-sec"><div class="g2-vals">
+    <div class="g2-val"><span class="ic g2-ic-a">${G2_ICON.shield}</span><div><b>Verified drivers</b><span>ID, driver's licence, PrDP and police clearance checked before a driver can take a child. Documents are watched for expiry.</span></div></div>
+    <div class="g2-val"><span class="ic g2-ic-b">${G2_ICON.bell}</span><div><b>Live alerts</b><span>Know when the driver is 1 km away, when your child is picked up, at school and dropped off. Live map on the trip.</span></div></div>
+    <div class="g2-val"><span class="ic g2-ic-c">${G2_ICON.sos}</span><div><b>Kid Emergency button</b><span>One tap sends your child's location straight to you and to Enivel.</span></div></div></div></section>
+  <section class="g2-sec"><h2>How it works</h2><div class="g2-steps">
+    <div class="g2-step"><span class="n">1</span><b>Add your child</b><span>Name, school and pickup address. Takes a minute.</span></div>
+    <div class="g2-step"><span class="n">2</span><b>Pick a verified driver</b><span>See the vehicle, the price, reviews and open seats on routes near you. Ask questions in chat.</span></div>
+    <div class="g2-step"><span class="n">3</span><b>Relax with live alerts</b><span>Pay monthly in the app. Get told at every pickup and drop-off.</span></div></div></section>
+  <section class="g2-sec"><h2>Enivel today</h2><p class="sub">Live numbers from the app, not marketing estimates.</p>${g2StatsHtml()}</section>
+  ${g2ReviewsHtml()}
+  <section class="g2-sec"><h2>Honest pricing</h2><div class="g2-price"><div class="big">${g2Pct()} <span style="font-size:1rem;font-weight:600;color:var(--fg3)">fee for parents</span></div><ul>
+    <li>${G2_ICON.check}<span>You pay the driver's monthly price plus ${g2Pct()}. On a ${money(900).replace('.00','')} route that is ${money(feeFor(900))}.</span></li>
+    <li>${G2_ICON.check}<span>No hidden costs, no sign-up fee, no contract. Cancel any time.</span></li>
+    <li>${G2_ICON.check}<span>Drivers keep the full transport price.</span></li>
+    <li>${G2_ICON.check}<span>Drivers: listing is free. ${g2ShortMoney(p.driverFee)}/month only once you have your first paying passenger.</span></li>
+    ${p.referralCredit>0?`<li>${G2_ICON.check}<span>Invite a friend and you both get ${g2ShortMoney(p.referralCredit)} credit.</span></li>`:''}</ul></div></section>
+  <section class="g2-sec"><h2>Questions parents ask</h2><div class="g2-faq">${G2_FAQ.map(([q,a])=>`<details><summary>${h(q)}</summary><p>${h(a)}</p></details>`).join('')}</div></section>
+  <section class="g2-drv"><h2>Drive for Enivel</h2><p>Fill your empty seats with parents who are looking for you. Free to list, you keep 100% of your price, and verified drivers get booked first.</p><button class="btn" style="margin-top:12px" onclick="g2ToForm('signup','driver')">Sign up as a driver</button></section>
+  <div class="g2-auth-head" id="g2-auth-head"><h2>${(S.authMode||'login')==='signup'?'Create your free account':'Log in to Enivel'}</h2><p>${(S.authMode||'login')==='signup'?'Parents and drivers. No card needed.':'Welcome back.'}</p></div></div>`}
+function g2LandingFoot(){const pub=S.g2Pub||{};const wa=g2WaLink(pub.phone,'Hi Enivel, I have a question about school transport.');
+  return `<div class="g2-land"><div class="g2-foot"><span>© ${new Date().getFullYear()} Enivel</span><button onclick="go('legal')">Legal centre</button><button onclick="go('privacy')">Privacy</button><button onclick="go('terms')">Terms</button><button onclick="go('safety')">Safety</button>${typeof VIEWS!=='undefined'&&VIEWS.pays&&flagOn('pays')?`<button onclick="go('pays')">Enivel Pays</button>`:''}</div></div>
+  <div class="g2-cta" id="g2-cta"><button class="btn" onclick="g2ToForm('signup','parent')">Get started — free</button><button class="btn ghost" onclick="g2ToForm('signup','driver')">I'm a driver</button></div>
+  ${wa?`<a class="g2-wa" id="g2-wa" href="${h(wa)}" target="_blank" rel="noopener" aria-label="Chat to Enivel on WhatsApp" title="Chat to Enivel on WhatsApp">${G2_ICON.wa}</a>`:''}`}
+const _g2Landing=VIEWS.landing;VIEWS.landing=function(){const base=_g2Landing.apply(this,arguments);if(S.demo)return base;if(me()&&!S.g2Preview)return base;
+  if(!S.g2PubAt||Date.now()-S.g2PubAt>300000)setTimeout(g2LoadPublic,0);
+  try{return g2LandingTop()+`<div id="g2-auth">`+base+`</div>`+g2LandingFoot()}catch(e){console.warn('landing',e);return base}};
+function g2LandingDecorate(){const cta=$('#g2-cta');const auth=$('#g2-auth');if(!cta||!auth)return;if(S.g2PubAt)document.title='Enivel — Safe school transport with verified drivers';
+  if(S.g2Preview){cta.insertAdjacentHTML('afterbegin',`<button class="btn sm ghost" style="flex:0 0 auto" onclick="S.g2Preview=false;go('a-controls')">Exit preview</button>`)}
+  try{const io=new IntersectionObserver(es=>{const vis=es.some(e=>e.isIntersecting);cta.classList.toggle('hide',vis);const wa=$('#g2-wa');if(wa)wa.classList.toggle('up',!vis)},{rootMargin:'0px 0px -40% 0px'});io.observe(auth);const wa=$('#g2-wa');if(wa)wa.classList.add('up')}catch(e){}
+  if(S.g2Scroll){S.g2Scroll=false;setTimeout(()=>auth.scrollIntoView({behavior:'smooth',block:'start'}),40)}}
+
+/* ---------- broadcast banner (settings/banner) ---------- */
+function g2BannerActive(){const b=Store.get('settings','banner');if(!b||!b.text||!b.id)return null;const now=Date.now();if(b.start&&Date.parse(b.start)>now)return null;if(b.end&&Date.parse(b.end)<now)return null;
+  const role=viewRole();if(!role)return null;const aud=b.audience||'all';if(aud!=='all'){const want=aud==='parents'?'parent':aud==='drivers'?'driver':'kid';if(role!==want&&!(role==='admin'&&!S.adminApp&&S.route==='a-controls'))return null}
+  if(ls.get('enivel_banner_x')===b.id)return null;return b}
+function g2BannerDismiss(id){ls.set('enivel_banner_x',id);const el=$('.g2-banner');if(el)el.remove()}
+function g2BannerHtml(b){const link=b.link&&safeRoute(b.link);return `<div class="g2-banner" role="status"><span>📢</span><div class="grow">${h(b.text)}${link?` <a href="#" onclick="event.preventDefault();go('${link}')">${h(b.linkLabel||'Open')} ›</a>`:''}</div><button aria-label="Dismiss" onclick="g2BannerDismiss('${h(b.id)}')">×</button></div>`}
+
+/* ---------- "view as": read-only look at any user's screens ---------- */
+const _g2Me=me;me=function(){if(S.viewAs&&S.admin){const u=Store.get('users',S.viewAs);if(u)return u}return _g2Me()};
+let g2RoT=0;function g2ReadOnly(){const u=Store.get('users',S.viewAs);if(Date.now()-g2RoT>1500){g2RoT=Date.now();toast(`Read-only: you are viewing as ${String(u?.name||'this user').split(' ')[0]}. Nothing was saved.`)}}
+const _g2VaPut=Store.put,_g2VaPatch=Store.patch,_g2VaDel=Store.del;
+Store.put=async function(c,id,doc){if(S.viewAs&&S.admin){g2ReadOnly();return (S.data[c]&&S.data[c][id])||{...(doc||{}),id}}return _g2VaPut.apply(this,arguments)};
+Store.patch=async function(c,id,p){if(S.viewAs&&S.admin){g2ReadOnly();return (S.data[c]&&S.data[c][id])||{id}}return _g2VaPatch.apply(this,arguments)};
+Store.del=async function(c,id){if(S.viewAs&&S.admin){g2ReadOnly();return}return _g2VaDel.apply(this,arguments)};
+async function g2ViewAs(id){if(!S.admin)return;const u=Store.get('users',id);if(!u||!['parent','driver'].includes(u.role))return toast('View as works for parent and driver accounts');closeModal();
+  await auditLog('viewas.start',id,u.name+' ('+u.role+')');S.viewAs=id;S.adminApp=u.role;S.filters=S.filters||{};go(u.role==='driver'?'d-home':'p-home');toast('Viewing as '+String(u.name).split(' ')[0]+' · read-only')}
+async function g2ViewExit(){const id=S.viewAs;if(!id)return;const u=Store.get('users',id);S.viewAs=null;S.adminApp=false;go('a-accounts');await auditLog('viewas.end',id,u?.name||'')}
+function g2ViewAsBar(){if(!S.viewAs||!S.admin)return '';const u=Store.get('users',S.viewAs);return `<div class="g2-viewas"><span>👁</span><div class="grow">Viewing as ${h(u?.name||'user')} · read-only</div><button class="btn sm" onclick="g2ViewExit()">Exit</button></div>`}
+
+/* ---------- feature switches applied to the screen ---------- */
+function g2Off(route){const home=viewRole()==='driver'?'d-home':viewRole()==='kid'?'k-home':viewRole()==='admin'?'a-home':me()?'p-home':'landing';return `<div style="max-width:420px;margin:30px auto" class="card"><h3>Not available right now</h3><p class="muted small" style="margin-top:6px">This part of Enivel is switched off at the moment.</p><button class="btn sm" style="margin-top:12px" onclick="go('${home}')">Back</button></div>`}
+for(const [route,flag] of [['pays','pays'],['p-cert','pays'],['lost-found','lostfound'],['help-centre','help'],['kid-setup','kids']]){if(typeof VIEWS[route]!=='function')continue;const f=VIEWS[route];VIEWS[route]=function(){if(!flagOn(flag)&&!S.admin)return g2Off(route);return f.apply(this,arguments)}}
+const _g2PFind=VIEWS['p-find'];VIEWS['p-find']=function(){if(!flagOn('chauffeur')&&S.filters&&S.filters.type==='private')S.filters.type='shared';return _g2PFind.apply(this,arguments)};
+function g2ApplyFlags(){const F=g2Flags();const rm=sel=>document.querySelectorAll(sel).forEach(e=>e.remove());const rmCard=sel=>document.querySelectorAll(sel).forEach(e=>(e.closest('.card')||e).remove());
+  if(!F.pays&&!S.admin){rm('[onclick*="go(\'pays\')"]');rm('[onclick*="go(\'p-cert\')"]');rm('.pays-homecard')}
+  if(!F.chauffeur){rm('.seg button[onclick*="type=\'private\'"]');rm('#r-type option[value="private"]')}
+  if(!F.waitlist)rm('[onclick*="joinWaitlist("]');
+  if(!F.kids){rm('#kc-start');rm('[data-kc-app]');rm('[data-kc-give]');rm('[data-own-askid]')}
+  if(!F.family)rmCard('[onclick*="addGuardian()"]');
+  if(!F.seatmap){rm('[onclick*="exSeatModal("]');rm('.ex-myseat')}
+  if(!F.lostfound){rm('[onclick*="go(\'lost-found\')"]');rm('[onclick*="exFoundModal("]');rm('[onclick*="exLostModal("]')}
+  if(!F.help)rm('[onclick*="go(\'help-centre\')"]')}
+
+/* ---------- reserved seats (48 h, no payment) ---------- */
+const G2_HOLD_MS=48*3600e3;
+function g2Reserved(f){const now=Date.now();return Store.all('bookings').filter(b=>b.status==='reserved'&&(b.reservedUntil||0)>now&&(!f||f(b)))}
+function g2ReservedOf(kid){return g2Reserved(b=>b.kidId===kid.id)[0]}
+const _g2Rsu=routeSeatsUsed;routeSeatsUsed=function(id){const base=_g2Rsu(id);const loc=g2Reserved(b=>b.routeId===id).length;const srv=(S.g2Resv&&S.g2Resv[id])||0;return base+Math.max(loc,srv)};
+if(typeof pullStats==='function'){const _g2Pull=pullStats;pullStats=async function(){await _g2Pull.apply(this,arguments);try{if(S.cloud&&sb&&S.session){const [r,tr]=await Promise.all([sb.rpc('route_reserved'),sb.rpc('driver_trust')]);if(!r.error&&r.data&&typeof r.data==='object')S.g2Resv=r.data;if(!tr.error&&tr.data&&typeof tr.data==='object')S.g2Trust=tr.data}}catch(e){}}}
+let g2ExpT=0;async function g2ExpireHolds(){if(Date.now()-g2ExpT<60000||S.viewAs)return;g2ExpT=Date.now();const u=me();if(!u)return;const now=Date.now();const mine=Store.all('bookings').filter(b=>b.status==='reserved'&&(b.reservedUntil||0)<=now&&(S.admin||b.parentId===u.id));
+  for(const b of mine){try{await Store.patch('bookings',b.id,{status:'expired',expiredAt:now});const k=Store.get('kids',b.kidId);const r=routeOf(b.routeId);if(b.parentId===u.id)await notify(u.id,`Your 48 h seat hold for ${k?.name||'your child'} on ${r?.name||'the route'} ended. The seat is open again — book when you are ready.`,'info','p-find')}catch(e){}}}
+async function g2Reserve(routeId,kidIds){const u=me();const r=routeOf(routeId);if(!u||!r||!kidIds.length)return;const open=r.seats-routeSeatsUsed(r.id);if(kidIds.length>open)return toast(`Only ${open} seat${open===1?'':'s'} open`);
+  const until=Date.now()+G2_HOLD_MS;for(const kidId of kidIds){const k=Store.get('kids',kidId);await Store.put('bookings',uid(),{parentId:u.id,kidId,routeId:r.id,driverId:r.driverId,price:r.price,type:r.type||'shared',status:'reserved',reservedAt:Date.now(),reservedUntil:until,sponsoredMonths:[]});
+    await notify(r.driverId,`${u.name} reserved a seat for ${k?.name||'a child'} on ${r.name} (48 h hold, payment to follow).`,'info','d-routes')}
+  await notify(u.id,`Seat${kidIds.length>1?'s':''} held for 48 h on ${r.name}. Pay before ${fmtDT(until)} to confirm.`,'pay','p-home');closeModal();S.findKid=null;go('p-home');toast('Seat reserved for 48 hours')}
+function g2ReserveConfirm(bid){const b=Store.get('bookings',bid);const u=me();if(!b||!u||b.status!=='reserved')return;const r=routeOf(b.routeId);if(!r)return toast('That route is no longer listed');
+  payModal(b.price+feeFor(b.price),async()=>{await Store.patch('bookings',bid,{status:'active',startedAt:Date.now(),reservedUntil:null});await pushTx({type:'subscription',amount:b.price,from:u.id,to:b.driverId,bookingId:bid,kidId:b.kidId,note:'Monthly transport'});await pushTx({type:'platform_fee',amount:feeFor(b.price),from:u.id,to:'enivel',bookingId:bid,note:g2Pct()+' platform fee'});
+    await notify(b.driverId,`${u.name} confirmed ${Store.get('kids',b.kidId)?.name||'a child'} on ${r.name}. ${money(b.price)}/month.`,'pay','d-routes');await notify(u.id,`Booking confirmed with ${userName(b.driverId)}. You'll be notified at every pickup and drop-off.`,'pay','p-home');closeModal();go('p-home');toast('Booked and paid')})}
+async function g2ReserveRelease(bid){const b=Store.get('bookings',bid);if(!b)return;await Store.patch('bookings',bid,{status:'cancelled',cancelledAt:Date.now()});const r=routeOf(b.routeId);await notify(b.driverId,`${userName(b.parentId)} released the held seat on ${r?.name||'your route'}.`,'info','d-routes');toast('Seat released')}
+const _g2BookRoute=bookRoute;bookRoute=async function(routeId,...a){const res=await _g2BookRoute.call(this,routeId,...a);try{const m=$('.modal');const go_=m&&$('#bk-go',m);if(!go_||$('#g2-resv',m))return res;const r=routeOf(routeId);const u=me();if(!r||!u||r.type==='private')return res;
+  m.querySelectorAll('.kidchip').forEach(ch=>{const k=Store.get('kids',ch.dataset.k);if(k&&g2ReservedOf(k)){ch.disabled=true;ch.classList.remove('on');ch.title='Seat already held'}});
+  go_.insertAdjacentHTML('afterend',`<button class="btn ghost wide" id="g2-resv" style="margin-top:8px">Reserve for 48 h — pay later</button><p class="tiny muted" style="margin-top:6px;text-align:center">No payment now. The seat is held for 48 hours, then it opens again.</p>`);
+  $('#g2-resv',m).onclick=()=>{const ids=[...m.querySelectorAll('.kidchip.on')].map(b=>b.dataset.k);if(!ids.length)return toast('Choose a child first');g2Reserve(routeId,ids)}}catch(e){console.warn('reserve',e)}return res};
+function g2HoldCards(){const u=me();if(!u||u.role!=='parent')return '';const rs=g2Reserved(b=>b.parentId===u.id);if(!rs.length)return '';
+  return rs.map(b=>{const k=Store.get('kids',b.kidId);const r=routeOf(b.routeId);const left=Math.max(0,b.reservedUntil-Date.now());const hrs=Math.ceil(left/3600e3);return `<div class="card g2-resv" data-g2-hold="${h(b.id)}" style="margin-bottom:14px"><div class="row between"><div><div class="eyebrow">Seat held · ${hrs}h left</div><b>${h(k?.name||'Child')} · ${h(r?.name||'route')}</b><div class="tiny muted">${h(userName(b.driverId))} · ${money(b.price)}/month + ${g2Pct()} fee. Pay before ${fmtDT(b.reservedUntil)} to keep the seat.</div></div></div><div class="row" style="margin-top:10px"><button class="btn sm" onclick="g2ReserveConfirm('${h(b.id)}')">Pay & confirm</button><button class="btn sm ghost" onclick="g2ReserveRelease('${h(b.id)}')">Release seat</button></div></div>`}).join('')}
+const _g2PHome=VIEWS['p-home'];VIEWS['p-home']=function(){const html=_g2PHome.apply(this,arguments);try{const cards=g2HoldCards();if(!cards)return html;const i=html.indexOf('<div class="grid');return i>=0?html.slice(0,i)+cards+html.slice(i):html+cards}catch(e){return html}};
+/* driver's route list counts held seats honestly */
+if(typeof activeBookings==='function'){/* reserved seats are not "active": money, pickups and capacity on the server ignore them (documented) */}
+
+/* ---------- route card: trust panel, guarantee ---------- */
+function g2TrustPanel(r){const d=Store.get('users',r.driverId);if(!d)return '';const ver=isVerified(d);const polSrc=d.policeDate||(S.g2Trust&&S.g2Trust[d.id]&&S.g2Trust[d.id].police&&S.g2Trust[d.id].police+'-01')||'';const pol=polSrc?new Date(polSrc):null;const polOk=pol&&!isNaN(pol);const trips=typeof driverTrips==='function'?driverTrips(d.id):null;let ot=null;try{ot=typeof onTimeScore==='function'?onTimeScore(d.id):null;if(ot&&typeof ot==='object')ot=ot.pct}catch(e){}let chk=null;try{chk=typeof opsMonthStats==='function'?opsMonthStats(d.id):null}catch(e){}
+  return `<div class="g2-trust" aria-label="Trust panel"><div class="${ver?'ok':''}"><b>${ver?'✓ Verified':'Pending'}</b>driver checks</div><div><b>${polOk?pol.toLocaleDateString('en-ZA',{month:'short',year:'numeric'}):'—'}</b>police clearance</div><div><b>${trips!=null?trips:'—'}</b>trips completed</div><div><b>${ot!=null?ot+'%':'—'}</b>on time</div><div><b>${chk&&chk.days?chk.done+'/'+chk.days:'—'}</b>vehicle checks this month</div></div>`}
+const _g2RouteCard=routeCard;routeCard=function(r,kids){let html=_g2RouteCard(r,kids);if(!html)return html;try{let extra=g2TrustPanel(r);if(flagOn('guarantee'))extra+=`<div class="g2-guar">${G2_ICON.shield}<span>Not happy after the first week? Enivel credits your fee.</span></div>`;
+  const mk='<div class="row" style="margin-top:14px"><button class="btn sm"';const i=html.indexOf(mk);if(i>=0)html=html.slice(0,i)+extra+html.slice(i);else{const j=html.lastIndexOf('</div>');html=html.slice(0,j)+extra+html.slice(j)}}catch(e){console.warn('trust',e)}return html};
+
+/* ---------- share your driver (booking screen) ---------- */
+function g2ShareText(b){const d=Store.get('users',b.driverId);const k=Store.get('kids',b.kidId);const df=String(d?.name||'our driver').split(' ')[0];const kf=String(k?.name||'my child').split(' ')[0];const link=typeof growRouteLink==='function'&&b.routeId?growRouteLink(b.routeId):location.origin+location.pathname;
+  return `I use ${df} for ${kf}'s school transport — ${isVerified(d)?'verified on Enivel':'on Enivel'}: ${link}`}
+function g2ShareCard(b){if(!b||b.once)return '';const text=g2ShareText(b);const wa='https://wa.me/?text='+encodeURIComponent(text);
+  return `<div class="card" style="margin-top:14px" id="g2-share"><h3>Share your driver</h3><p class="small muted" style="margin:6px 0 10px">Know a parent at the same school? Send them your driver.</p><div class="row"><a class="btn sm" style="background:#25d366;border-color:#25d366;color:#fff" href="${h(wa)}" target="_blank" rel="noopener">${G2_ICON.wa} WhatsApp</a><button class="btn sm ghost" onclick="navigator.clipboard&&navigator.clipboard.writeText(${JSON.stringify(text).replace(/"/g,'&quot;')}).then(()=>toast('Copied'))">Copy</button>${typeof growShareRoute==='function'&&b.routeId?`<button class="btn sm ghost" onclick="growShareRoute('${h(b.routeId)}')">Poster & QR</button>`:''}</div></div>`}
+const _g2PBooking=VIEWS['p-booking'];VIEWS['p-booking']=function(){const html=_g2PBooking.apply(this,arguments);try{const b=Store.get('bookings',S.bookingId);if(!b||me()?.id!==b.parentId)return html;return html+g2ShareCard(b)}catch(e){return html}};
+
+/* ---------- promo codes ---------- */
+async function g2PromoApply(code){code=String(code||'').trim().toUpperCase();if(!/^[A-Z0-9]{3,20}$/.test(code))return toast('Enter the code: letters and digits only');if(!S.cloud||!sb)return toast('Promo codes work in the live app');
+  const {data,error}=await sb.rpc('promo_apply',{p_code:code});if(error)return toast(error.message);await cloudPull(true);toast(`${money(data.credit)} credit added. Balance ${money(data.balance)}`);if(typeof confetti==='function')confetti();render()}
+function g2PromoCard(){const u=me();if(!u||S.admin&&!S.viewAs)return '';return `<div class="card" style="margin-top:14px" id="g2-promo"><h3>Have a promo code?</h3><p class="small muted" style="margin-top:4px">Credit is applied to your next payment.${u.credit?' You have '+money(u.credit)+' credit.':''}</p><form class="g2-promo" onsubmit="event.preventDefault();g2PromoApply(this.c.value)"><input name="c" placeholder="e.g. SCHOOL50" maxlength="20" autocapitalize="characters" autocomplete="off"><button class="btn sm">Apply</button></form></div>`}
+for(const r of ['p-pay','p-more','d-more']){const f=VIEWS[r];if(typeof f!=='function')continue;VIEWS[r]=function(){const html=f.apply(this,arguments);try{if(!me()||viewRole()==='kid')return html;return html+g2PromoCard()}catch(e){return html}}}
+
+/* ---------- admin: credit, account tools ---------- */
+function g2UserPick(id,who){const us=Store.all('users').filter(u=>u.role!=='admin'&&!u.anonymised&&(!who||who(u))).sort((a,b)=>String(a.name).localeCompare(String(b.name)));return `<select id="${id}" class="g2-in">${us.map(u=>`<option value="${h(u.id)}">${h(u.name)} · ${u.role}${u.email?' · '+h(u.email):''}</option>`).join('')||'<option value="">No accounts</option>'}</select>`}
+function g2CreditModal(userId){modal(`<h3>Give credit or refund</h3><p class="small muted" style="margin-top:4px">Adds Enivel credit to the account. The person gets a notification and the audit log keeps the reason.</p><div class="stack" style="margin-top:12px">
+  <div class="field"><label>Account</label>${userId?`<input class="g2-in" value="${h(userName(userId))}" disabled><input type="hidden" id="g2c-u" value="${h(userId)}">`:g2UserPick('g2c-u')}</div>
+  <div class="field"><label>Amount (R) — negative removes credit</label><input id="g2c-a" class="g2-in" type="number" step="0.01" placeholder="50"></div>
+  <div class="field"><label>Reason</label><input id="g2c-r" class="g2-in" placeholder="e.g. First-week guarantee · refund of September fee" maxlength="200"></div>
+  <button class="btn wide" id="g2c-go">Add credit</button></div>`,m=>{$('#g2c-go',m).onclick=async()=>{const u=val(m,'g2c-u'),a=+val(m,'g2c-a'),r=val(m,'g2c-r').trim();if(!u)return toast('Pick an account');if(!a)return toast('Enter an amount');if(r.length<3)return toast('Give a reason');const btn=$('#g2c-go',m);btn.disabled=true;
+    try{if(S.cloud&&sb){const {data,error}=await sb.rpc('admin_credit',{p_user:u,p_amount:a,p_reason:r});if(error)throw new Error(error.message);await cloudPull(true);toast(`Credit updated: balance ${money(data.credit)}`)}
+      else{const cur=Store.get('users',u)||{};const nc=Math.max(0,Math.round(((cur.credit||0)+a)*100)/100);await Store.patch('users',u,{credit:nc});await notify(u,`Enivel ${a>0?'added':'removed'} ${money(Math.abs(a))} credit: ${r}`,'pay','p-pay');await auditLog(a>0?'credit.give':'credit.remove',u,money(a)+' · '+r+' · balance '+money(nc));toast('Credit updated: balance '+money(nc))}
+      closeModal();render()}catch(e){toast(e.message);btn.disabled=false}}})}
+function g2ExportUser(id){const u=Store.get('users',id);if(!u)return;const keys=['userId','parentId','driverId','from','to','by'];const out={exportedAt:new Date().toISOString(),user:u};for(const c of COLS){if(c==='users'||c==='settings'||c==='audit')continue;const rows=Store.all(c).filter(d=>d.id===id||keys.some(k=>d[k]===id));if(rows.length)out[c]=rows}
+  const kidIds=new Set((out.kids||[]).map(k=>k.id));for(const c of ['events','bookings','messages'])if(kidIds.size){const extra=Store.all(c).filter(d=>kidIds.has(d.kidId)&&!(out[c]||[]).some(x=>x.id===d.id));if(extra.length)out[c]=[...(out[c]||[]),...extra]}
+  const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='enivel-data-'+String(u.name||id).replace(/\W+/g,'-').toLowerCase()+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);auditLog('data.export',id,u.name+' · '+Object.keys(out).filter(k=>Array.isArray(out[k])).map(k=>k+' '+out[k].length).join(', '));toast('Download started')}
+async function g2ResetSecurity(id){const u=Store.get('users',id);if(!u)return;confirmBox('Reset two-step verification?',`${u.name} will be able to log in with just their password. Their PIN, SMS step and passkeys are removed.`,async()=>{try{if(S.cloud&&sb){const {error}=await sb.rpc('admin_reset_security',{p_user:id});if(error)throw new Error(error.message);await cloudPull(true)}else{await Store.patch('users',id,{twoFactor:null,pinHash:null,pinSalt:null,passkeys:[]});await auditLog('security.reset',id,'Two-step verification and passkeys cleared');await notify(id,'Enivel support reset your two-step verification and passkeys. Set them up again under Settings → Security.','info')}toast('Security reset');render()}catch(e){toast(e.message)}})}
+async function g2Anonymise(id){const u=Store.get('users',id);if(!u)return;modal(`<h3>Delete / anonymise ${h(u.name)}?</h3><div class="g2-warn" style="margin-top:10px"><b>This cannot be undone.</b> Name, email, phone, ID number, photos and documents are replaced with placeholders. Children's names are blanked. The account is suspended. Money records are kept for the books.</div><p class="small muted" style="margin-top:10px">Export their data first if they asked for a copy (POPIA access request).</p><div class="field" style="margin-top:12px"><label>Type DELETE to confirm</label><input id="g2-del" class="g2-in" autocomplete="off"></div><div class="row" style="margin-top:12px"><button class="btn" id="g2-del-go" style="background:var(--bad);border-color:var(--bad);color:#fff">Anonymise account</button><button class="btn ghost" onclick="closeModal()">Cancel</button></div>`,m=>{$('#g2-del-go',m).onclick=async()=>{if(val(m,'g2-del')!=='DELETE')return toast('Type DELETE to confirm');try{
+    if(S.cloud&&sb){const {error}=await sb.rpc('admin_anonymise',{p_user:id});if(error)throw new Error(error.message);await cloudPull(true)}
+    else{const tag=id.slice(0,8);const {idNumber,idPhoto,docsMeta,passkeys,pushSubs,pinHash,pinSalt,twoFactor,guardians,journey,photo,utm,...rest}=u;await Store.put('users',id,{...rest,name:'Deleted user '+tag,email:'deleted-'+tag+'@anon.enivel',phone:null,phoneVerified:false,suspended:true,anonymised:true,anonymisedAt:Date.now(),verification:{status:'none'},idStatus:null,passkeys:[],pushSubs:[]});for(const k of kidsOf(id))await Store.patch('kids',k.id,{name:'Child',photo:null,notes:null,anonymised:true});await auditLog('account.anonymise',id,'Was '+u.name+' ('+u.role+'); money records kept')}
+    closeModal();toast('Account anonymised');render()}catch(e){toast(e.message)}}})}
+function g2AccountTools(id){const u=Store.get('users',id);if(!u)return;const item=(l,s,f,danger)=>`<div class="item" style="cursor:pointer" onclick="${f}"><div class="grow"><b class="small" ${danger?'style="color:var(--bad)"':''}>${l}</b><div class="tiny muted">${s}</div></div>›</div>`;
+  modal(`<div class="row"><span class="avatar">${initials(u.name)}</span><div><h3>${h(u.name)}</h3><div class="tiny muted">${u.role} · ${h(u.email||'')}${g2Source(u)?' · from '+h(g2Source(u)):''}${u.credit?' · '+money(u.credit)+' credit':''}</div></div></div><div class="list" style="margin-top:10px">
+  ${['parent','driver'].includes(u.role)&&!u.anonymised?item('View as '+h(String(u.name).split(' ')[0])+' (read-only)','See exactly what they see. Nothing you tap is saved.',`g2ViewAs('${h(id)}')`):''}
+  ${item('Give credit / refund','Adds Enivel credit with a reason, notification and audit row',`closeModal();g2CreditModal('${h(id)}')`)}
+  ${item('Reset two-step verification & passkeys','For "I am locked out" calls',`closeModal();g2ResetSecurity('${h(id)}')`)}
+  ${item('Export their data (JSON)','POPIA access request: everything linked to this account',`g2ExportUser('${h(id)}')`)}
+  ${u.anonymised?'':item('Delete / anonymise account','POPIA deletion request. Money records are kept.',`closeModal();g2Anonymise('${h(id)}')`,true)}
+  ${item('Open full account','Documents, bookings, transactions',`closeModal();viewAccount('${h(id)}')`)}</div><button class="btn ghost wide" style="margin-top:12px" onclick="closeModal()">Close</button>`)}
+const _g2Acc=VIEWS['a-accounts'];VIEWS['a-accounts']=function(){let html=_g2Acc.apply(this,arguments);if(!S.admin)return html;try{
+  html=html.replace('<th>Joined</th><th></th>','<th>Joined</th><th>Source</th><th></th>');
+  html=html.replace(/<tr>([\s\S]*?)<\/tr>/g,(m,inner)=>{const id=(inner.match(/viewAccount\('([^']+)'\)/)||[])[1];if(!id)return m;const u=Store.get('users',id);const src=g2Source(u);const k=inner.lastIndexOf('<td>');if(k<0)return m;
+    inner=inner.slice(0,k)+`<td>${src?`<span class="g2-pill-src">${h(src)}</span>`:'<span class="tiny muted">—</span>'}</td>`+inner.slice(k);
+    return '<tr>'+inner.replace(`onclick="viewAccount('${id}')">View</button>`,`onclick="viewAccount('${id}')">View</button><button class="btn sm ghost" title="Account tools" onclick="g2AccountTools('${id}')">Tools</button>`)+'</tr>'})}catch(e){console.warn('accounts',e)}return html};
+
+/* ---------- admin: quick actions on the overview ---------- */
+function g2QaMessageRoute(){const rs=Store.all('routes').filter(r=>activeBookings(b=>b.routeId===r.id).length);if(!rs.length)return toast('No routes with passengers yet');
+  modal(`<h3>Message all parents of a route</h3><div class="stack" style="margin-top:12px"><div class="field"><label>Route</label><select id="g2m-r" class="g2-in">${rs.map(r=>`<option value="${h(r.id)}">${h(r.name)} · ${h(userName(r.driverId))} · ${activeBookings(b=>b.routeId===r.id).length} parents</option>`).join('')}</select></div><div class="field"><label>Message</label><textarea id="g2m-t" class="g2-in" rows="3" maxlength="300" placeholder="e.g. The driver is running 15 minutes late this afternoon."></textarea></div><button class="btn wide" id="g2m-go">Send</button></div>`,m=>{$('#g2m-go',m).onclick=async()=>{const rid=val(m,'g2m-r'),t=val(m,'g2m-t').trim();if(!t)return toast('Write the message');const r=routeOf(rid);const ps=[...new Set(activeBookings(b=>b.routeId===rid).map(b=>b.parentId))];for(const p of ps)await notify(p,'📢 Enivel about '+r.name+': '+t,'info','p-home');await auditLog('route.broadcast',rid,r.name+' → '+ps.length+' parents: '+t.slice(0,120));closeModal();toast('Sent to '+ps.length+' parent'+(ps.length===1?'':'s'))}})}
+function g2QaPauseDriver(){const ds=Store.all('users').filter(u=>u.role==='driver'&&!u.anonymised);if(!ds.length)return toast('No drivers yet');
+  modal(`<h3>Pause or resume a driver</h3><p class="small muted" style="margin-top:4px">Pausing hides all their routes from parents and stops new bookings. Existing passengers are not cancelled.</p><div class="stack" style="margin-top:12px"><div class="field"><label>Driver</label>${g2UserPick('g2p-d',u=>u.role==='driver')}</div><div class="field"><label>Reason (sent to the driver)</label><input id="g2p-r" class="g2-in" maxlength="200" placeholder="e.g. PrDP expired, please upload the renewal"></div><div class="row"><button class="btn" id="g2p-pause">Pause routes</button><button class="btn ghost" id="g2p-resume">Resume</button></div></div>`,m=>{
+    $('#g2p-pause',m).onclick=async()=>{const id=val(m,'g2p-d'),r=val(m,'g2p-r').trim();const rs=myRoutesOf(id).filter(x=>x.active!==false);for(const x of rs)await Store.patch('routes',x.id,{active:false,pausedByAdmin:Date.now()});await Store.patch('users',id,{pausedByAdmin:Date.now(),pauseReason:r||null});await notify(id,'⏸ Enivel paused your routes'+(r?': '+r:'')+'. Contact support to resume.','info','d-routes');await auditLog('driver.pause',id,userName(id)+' · '+rs.length+' routes · '+r);closeModal();toast('Paused '+rs.length+' route'+(rs.length===1?'':'s'))};
+    $('#g2p-resume',m).onclick=async()=>{const id=val(m,'g2p-d');const rs=myRoutesOf(id).filter(x=>x.pausedByAdmin);for(const x of rs)await Store.patch('routes',x.id,{active:true,pausedByAdmin:null});await Store.patch('users',id,{pausedByAdmin:null,pauseReason:null});await notify(id,'▶ Enivel resumed your routes. Parents can book again.','info','d-routes');await auditLog('driver.resume',id,userName(id)+' · '+rs.length+' routes');closeModal();toast('Resumed '+rs.length+' route'+(rs.length===1?'':'s'))}})}
+function g2QaVerifyDriver(){const ds=Store.all('users').filter(u=>u.role==='driver'&&u.verification?.status==='pending');if(!ds.length)return toast('Nobody is waiting for verification');
+  modal(`<h3>Verify a driver</h3><p class="small muted" style="margin-top:4px">Approves the documents as submitted. Open the Verify queue to look at them first.</p><div class="stack" style="margin-top:12px"><div class="field"><label>Driver</label><select id="g2v-d" class="g2-in">${ds.map(u=>`<option value="${h(u.id)}">${h(u.name)} · ${h(u.email||'')}</option>`).join('')}</select></div><div class="row"><button class="btn" id="g2v-go">Approve</button><button class="btn ghost" onclick="closeModal();go('a-verify')">Open queue</button></div></div>`,m=>{$('#g2v-go',m).onclick=async()=>{const id=val(m,'g2v-d');const u=Store.get('users',id);if(typeof reviewUser==='function'){try{await reviewUser(id,'approved')}catch(e){await Store.patch('users',id,{verification:{...(u.verification||{}),status:'approved',reviewedAt:Date.now()}})}}else await Store.patch('users',id,{verification:{...(u.verification||{}),status:'approved',reviewedAt:Date.now()}});await auditLog('driver.verify',id,u.name+' approved from quick actions');closeModal();toast(u.name+' verified')}})}
+function g2QuickActions(){const pend=Store.all('users').filter(u=>u.role==='driver'&&u.verification?.status==='pending').length;const qa=(l,s,f,ic)=>`<button onclick="${f}">${ic}<b>${l}</b><span>${s}</span></button>`;
+  return `<div class="card" style="margin-bottom:14px"><div class="row between"><h3>Quick actions</h3><span class="tiny muted">audited</span></div><div class="g2-qa">
+  ${qa('Message a route','All parents on one route',"g2QaMessageRoute()",G2_ICON.mega)}
+  ${qa('Pause driver','Hide routes, stop bookings',"g2QaPauseDriver()",G2_ICON.pause)}
+  ${qa('Verify driver',pend?pend+' waiting':'Queue empty',"g2QaVerifyDriver()",G2_ICON.shield)}
+  ${qa('Give credit','Refund or goodwill',"g2CreditModal()",G2_ICON.money)}
+  ${typeof VIEWS['a-pays']==='function'?qa('Draw Enivel Pays','Pick this month\'s family',"go('a-pays')",G2_ICON.gift):''}
+  ${qa('Controls','Switches, pricing, promos, banner',"go('a-controls')",G2_ICON.sliders)}</div></div>`}
+const _g2AHome=VIEWS['a-home'];VIEWS['a-home']=function(){let html=_g2AHome.apply(this,arguments);if(!S.admin)return html;try{const i=html.indexOf('<div class="kpi">');const q=g2QuickActions();html=i>=0?html.slice(0,i)+q+html.slice(i):html+q;
+  const k='<div class="grid g2" style="margin-top:14px"><div class="card"><h3>Revenue by month</h3>';const j=html.indexOf(k);const src=g2SourceCard();html=j>=0?html.slice(0,j)+src+html.slice(j):html+src}catch(e){console.warn('a-home',e)}return html};
+
+/* ---------- admin: controls (switches, pricing, promos, banner, landing) ---------- */
+FORM_ROUTES.push('a-controls','a-payouts');
+async function g2SetFlag(k,on){await Store.patch('settings','flags',{[k]:!!on,updatedAt:Date.now()});await auditLog('flag.'+k,null,on?'on':'off');toast(G2_FLAG_LABELS.find(x=>x[0]===k)?.[1]+' '+(on?'on':'off'))}
+function g2PricingPreview(p){const ex=900;return `On a ${g2ShortMoney(ex)} route a parent pays <b>${money(ex+Math.round(ex*p.feePct)/100)}</b> (${money(Math.round(ex*p.feePct)/100)} fee), the driver keeps <b>${money(ex)}</b>. Drivers pay <b>${g2ShortMoney(p.driverFee)}/month</b> after their first passenger, ${p.freeVehicles} vehicle${p.freeVehicles===1?'':'s'} free then <b>${money(p.parkingFee)}</b> per extra vehicle. Referral credit <b>${g2ShortMoney(p.referralCredit)}</b>.`}
+function g2PricingRead(m){return {feePct:+val(m,'g2pr-fee'),driverFee:+val(m,'g2pr-drv'),parkingFee:+val(m,'g2pr-park'),freeVehicles:+val(m,'g2pr-free'),referralCredit:+val(m,'g2pr-ref')}}
+function g2PricingInput(){const m=$('#g2-pricing');if(!m)return;const p=g2PricingRead(m);const ok=[p.feePct,p.driverFee,p.parkingFee,p.freeVehicles,p.referralCredit].every(x=>Number.isFinite(x)&&x>=0)&&p.feePct<=20;$('#g2pr-prev').innerHTML=ok?g2PricingPreview(p):'<span style="color:var(--bad)">Check the numbers (fee at most 20%).</span>';$('#g2pr-save').disabled=!ok}
+async function g2PricingSave(){const m=$('#g2-pricing');if(!m)return;const p=g2PricingRead(m);const cur=pricing();const diff=Object.keys(p).filter(k=>p[k]!==cur[k]);if(!diff.length)return toast('Nothing changed');
+  confirmBox('Change prices for everyone?',`This applies app-wide the moment you confirm: ${diff.map(k=>k+' '+cur[k]+' → '+p[k]).join(', ')}. Parents and drivers see the new numbers at their next payment.`,async()=>{await Store.put('settings','pricing',{...p,updatedAt:Date.now(),by:me()?.id});await auditLog('pricing.change',null,diff.map(k=>k+' '+cur[k]+' → '+p[k]).join(', '));toast('Pricing saved');render()})}
+async function g2PricingReset(){confirmBox('Back to the standard prices?','2% parent fee, R100 driver fee, 3 free vehicles, R49.99 per parking slot, R50 referral credit.',async()=>{await Store.put('settings','pricing',{...G2_DEF_PRICING,updatedAt:Date.now()});await auditLog('pricing.reset',null,'standard prices');toast('Standard prices restored');render()})}
+async function g2PromosLoad(){if(!S.cloud||!sb||S.g2PromoBusy)return;S.g2PromoBusy=true;try{const {data,error}=await sb.rpc('promo_list');if(!error)S.g2Promos=data||[];S.g2PromoAt=Date.now()}catch(e){}finally{S.g2PromoBusy=false;if(S.route==='a-controls')render()}}
+async function g2PromoSave(){const m=$('#g2-promos');if(!m)return;const code=val(m,'g2pm-c').trim().toUpperCase(),credit=+val(m,'g2pm-a'),max=+val(m,'g2pm-m'),exp=val(m,'g2pm-e'),role=val(m,'g2pm-r');if(!/^[A-Z0-9]{3,20}$/.test(code))return toast('Code: 3 to 20 letters or digits');if(!(credit>0))return toast('Credit amount?');if(!(max>=1))return toast('Max uses?');
+  if(!S.cloud||!sb)return toast('Promo codes work in the live app');const {error}=await sb.rpc('promo_upsert',{p_code:code,p_credit:credit,p_max:max,p_expires:exp||'',p_role:role||'any'});if(error)return toast(error.message);await auditLog('promo.save',code,money(credit)+' · max '+max+(exp?' · until '+exp:'')+' · '+role);toast('Promo code '+code+' saved');S.g2PromoAt=0;g2PromosLoad()}
+async function g2PromoDelete(code){confirmBox('Delete '+code+'?','Nobody can redeem it any more. People who already used it keep their credit.',async()=>{const {error}=await sb.rpc('promo_delete',{p_code:code});if(error)return toast(error.message);await auditLog('promo.delete',code,'');toast('Deleted');S.g2PromoAt=0;g2PromosLoad()})}
+async function g2BannerSave(clear){const m=$('#g2-banner-card');if(!m)return;if(clear){await Store.put('settings','banner',{id:null,text:'',updatedAt:Date.now()});await auditLog('banner.clear',null,'');toast('Banner removed');render();return}
+  const text=val(m,'g2b-t').trim();if(!text)return toast('Write the announcement');const b={id:'b'+Date.now().toString(36),text:text.slice(0,240),audience:val(m,'g2b-a')||'all',start:val(m,'g2b-s')||'',end:val(m,'g2b-e')||'',link:val(m,'g2b-l')||'',linkLabel:val(m,'g2b-ll').trim().slice(0,30)||'',updatedAt:Date.now()};
+  if(b.start&&b.end&&Date.parse(b.end)<Date.parse(b.start))return toast('End is before start');await Store.put('settings','banner',b);await auditLog('banner.set',null,b.audience+(b.start?' from '+b.start:'')+(b.end?' to '+b.end:'')+': '+b.text.slice(0,120));toast('Banner live');render()}
+async function g2LandingSave(){const m=$('#g2-landing-card');if(!m)return;const city=val(m,'g2l-city').trim().slice(0,60);await Store.patch('settings','landing',{city,updatedAt:Date.now()});await auditLog('landing.city',null,city||'(none)');toast('Saved');S.g2PubAt=0}
+VIEWS['a-controls']=adminGate(()=>{const F=g2Flags();const p=pricing();const b=Store.get('settings','banner')||{};const land=Store.get('settings','landing')||{};if(S.cloud&&(!S.g2PromoAt||Date.now()-S.g2PromoAt>15000))setTimeout(g2PromosLoad,0);const promos=S.g2Promos||[];const routes=Object.keys(VIEWS).filter(r=>/^(p|d|k)-[a-z-]+$|^(pays|legal|help-centre|lost-found|notifs)$/.test(r)).sort();
+  return pageHead('Controls','Feature switches, pricing, promo codes, announcements',`<button class="btn sm ghost" onclick="S.g2Preview=true;go('landing')">Preview landing</button>`)+`<div class="grid g2" style="align-items:start">
+  <div class="card"><h3>Feature switches</h3><p class="tiny muted" style="margin-top:4px">Off hides the entry points for everyone except you. Takes effect on the next screen.</p><div style="margin-top:6px">${G2_FLAG_LABELS.map(([k,l,s])=>`<label class="g2-sw"><div class="grow"><b>${l}</b><span>${s}</span></div><input type="checkbox" class="g2-tog" data-g2-flag="${k}" ${F[k]?'checked':''} onchange="g2SetFlag('${k}',this.checked)"></label>`).join('')}</div></div>
+  <div class="stack">
+  <div class="card" id="g2-pricing"><h3>Pricing controls</h3><div class="g2-warn" style="margin-top:10px"><b>Careful.</b> These numbers change what every parent and driver pays from their next payment. The policy pages quote the standard prices, so update the Terms before you change the fee for good.</div>
+    <div class="g2-fields"><div class="field"><label>Parent fee %</label><input id="g2pr-fee" type="number" step="0.1" min="0" max="20" value="${p.feePct}" oninput="g2PricingInput()"></div><div class="field"><label>Driver fee / month (R)</label><input id="g2pr-drv" type="number" step="1" min="0" value="${p.driverFee}" oninput="g2PricingInput()"></div><div class="field"><label>Free vehicles</label><input id="g2pr-free" type="number" step="1" min="0" value="${p.freeVehicles}" oninput="g2PricingInput()"></div><div class="field"><label>Parking slot / month (R)</label><input id="g2pr-park" type="number" step="0.01" min="0" value="${p.parkingFee}" oninput="g2PricingInput()"></div><div class="field"><label>Referral credit (R)</label><input id="g2pr-ref" type="number" step="1" min="0" value="${p.referralCredit}" oninput="g2PricingInput()"></div></div>
+    <p class="small" id="g2pr-prev" style="margin-top:10px">${g2PricingPreview(p)}</p>${p.referralCredit!==50?'<p class="tiny muted" style="margin-top:6px">Note: the referral amount shown in the app follows this number; the server still awards R50 per referral until setup.sql is updated.</p>':''}
+    <div class="row" style="margin-top:12px"><button class="btn sm" id="g2pr-save" onclick="g2PricingSave()">Save prices</button>${g2PricingChanged()?'<button class="btn sm ghost" onclick="g2PricingReset()">Back to standard</button>':''}</div></div>
+  <div class="card" id="g2-promos"><div class="row between"><h3>Promo codes</h3><span class="tiny muted">${S.cloud?promos.length+' code'+(promos.length===1?'':'s'):'live app only'}${S.cloud?' <button class="btn sm ghost" style="min-height:30px;padding:4px 10px" onclick="S.g2PromoAt=0;g2PromosLoad()">Refresh</button>':''}</span></div><p class="tiny muted" style="margin-top:4px">Each person can use a code once. Credit goes to their next payment.</p>
+    <div class="g2-fields"><div class="field"><label>Code</label><input id="g2pm-c" placeholder="SCHOOL50" maxlength="20" style="text-transform:uppercase"></div><div class="field"><label>Credit (R)</label><input id="g2pm-a" type="number" min="1" step="1" placeholder="50"></div><div class="field"><label>Max uses</label><input id="g2pm-m" type="number" min="1" step="1" value="100"></div><div class="field"><label>Expires</label><input id="g2pm-e" type="date"></div><div class="field"><label>For</label><select id="g2pm-r"><option value="any">Anyone</option><option value="parent">Parents</option><option value="driver">Drivers</option></select></div></div>
+    <button class="btn sm" style="margin-top:10px" onclick="g2PromoSave()">Save code</button>
+    ${promos.length?`<div class="list" style="margin-top:10px">${promos.map(x=>`<div class="item small"><div class="grow"><b>${h(x.code)}</b> · ${money(x.credit)} · ${x.uses}/${x.max_uses} used${x.expires?' · until '+h(x.expires):''}${x.role!=='any'?' · '+h(x.role)+'s':''}</div><button class="btn sm ghost" onclick="g2PromoDelete('${h(x.code)}')">Delete</button></div>`).join('')}</div>`:''}</div>
+  <div class="card" id="g2-banner-card"><div class="row between"><h3>Announcement banner</h3>${b.id&&b.text?'<span class="pill live tiny">live</span>':''}</div><p class="tiny muted" style="margin-top:4px">A bar at the top of every screen for the audience you pick. People can dismiss it. Scheduled start and end are optional.</p>
+    <div class="field" style="margin-top:10px"><label>Text</label><textarea id="g2b-t" rows="2" maxlength="240" placeholder="e.g. Schools open on 15 January. Book your seat before the rush.">${h(b.text||'')}</textarea></div>
+    <div class="g2-fields"><div class="field"><label>Audience</label><select id="g2b-a">${[['all','Everyone'],['parents','Parents'],['drivers','Drivers'],['kids','Kids']].map(([k,l])=>`<option value="${k}" ${(b.audience||'all')===k?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Start</label><input id="g2b-s" type="datetime-local" value="${h(b.start||'')}"></div><div class="field"><label>End</label><input id="g2b-e" type="datetime-local" value="${h(b.end||'')}"></div><div class="field"><label>Link to screen</label><select id="g2b-l"><option value="">None</option>${routes.map(r=>`<option value="${r}" ${b.link===r?'selected':''}>${r}</option>`).join('')}</select></div><div class="field"><label>Link label</label><input id="g2b-ll" maxlength="30" value="${h(b.linkLabel||'')}" placeholder="Open"></div></div>
+    <div class="row" style="margin-top:10px"><button class="btn sm" onclick="g2BannerSave()">Publish banner</button>${b.id&&b.text?'<button class="btn sm ghost" onclick="g2BannerSave(true)">Remove</button>':''}</div></div>
+  <div class="card" id="g2-landing-card"><h3>Ad landing page</h3><p class="tiny muted" style="margin-top:4px">Shown to every signed-out visitor. Numbers are live from the database; with no activity yet it says "Just launched".</p><div class="field" style="margin-top:10px"><label>City (for "Just launched in …")</label><input id="g2l-city" class="g2-in" maxlength="60" value="${h(land.city||'')}" placeholder="e.g. Soweto"></div>
+    <p class="tiny muted" style="margin-top:8px">WhatsApp button uses the support phone under Legal details. Reviews follow the "Landing page reviews" switch. Ad links: add <code>?utm_source=…&amp;utm_campaign=…</code>.</p><div class="row" style="margin-top:10px"><button class="btn sm" onclick="g2LandingSave()">Save</button><button class="btn sm ghost" onclick="S.g2Preview=true;go('landing')">Preview as a visitor</button></div></div>
+  </div></div>`});
+
+/* ---------- admin: driver payouts sheet ---------- */
+function g2Months(n){const out=[];const d=new Date();d.setDate(1);for(let i=0;i<n;i++){out.push(monthKey(d));d.setMonth(d.getMonth()-1)}return out}
+function g2R2(x){return Math.round((+x||0)*100)/100}
+function g2Payouts(m){const tx=Store.all('transactions').filter(t=>t.month===m);const ds=Store.all('users').filter(u=>u.role==='driver');const endOfMonth=new Date(+m.slice(0,4),+m.slice(5,7),1).getTime();
+  return ds.map(d=>{const bs=Store.all('bookings').filter(b=>b.driverId===d.id&&!b.once&&(b.startedAt||0)<endOfMonth&&(b.status==='active'||(typeof bookingPaidFor==='function'&&bookingPaidFor(b,m))));const expected=g2R2(bs.reduce((s,b)=>s+(+b.price||0),0));
+    const mine=tx.filter(t=>t.to===d.id);const paid=g2R2(mine.filter(t=>t.type==='subscription'||t.type==='trip').reduce((s,t)=>s+t.amount,0));const sponsored=g2R2(mine.filter(t=>t.type==='sponsorship').reduce((s,t)=>s+t.amount,0));
+    const fees=g2R2(tx.filter(t=>t.from===d.id&&(t.type==='driver_fee'||t.type==='parking_slot')).reduce((s,t)=>s+t.amount,0));const enivelFee=g2R2(tx.filter(t=>t.type==='platform_fee'&&bs.some(b=>b.id===t.bookingId)).reduce((s,t)=>s+t.amount,0));
+    const paidOut=g2R2(mine.filter(t=>t.type==='payout').reduce((s,t)=>s+t.amount,0));const lastOut=mine.filter(t=>t.type==='payout').sort((a,b)=>b.ts-a.ts)[0];const net=g2R2(paid+sponsored-fees);
+    return {d,bookings:bs.length,expected,paid,sponsored,fees,enivelFee,net,paidOut,due:g2R2(net-paidOut),lastOut}}).filter(r=>r.bookings||r.paid||r.sponsored||r.fees||r.paidOut).sort((a,b)=>b.due-a.due)}
+function g2PayoutCsv(m){const rows=g2Payouts(m);const esc=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const head=['Month','Driver','Email','Phone','Passengers','Expected from bookings','Paid by parents','Sponsored by Enivel','Enivel fee (2%) on their bookings','Driver fees (platform + parking)','Net to driver','Paid out','Still due','Last payout'];
+  const csv=[head.map(esc).join(',')].concat(rows.map(r=>[m,r.d.name,r.d.email,r.d.phone,r.bookings,r.expected,r.paid,r.sponsored,r.enivelFee,r.fees,r.net,r.paidOut,r.due,r.lastOut?new Date(r.lastOut.ts).toISOString().slice(0,10):''].map(esc).join(','))).join('\r\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='enivel-payouts-'+m+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);auditLog('payouts.export',null,m+' · '+rows.length+' drivers');toast('CSV downloaded')}
+function g2MarkPaid(driverId,m){const r=g2Payouts(m).find(x=>x.d.id===driverId);if(!r)return;if(r.due<=0)return toast('Nothing due');
+  modal(`<h3>Mark paid out</h3><p class="small muted" style="margin-top:4px">${h(r.d.name)} · ${m}</p><div class="fee" style="margin-top:10px"><span>Paid by parents</span><b>${money(r.paid)}</b><span>Sponsored</span><b>${money(r.sponsored)}</b><span>Driver fees</span><b>−${money(r.fees)}</b><span>Already paid out</span><b>−${money(r.paidOut)}</b><span class="tot">Due now</span><b class="tot">${money(r.due)}</b></div><div class="g2-fields"><div class="field"><label>Amount (R)</label><input id="g2po-a" type="number" step="0.01" value="${r.due}"></div><div class="field"><label>Paid on</label><input id="g2po-d" type="date" value="${localKey()}"></div><div class="field"><label>Reference</label><input id="g2po-r" maxlength="80" placeholder="EFT ref"></div></div><button class="btn wide" style="margin-top:12px" id="g2po-go">Record payout</button>`,mm=>{$('#g2po-go',mm).onclick=async()=>{const a=+val(mm,'g2po-a');if(!(a>0))return toast('Amount?');const d=val(mm,'g2po-d');const ref=val(mm,'g2po-r').trim();await pushTx({type:'payout',amount:g2R2(a),from:'enivel',to:driverId,month:m,note:'Driver payout '+m+(ref?' · '+ref:''),paidAt:d?Date.parse(d):Date.now()});await notify(driverId,`💸 Enivel paid out ${money(a)} for ${m}${ref?' (ref '+ref+')':''}.`,'pay','d-billing');await auditLog('payout.mark',driverId,r.d.name+' · '+m+' · '+money(a)+(ref?' · '+ref:''));closeModal();toast('Payout recorded')}})}
+VIEWS['a-payouts']=adminGate(()=>{const months=g2Months(6);const m=months.includes(S.g2PayM)?S.g2PayM:months[0];S.g2PayM=m;const rows=g2Payouts(m);const tot=k=>g2R2(rows.reduce((s,r)=>s+r[k],0));
+  return pageHead('Driver payouts',m+' · what each driver is owed',`<button class="btn sm ghost" onclick="g2PayoutCsv('${m}')">${G2_ICON.sheet} CSV</button>`)+`<div class="row" style="margin-bottom:12px"><div class="seg">${months.map(x=>`<button class="${x===m?'on':''}" onclick="S.g2PayM='${x}';render()">${x}</button>`).join('')}</div></div>
+  <div class="kpi">${[['Expected from bookings',tot('expected')],['Paid by parents',tot('paid')],['Sponsored',tot('sponsored')],['Driver fees',tot('fees')],['Net to drivers',tot('net')],['Paid out',tot('paidOut')],['Still due',tot('due')]].map(([l,v])=>`<div class="card"><div class="eyebrow">${l}</div><div class="num" style="font-size:1.25rem">${money(v)}</div></div>`).join('')}</div>
+  <p class="tiny muted" style="margin:10px 0">Net = paid by parents + sponsored − driver fees (platform + parking). The Enivel ${g2Pct()} parent fee is paid on top by parents and never comes out of the driver's price. "Paid out" rows are the payout transactions you record here.</p>
+  <div class="tw" style="margin-top:4px"><table><thead><tr><th>Driver</th><th>Pax</th><th style="text-align:right">Expected</th><th style="text-align:right">Paid by parents</th><th style="text-align:right">Sponsored</th><th style="text-align:right">Enivel fee</th><th style="text-align:right">Driver fees</th><th style="text-align:right">Net</th><th style="text-align:right">Paid out</th><th style="text-align:right">Due</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr data-g2-pay="${h(r.d.id)}"><td><b>${h(r.d.name)}</b><div class="tiny muted">${h(r.d.email||'')}</div></td><td>${r.bookings}</td><td style="text-align:right">${money(r.expected)}</td><td style="text-align:right">${money(r.paid)}</td><td style="text-align:right">${money(r.sponsored)}</td><td style="text-align:right">${money(r.enivelFee)}</td><td style="text-align:right">−${money(r.fees)}</td><td style="text-align:right"><b>${money(r.net)}</b></td><td style="text-align:right">${money(r.paidOut)}${r.lastOut?`<div class="tiny muted">${new Date(r.lastOut.paidAt||r.lastOut.ts).toLocaleDateString('en-ZA')}</div>`:''}</td><td style="text-align:right"><b style="color:${r.due>0.005?'var(--warn)':'var(--live)'}">${money(r.due)}</b></td><td>${r.due>0.005?`<button class="btn sm" onclick="g2MarkPaid('${h(r.d.id)}','${m}')">Mark paid out</button>`:'<span class="pill live tiny">settled</span>'}</td></tr>`).join('')||'<tr><td colspan="11" class="muted">No driver activity in this month.</td></tr>'}</tbody></table></div>`});
+/* payouts are money Enivel sends on; they are not revenue through the app */
+if(typeof revenue==='function'){const _g2Rev=revenue;revenue=function(){const r=_g2Rev.apply(this,arguments);try{const po=g2R2(Store.all('transactions').filter(t=>t.type==='payout').reduce((s,t)=>s+t.amount,0));if(po&&typeof r.gmv==='number')r.gmv=g2R2(r.gmv-po)}catch(e){}return r}}
+const _g2AMoney=VIEWS['a-money'];VIEWS['a-money']=function(){let html=_g2AMoney.apply(this,arguments);if(!S.admin)return html;try{const mk=`<button class="${S.filters.tt==='sponsorship'?'on':''}" onclick="S.filters.tt='sponsorship';render()">Giveaways</button>`;if(html.includes(mk))html=html.replace(mk,mk+`<button class="${S.filters.tt==='payout'?'on':''}" onclick="S.filters.tt='payout';render()">Payouts</button>`);
+  const i=html.indexOf('<div class="row" style="margin:14px 0">');const card=`<div class="card soft" style="margin-top:14px"><div class="row between"><div><b>Driver payouts sheet</b><div class="tiny muted">Per driver per month: owed, paid out, CSV for the bank.</div></div><button class="btn sm" onclick="go('a-payouts')">Open</button></div></div>`;html=i>=0?html.slice(0,i)+card+html.slice(i):html+card}catch(e){}return html};
+if(typeof paidAllTime==='function'){const _g2Pat=paidAllTime;paidAllTime=function(id){return _g2Pat(id)}}
+
+/* ---------- admin tiles, pages ---------- */
+if(typeof ADMIN_TILES!=='undefined'){
+  ADMIN_TILES.push({route:'a-payouts',label:'Payouts',icon:G2_ICON.sheet,tone:'green',count:()=>{const r=g2Payouts(monthKey());return r.filter(x=>x.due>0.005).length},alert:()=>false,sub:()=>{const r=g2Payouts(monthKey());const due=g2R2(r.reduce((s,x)=>s+Math.max(0,x.due),0));return due?money(due)+' due':'All settled'}});
+  ADMIN_TILES.push({route:'a-controls',label:'Controls',icon:G2_ICON.sliders,tone:'violet',count:()=>{const F=g2Flags();return Object.keys(G2_DEF_FLAGS).filter(k=>F[k]).length+'/'+Object.keys(G2_DEF_FLAGS).length},alert:()=>g2PricingChanged(),sub:()=>{const b=g2BannerActive();return g2PricingChanged()?'custom pricing':b?'banner live':'switches on'}})}
+const _g2AMore=VIEWS['a-more'];VIEWS['a-more']=function(){const html=_g2AMore.apply(this,arguments);const k='<h3>Pages</h3><div class="list" style="margin-top:6px">';if(!html.includes(k))return html;return html.replace(k,k+[['a-controls','Controls: switches, pricing, promos, banner'],['a-payouts','Driver payouts']].map(([r,l])=>`<div class="item" style="cursor:pointer" onclick="go('${r}')"><div class="grow">${l}</div>›</div>`).join(''))};
+
+/* ---------- render hook ---------- */
+const _g2Render=render;render=function(){if(S.viewAs&&S.admin&&typeof S.route==='string'&&S.route.startsWith('a-')){S.viewAs=null;S.adminApp=false}
+  const r=_g2Render.apply(this,arguments);try{const main=$('#app main');if(main){const u=me();
+    if(S.viewAs&&S.admin)main.insertAdjacentHTML('afterbegin',g2ViewAsBar());
+    else if(u){const b=g2BannerActive();if(b&&!main.querySelector('.g2-banner'))main.insertAdjacentHTML('afterbegin',g2BannerHtml(b))}
+    g2ApplyFlags();g2PriceText();
+    if(S.route==='landing'&&(!u||S.g2Preview))g2LandingDecorate();
+    if(u&&S.ready)setTimeout(()=>g2ExpireHolds().catch(()=>{}),0)}}catch(e){console.warn('growth2 render',e)}return r};
+</script>
 
 </body></html>

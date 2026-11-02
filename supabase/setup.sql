@@ -1747,3 +1747,790 @@ revoke execute on function public.grow_referrals() from public, anon;
 grant execute on function public.grow_referrals() to authenticated;
 
 select 'Enivel growth ready' as status;
+
+-- r10:family
+-- r10:family
+-- =====================================================================
+-- Round 10 · family members (co-parents): a parent ("owner") invites a
+-- mom, dad, gran or guardian by email. The invited person signs up or logs
+-- in as a parent and accepts the link. From then on they read the owner's
+-- children, rides, events, driver chats and alerts; they may chat to the
+-- drivers, mark a child "not riding" and send a note to the driver. They
+-- can never pay, book, cancel, change children or other members.
+--   family_invite(email, relation)  owner → share token (7 days, one use)
+--   family_accept(token)            invited parent → joins, owner is told
+--   family_remove(member)           owner removes a member
+--   family_leave()                  member leaves
+--   family_list()                   members + open invites (owner), owner (member)
+--   family_absent(kid, day)         member toggles "not riding" (owner + drivers told)
+--   family_note(booking, day, text) member writes the note to the driver
+--   fetch_docs is redefined (copied from setup.sql) with the family rules.
+--   A trigger copies the owner's ride alerts to every member so that phone
+--   pop-ups (notif_push_due) reach them too.
+-- Runs after setup.sql. Safe to run again.
+-- =====================================================================
+
+create table if not exists public.family_invites (
+  token_hash text primary key,
+  owner_id   text        not null,
+  email      text        not null,
+  relation   text        not null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  used_at    timestamptz,
+  used_by    uuid
+);
+create index if not exists family_invites_owner_idx on public.family_invites (owner_id, created_at);
+alter table public.family_invites enable row level security;
+revoke all on public.family_invites from anon, authenticated;
+
+create table if not exists public.family_members (
+  owner_id   text        not null,
+  member_id  text        not null,
+  relation   text        not null,
+  created_at timestamptz not null default now(),
+  primary key (owner_id, member_id)
+);
+create index if not exists family_members_member_idx on public.family_members (member_id);
+alter table public.family_members enable row level security;
+revoke all on public.family_members from anon, authenticated;
+
+-- The relationships a member can have.
+create or replace function public._fam_relation_ok(p text) returns boolean
+language sql immutable as $$
+  select coalesce(p, '') in ('Mom','Dad','Gran','Grandpa','Aunt','Uncle','Guardian','Other')
+$$;
+
+-- Alerts that every family member gets a copy of.
+create or replace function public._fam_alert_types() returns text[]
+language sql immutable as $$
+  select array['approach','pickup','dropoff','arrived','hoot','late','ontime','kid-sos','sos','emergency','ride-check']
+$$;
+
+-- The owner this login is a family member of (null when none, or the owner is banned).
+create or replace function public._fam_owner(p_uid text) returns text
+language sql stable security definer set search_path = public as $$
+  select m.owner_id from public.family_members m
+  where m.member_id = coalesce(p_uid, '')
+    and exists (select 1 from public.docs o where o.coll = 'users' and o.id = m.owner_id and not o.deleted
+                and coalesce(o.data ->> 'banned', 'false') <> 'true' and coalesce(o.data ->> 'suspended', 'false') <> 'true')
+  order by m.created_at limit 1
+$$;
+
+-- A short label like "Thandi (Thabo's gran)".
+create or replace function public._fam_label(p_member text) returns text
+language sql stable security definer set search_path = public as $$
+  select coalesce(u.data ->> 'name', 'A family member')
+         || case when m.owner_id is not null then ' (' || split_part(coalesce(o.data ->> 'name', 'the parent'), ' ', 1) || '''s ' || lower(m.relation) || ')' else '' end
+  from public.docs u
+  left join public.family_members m on m.member_id = u.id
+  left join public.docs o on o.coll = 'users' and o.id = m.owner_id
+  where u.coll = 'users' and u.id = coalesce(p_member, '')
+  limit 1
+$$;
+
+-- Owner: invite a family member by email. Returns the one-time token for the #family= link.
+create or replace function public.family_invite(p_email text, p_relation text) returns text
+language plpgsql security definer set search_path = public, auth as $$
+declare me text := auth.uid()::text; u public.docs%rowtype; em text := lower(trim(coalesce(p_email, ''))); myem text; tok text; n int;
+begin
+  if auth.uid() is null then raise exception 'Please sign in again'; end if;
+  if public._is_kid_login(auth.uid()) then raise exception 'Kid logins cannot do this'; end if;
+  select * into u from public.docs where coll = 'users' and id = me and not deleted;
+  if not found or u.data ->> 'role' <> 'parent' then raise exception 'Only a parent account can add family members'; end if;
+  if coalesce(u.data ->> 'banned', 'false') = 'true' or coalesce(u.data ->> 'suspended', 'false') = 'true' then raise exception 'This account cannot add family members'; end if;
+  if exists (select 1 from public.family_members m where m.member_id = me) then raise exception 'Family members cannot invite other people. Only the parent who owns the account can.'; end if;
+  if not public._fam_relation_ok(p_relation) then raise exception 'Choose a relationship'; end if;
+  if em !~ '^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$' then raise exception 'Enter a real email address'; end if;
+  select lower(au.email) into myem from auth.users au where au.id = auth.uid();
+  if myem = em then raise exception 'That is your own email address'; end if;
+  if exists (select 1 from public.family_members m join public.docs d on d.coll = 'users' and d.id = m.member_id
+             where m.owner_id = me and lower(d.data ->> 'email') = em) then raise exception 'That person is already a family member'; end if;
+  if exists (select 1 from public.docs d where d.coll = 'users' and not d.deleted and lower(d.data ->> 'email') = em and d.data ->> 'role' in ('driver','kid')) then
+    raise exception 'That email belongs to a driver or kid account. Family members need a parent account.'; end if;
+  select count(*) into n from public.family_members where owner_id = me;
+  if n >= 5 then raise exception 'You can have up to 5 family members'; end if;
+  select count(*) into n from public.family_invites where owner_id = me and created_at > now() - interval '1 hour';
+  if n >= 10 then raise exception 'Too many invites. Wait an hour and try again.'; end if;
+  delete from public.family_invites where expires_at < now() - interval '30 days';
+  -- a fresh invite replaces any open one for the same email
+  update public.family_invites set used_at = now() where owner_id = me and email = em and used_at is null;
+  tok := replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
+  insert into public.family_invites (token_hash, owner_id, email, relation, expires_at)
+  values (encode(sha256(convert_to(tok, 'UTF8')), 'hex'), me, em, p_relation, now() + interval '7 days');
+  return tok;
+end $$;
+
+-- Invited parent: accept the invite. Joins the family, marks the profile and tells the owner.
+create or replace function public.family_accept(p_token text) returns jsonb
+language plpgsql security definer set search_path = public, auth as $$
+declare me text := auth.uid()::text; l public.family_invites%rowtype; em text; u public.docs%rowtype; o public.docs%rowtype; other text;
+  nowms bigint := (extract(epoch from now()) * 1000)::bigint; kids jsonb;
+begin
+  if auth.uid() is null then raise exception 'Please sign in again'; end if;
+  if public._is_kid_login(auth.uid()) then raise exception 'Kid logins cannot join a family'; end if;
+  select * into l from public.family_invites where token_hash = encode(sha256(convert_to(coalesce(p_token, ''), 'UTF8')), 'hex') for update;
+  if not found then raise exception 'This family link is not valid'; end if;
+  if l.used_at is not null then raise exception 'This family link was already used'; end if;
+  if l.expires_at < now() then raise exception 'This family link has expired. Ask for a new one.'; end if;
+  select lower(au.email) into em from auth.users au where au.id = auth.uid();
+  if em is null or em <> l.email then raise exception 'This link was sent to % — sign in with that email', l.email; end if;
+  if me = l.owner_id then raise exception 'You cannot join your own family'; end if;
+  select * into u from public.docs where coll = 'users' and id = me and not deleted;
+  if not found then raise exception 'Create your parent account first'; end if;
+  if u.data ->> 'role' <> 'parent' then raise exception 'Family members need a parent account'; end if;
+  select * into o from public.docs where coll = 'users' and id = l.owner_id and not deleted;
+  if not found or o.data ->> 'role' <> 'parent' then raise exception 'That parent account no longer exists'; end if;
+  select m.owner_id into other from public.family_members m where m.member_id = me and m.owner_id <> l.owner_id limit 1;
+  if other is not null then raise exception 'You are already in another family. Leave it first (Settings → Family).'; end if;
+  if exists (select 1 from public.family_members m where m.owner_id = me) then raise exception 'Your account has its own family members, so it cannot join another family'; end if;
+  insert into public.family_members (owner_id, member_id, relation) values (l.owner_id, me, l.relation)
+    on conflict (owner_id, member_id) do update set relation = excluded.relation;
+  update public.docs set data = data || jsonb_build_object('familyOf', l.owner_id, 'familyRel', l.relation,
+      'familyOwnerName', coalesce(o.data ->> 'name', 'Parent'), 'familyJoinedAt', nowms), updated_at = now()
+    where coll = 'users' and id = me;
+  update public.family_invites set used_at = now(), used_by = auth.uid() where token_hash = l.token_hash;
+  select coalesce(jsonb_agg(k.data -> 'name'), '[]'::jsonb) into kids from public.docs k where k.coll = 'kids' and not k.deleted and k.data ->> 'parentId' = l.owner_id;
+  insert into public.docs (coll, id, data, owner, parties)
+  values ('notifications', 'fj' || replace(gen_random_uuid()::text, '-', ''),
+    jsonb_build_object('userId', l.owner_id, 'type', 'info', 'link', 'p-more', 'read', false, 'ts', nowms,
+      'text', coalesce(u.data ->> 'name', em) || ' joined your family as ' || l.relation || '. They now see your children''s rides and alerts.'),
+    l.owner_id::uuid, array[l.owner_id]);
+  return jsonb_build_object('ownerId', l.owner_id, 'ownerName', o.data ->> 'name', 'relation', l.relation, 'kids', kids);
+end $$;
+
+-- shared clean-up when a member goes
+create or replace function public._fam_drop(p_owner text, p_member text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from public.family_members where owner_id = p_owner and member_id = p_member;
+  update public.docs set data = data - 'familyOf' - 'familyRel' - 'familyOwnerName' - 'familyJoinedAt', updated_at = now()
+    where coll = 'users' and id = p_member and data ->> 'familyOf' = p_owner;
+  update public.docs set deleted = true, updated_at = now()
+    where coll = 'notifications' and not deleted and data ->> 'familyOwner' = p_owner and data ->> 'userId' = p_member;
+  update public.family_invites set used_at = now() where owner_id = p_owner and used_at is null
+    and email = (select lower(d.data ->> 'email') from public.docs d where d.coll = 'users' and d.id = p_member);
+end $$;
+
+-- Owner (or admin): remove a family member.
+create or replace function public.family_remove(p_member text) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare me text := auth.uid()::text; m public.family_members%rowtype; nowms bigint := (extract(epoch from now()) * 1000)::bigint; oname text;
+begin
+  if auth.uid() is null then raise exception 'Please sign in again'; end if;
+  select * into m from public.family_members where member_id = coalesce(p_member, '') and (owner_id = me or public.is_admin()) limit 1;
+  if not found then raise exception 'Only the parent who owns the account can remove a family member'; end if;
+  perform public._fam_drop(m.owner_id, m.member_id);
+  select data ->> 'name' into oname from public.docs where coll = 'users' and id = m.owner_id;
+  insert into public.docs (coll, id, data, owner, parties)
+  values ('notifications', 'fr' || replace(gen_random_uuid()::text, '-', ''),
+    jsonb_build_object('userId', m.member_id, 'type', 'info', 'link', 'p-home', 'read', false, 'ts', nowms,
+      'text', coalesce(oname, 'The parent') || ' removed you from their family on Enivel.'),
+    m.member_id::uuid, array[m.member_id]);
+  return true;
+end $$;
+
+-- Member: leave the family.
+create or replace function public.family_leave() returns boolean
+language plpgsql security definer set search_path = public as $$
+declare me text := auth.uid()::text; m public.family_members%rowtype; nowms bigint := (extract(epoch from now()) * 1000)::bigint; mname text;
+begin
+  if auth.uid() is null then raise exception 'Please sign in again'; end if;
+  select * into m from public.family_members where member_id = me limit 1;
+  if not found then return false; end if;
+  perform public._fam_drop(m.owner_id, me);
+  select data ->> 'name' into mname from public.docs where coll = 'users' and id = me;
+  insert into public.docs (coll, id, data, owner, parties)
+  values ('notifications', 'fl' || replace(gen_random_uuid()::text, '-', ''),
+    jsonb_build_object('userId', m.owner_id, 'type', 'info', 'link', 'p-more', 'read', false, 'ts', nowms,
+      'text', coalesce(mname, 'A family member') || ' left your family on Enivel.'),
+    m.owner_id::uuid, array[m.owner_id]);
+  return true;
+end $$;
+
+-- Members and open invites of the caller's account, or the owner when the caller is a member.
+create or replace function public.family_list() returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare me text := auth.uid()::text; fo text; members jsonb; invites jsonb; o record;
+begin
+  if auth.uid() is null then return '{}'::jsonb; end if;
+  fo := public._fam_owner(me);
+  if fo is not null then
+    select m.relation, m.created_at, d.data ->> 'name' as name into o from public.family_members m
+      left join public.docs d on d.coll = 'users' and d.id = m.owner_id where m.member_id = me and m.owner_id = fo;
+    return jsonb_build_object('owner', jsonb_build_object('id', fo, 'name', o.name, 'relation', o.relation,
+      'since', (extract(epoch from o.created_at) * 1000)::bigint));
+  end if;
+  select coalesce(jsonb_agg(jsonb_build_object('id', m.member_id, 'name', d.data ->> 'name', 'email', d.data ->> 'email', 'relation', m.relation,
+      'since', (extract(epoch from m.created_at) * 1000)::bigint) order by m.created_at), '[]'::jsonb) into members
+    from public.family_members m left join public.docs d on d.coll = 'users' and d.id = m.member_id where m.owner_id = me;
+  select coalesce(jsonb_agg(jsonb_build_object('email', i.email, 'relation', i.relation,
+      'expiresAt', (extract(epoch from i.expires_at) * 1000)::bigint) order by i.created_at desc), '[]'::jsonb) into invites
+    from public.family_invites i where i.owner_id = me and i.used_at is null and i.expires_at > now();
+  return jsonb_build_object('members', members, 'invites', invites);
+end $$;
+
+-- Member: toggle "not riding" for one of the owner's children (today or the next two weeks).
+create or replace function public.family_absent(p_kid text, p_day text) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare me text := auth.uid()::text; fo text; k public.docs%rowtype; dd date; lbl text; drv text; who text; absent boolean;
+  today date := (now() at time zone 'Africa/Johannesburg')::date; nowms bigint := (extract(epoch from now()) * 1000)::bigint;
+begin
+  if auth.uid() is null then raise exception 'Please sign in again'; end if;
+  fo := public._fam_owner(me);
+  if fo is null then raise exception 'Only a family member can do this'; end if;
+  select * into k from public.docs where coll = 'kids' and id = coalesce(p_kid, '') and not deleted;
+  if not found or k.data ->> 'parentId' <> fo then raise exception 'That child is not in your family'; end if;
+  if coalesce(p_day, '') !~ '^\d{4}-\d{2}-\d{2}$' then raise exception 'Pick a day'; end if;
+  begin dd := p_day::date; exception when others then raise exception 'Pick a real day'; end;
+  if dd < today or dd > today + 14 then raise exception 'Pick today or a day in the next two weeks'; end if;
+  absent := coalesce(k.data -> 'absences', '[]'::jsonb) ? p_day;
+  if absent then
+    update public.docs set data = jsonb_set(data, '{absences}', coalesce((select jsonb_agg(x) from jsonb_array_elements(data -> 'absences') x where x <> to_jsonb(p_day)), '[]'::jsonb)), updated_at = now()
+      where coll = 'kids' and id = k.id;
+  else
+    update public.docs set data = jsonb_set(data, '{absences}',
+        case when jsonb_typeof(data -> 'absences') = 'array' then data -> 'absences' else '[]'::jsonb end || to_jsonb(p_day)), updated_at = now()
+      where coll = 'kids' and id = k.id;
+  end if;
+  lbl := case when dd = today then 'today' else 'on ' || to_char(dd, 'Dy DD Mon') end;
+  who := public._fam_label(me);
+  insert into public.docs (coll, id, data, owner, parties)
+  values ('notifications', 'fa' || replace(gen_random_uuid()::text, '-', ''),
+    jsonb_build_object('userId', fo, 'type', 'info', 'link', 'p-home', 'read', false, 'ts', nowms,
+      'text', who || case when absent then ' says ' || coalesce(k.data ->> 'name', 'your child') || ' is riding again ' else ' marked ' || coalesce(k.data ->> 'name', 'your child') || ' not riding ' end || lbl || '.'),
+    auth.uid(), array[fo]);
+  for drv in select distinct b.data ->> 'driverId' from public.docs b where b.coll = 'bookings' and not b.deleted
+               and b.data ->> 'kidId' = k.id and b.data ->> 'status' in ('active','trip') and b.data ->> 'driverId' is not null loop
+    insert into public.docs (coll, id, data, owner, parties)
+    values ('notifications', 'fa' || replace(gen_random_uuid()::text, '-', ''),
+      jsonb_build_object('userId', drv, 'type', 'info', 'link', 'd-trip', 'read', false, 'ts', nowms,
+        'text', coalesce(k.data ->> 'name', 'A child') || case when absent then ' is riding again ' else ' is not riding ' end || lbl || ' (' || who || ').'),
+      auth.uid(), array[drv]);
+  end loop;
+  return not absent;
+end $$;
+
+-- Member: the note to the driver for one day (empty text removes it).
+create or replace function public.family_note(p_booking text, p_day text, p_text text) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare me text := auth.uid()::text; fo text; b public.docs%rowtype; dd date; txt text := left(regexp_replace(trim(coalesce(p_text, '')), '\s+', ' ', 'g'), 140);
+  notes jsonb := '{}'::jsonb; kv record; kname text; who text; lbl text;
+  today date := (now() at time zone 'Africa/Johannesburg')::date; nowms bigint := (extract(epoch from now()) * 1000)::bigint;
+begin
+  if auth.uid() is null then raise exception 'Please sign in again'; end if;
+  fo := public._fam_owner(me);
+  if fo is null then raise exception 'Only a family member can do this'; end if;
+  select * into b from public.docs where coll = 'bookings' and id = coalesce(p_booking, '') and not deleted;
+  if not found or b.data ->> 'parentId' <> fo or b.data ->> 'status' not in ('active','trip') then raise exception 'That booking is not in your family'; end if;
+  if coalesce(p_day, '') !~ '^\d{4}-\d{2}-\d{2}$' then raise exception 'Pick a day'; end if;
+  begin dd := p_day::date; exception when others then raise exception 'Pick a real day'; end;
+  if dd < today or dd > today + 14 then raise exception 'Pick today or a day in the next two weeks'; end if;
+  -- keep only today's and future notes, then set or remove this day
+  if jsonb_typeof(b.data -> 'notes') = 'object' then
+    for kv in select key, value from jsonb_each(b.data -> 'notes') loop
+      if kv.key ~ '^\d{4}-\d{2}-\d{2}$' and kv.key >= to_char(today, 'YYYY-MM-DD') and jsonb_typeof(kv.value) = 'string' and trim(kv.value #>> '{}') <> '' then
+        notes := notes || jsonb_build_object(kv.key, left(trim(kv.value #>> '{}'), 140)); end if;
+    end loop;
+  end if;
+  if txt <> '' then notes := notes || jsonb_build_object(p_day, txt); else notes := notes - p_day; end if;
+  update public.docs set data = data || jsonb_build_object('notes', notes), updated_at = now() where coll = 'bookings' and id = b.id;
+  if txt <> '' and b.data ->> 'driverId' is not null then
+    select data ->> 'name' into kname from public.docs where coll = 'kids' and id = b.data ->> 'kidId';
+    who := public._fam_label(me);
+    lbl := case when dd = today then 'today' when dd = today + 1 then 'tomorrow' else to_char(dd, 'Dy DD Mon') end;
+    insert into public.docs (coll, id, data, owner, parties)
+    values ('notifications', 'fn' || replace(gen_random_uuid()::text, '-', ''),
+      jsonb_build_object('userId', b.data ->> 'driverId', 'type', 'note', 'link', 'd-home', 'read', false, 'ts', nowms,
+        'text', '📝 Note for ' || coalesce(kname, 'your passenger') || ' (' || lbl || ') from ' || who || ': ' || txt),
+      auth.uid(), array[b.data ->> 'driverId']);
+  end if;
+  return true;
+end $$;
+
+-- Every ride alert for an owner is copied to each family member (own row, so pop-ups reach them).
+create or replace function public._fam_notif_copy() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare ty text; to_id text; m record;
+begin
+  if new.coll <> 'notifications' or new.deleted then return null; end if;
+  if new.data ? 'familyCopy' then return null; end if;
+  ty := coalesce(new.data ->> 'type', 'info');
+  if not (ty = any (public._fam_alert_types())) then return null; end if;
+  to_id := new.data ->> 'userId';
+  if to_id is null or to_id !~ '^[0-9a-f-]{36}$' then return null; end if;
+  for m in select member_id from public.family_members where owner_id = to_id loop
+    begin
+      insert into public.docs (coll, id, data, owner, parties, deleted, updated_at)
+      values ('notifications', 'fm' || replace(gen_random_uuid()::text, '-', ''),
+        new.data || jsonb_build_object('userId', m.member_id, 'familyCopy', true, 'familyOwner', to_id, 'read', false, 'answered', false),
+        m.member_id::uuid, array[m.member_id], false, now());
+    exception when others then null;
+    end;
+  end loop;
+  return null;
+end $$;
+drop trigger if exists fam_notif_copy on public.docs;
+create trigger fam_notif_copy after insert on public.docs
+  for each row execute function public._fam_notif_copy();
+
+-- Read everything the caller is allowed to see. Copied from setup.sql (kid logins unchanged)
+-- and extended: a family member also reads the owner's children, bookings, ride events,
+-- driver chats, and the live car position while one of those children is on board.
+create or replace function public.fetch_docs(p_since timestamptz default null)
+returns table (coll text, id text, data jsonb, deleted boolean, updated_at timestamptz)
+language plpgsql stable security definer set search_path = public as $$
+declare me text := auth.uid()::text; adm boolean := public.is_admin();
+  v_kid text; v_parent text; v_perms jsonb; v_track boolean; fo text;
+begin
+  if auth.uid() is null then return; end if;
+
+  -- ---------- kid logins: only their own child's rides ----------
+  if not adm and public._is_kid_login(auth.uid()) then
+    select c.kid_id, c.parent_id, c.perms into v_kid, v_parent, v_perms from public._kid_ctx(me) c;
+    if v_kid is null then
+      -- switched off or removed: only their own profile, so the app can sign them out
+      return query select d.coll, d.id, d.data, d.deleted, d.updated_at from public.docs d
+        where d.coll = 'users' and d.id = me and (p_since is null or d.updated_at > p_since);
+      return;
+    end if;
+    v_track := public._kid_perm(v_perms, 'track', true);
+    return query
+    select d.coll, d.id,
+      case
+        when d.deleted then d.data
+        when d.owner = auth.uid() then d.data
+        when d.coll = 'users' then public._public_user(d.data)
+             || case when d.id = v_parent and jsonb_typeof(d.data -> 'phone') = 'string' then jsonb_build_object('phone', d.data -> 'phone') else '{}'::jsonb end
+        when d.coll = 'kids' then d.data - 'handoverHash' - 'handoverSalt' - 'consent'
+        when d.coll = 'bookings' then d.data - 'price' - 'sponsoredMonths' - 'fromRequest' - 'fee' - 'amount' - 'paid' - 'paidMonths' - 'discount' - 'credit'
+        when d.coll = 'routes' then
+          case when v_track and exists (select 1 from public.docs b where b.coll = 'bookings' and not b.deleted
+                     and b.data ->> 'kidId' = v_kid and b.data ->> 'routeId' = d.id and b.data ->> 'status' in ('active','trip'))
+               then d.data - 'price' else d.data - 'price' - 'live' end
+        else d.data
+      end,
+      d.deleted, d.updated_at
+    from public.docs d
+    where (p_since is null or d.updated_at > p_since)
+      and (p_since is not null or not d.deleted)
+      and (
+        d.owner = auth.uid()
+        or (d.coll = 'users' and (d.deleted or d.id = v_parent or d.data ->> 'role' = 'driver'))
+        or (d.coll = 'kids' and d.id = v_kid)
+        or (d.coll = 'bookings' and d.data ->> 'kidId' = v_kid)
+        or (d.coll = 'events' and d.data ->> 'kidId' = v_kid and coalesce(d.data ->> 'type', '') <> 'report'
+            and (d.owner::text = v_parent
+                 or exists (select 1 from public.admins a where a.user_id = d.owner)
+                 or exists (select 1 from public.docs b where b.coll = 'bookings' and b.data ->> 'kidId' = v_kid and b.data ->> 'driverId' = d.owner::text)))
+        or d.coll in ('routes','vehicles','checks','settings')
+        or (d.coll in ('messages','notifications') and me = any (d.parties))
+      );
+    return;
+  end if;
+
+  -- ---------- everyone else (kid profiles stay private; family members read the owner's rides) ----------
+  fo := case when adm then null else public._fam_owner(me) end;
+  return query
+  select d.coll, d.id,
+    case
+      when adm or d.owner = auth.uid() then d.data
+      when d.coll = 'users' then public._public_user(d.data)
+           || case when d.data ->> 'role' = 'kid' then jsonb_strip_nulls(jsonb_build_object('kidId', d.data -> 'kidId', 'parentId', d.data -> 'parentId', 'unlinked', d.data -> 'unlinked')) else '{}'::jsonb end
+           || case when jsonb_typeof(d.data -> 'familyOf') = 'string' then jsonb_strip_nulls(jsonb_build_object('familyOf', d.data -> 'familyOf', 'familyRel', d.data -> 'familyRel')) else '{}'::jsonb end
+      when d.coll = 'kids' then (d.data - 'handoverHash' - 'handoverSalt') || case when d.data ? 'handoverHash' and jsonb_typeof(d.data -> 'handoverHash') = 'string' then '{"handoverOn":true}'::jsonb else '{}'::jsonb end
+      when d.coll = 'routes' and not exists (
+             select 1 from public.docs b
+             where b.coll = 'bookings' and not b.deleted
+               and b.data ->> 'routeId' = d.id and (b.data ->> 'parentId' = me or (fo is not null and b.data ->> 'parentId' = fo))
+               and b.data ->> 'status' in ('active','trip'))
+        then d.data - 'live'
+      else d.data
+    end,
+    d.deleted, d.updated_at
+  from public.docs d
+  where (p_since is null or d.updated_at > p_since)
+    and (p_since is not null or not d.deleted)
+    and (
+      adm
+      or d.owner = auth.uid()
+      or me = any (d.parties)
+      or (d.coll in ('users','routes','vehicles','ratings','settings','requests','checks')
+          and not (d.coll = 'users' and d.data ->> 'role' = 'kid'))
+      or (d.coll = 'users' and d.data ->> 'role' = 'kid' and public._kid_driver(d.data ->> 'kidId', me))
+      or (d.coll = 'kids' and exists (
+            select 1 from public.docs b
+            where b.coll = 'bookings' and not b.deleted
+              and b.data ->> 'kidId' = d.id and b.data ->> 'driverId' = me
+              and b.data ->> 'status' in ('active','trip')))
+      or (fo is not null and (
+            (d.coll in ('kids','bookings','waitlist') and d.data ->> 'parentId' = fo)
+            or (d.coll = 'events' and coalesce(d.data ->> 'type', '') <> 'report'
+                and (d.data ->> 'parentId' = fo
+                     or exists (select 1 from public.docs k where k.coll = 'kids' and k.id = d.data ->> 'kidId' and k.data ->> 'parentId' = fo)))
+            or (d.coll = 'messages' and fo = any (d.parties)
+                and exists (select 1 from public.docs u where u.coll = 'users' and u.id = any (d.parties) and u.data ->> 'role' = 'driver'))
+         ))
+    );
+end $$;
+
+revoke execute on function public._fam_relation_ok(text), public._fam_alert_types(), public._fam_owner(text), public._fam_label(text),
+  public._fam_drop(text, text), public._fam_notif_copy() from public, anon, authenticated;
+revoke execute on function public.fetch_docs(timestamptz), public.family_invite(text, text), public.family_accept(text), public.family_remove(text),
+  public.family_leave(), public.family_list(), public.family_absent(text, text), public.family_note(text, text, text) from public, anon;
+grant execute on function public.fetch_docs(timestamptz), public.family_invite(text, text), public.family_accept(text), public.family_remove(text),
+  public.family_leave(), public.family_list(), public.family_absent(text, text), public.family_note(text, text, text) to authenticated;
+
+select 'Enivel family members ready' as status;
+
+-- r10:growth2
+-- =====================================================================
+-- Enivel round 10: growth 2 (ad landing stats, admin superpowers,
+-- promo codes, seat reservations). Runs after setup.sql. Safe to run again.
+-- Only NEW objects live here; nothing in setup.sql is changed.
+-- =====================================================================
+
+-- ---------------------------------------------------------------------
+-- Public landing numbers. Anyone may call it (no login). Real counts only:
+-- verified drivers, parent accounts, children, completed drop-offs this
+-- month. Also the public bits the landing needs: city, WhatsApp number
+-- (settings/legal.phone, already public on the policy pages) and the
+-- landing-related feature switches.
+-- ---------------------------------------------------------------------
+create or replace function public.public_stats() returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare m0 bigint; m1 bigint; flags jsonb; land jsonb; legal jsonb; r jsonb; n int;
+begin
+  m0 := (extract(epoch from date_trunc('month', now()))*1000)::bigint;
+  m1 := (extract(epoch from (date_trunc('month', now()) + interval '1 month'))*1000)::bigint;
+  select coalesce(data, '{}'::jsonb) into flags from public.docs where coll = 'settings' and id = 'flags' and not deleted;
+  select coalesce(data, '{}'::jsonb) into land  from public.docs where coll = 'settings' and id = 'landing' and not deleted;
+  select coalesce(data, '{}'::jsonb) into legal from public.docs where coll = 'settings' and id = 'legal' and not deleted;
+  select count(*)::int into n from public.docs d where d.coll = 'ratings' and not d.deleted and coalesce(d.data ->> 'stars','') ~ '^[1-5]$';
+  select jsonb_build_object(
+    'drivers_verified', (select count(*) from public.docs d where d.coll = 'users' and not d.deleted and d.data ->> 'role' = 'driver'
+        and coalesce(d.data #>> '{verification,status}','none') = 'approved' and coalesce(d.data ->> 'banned','false') <> 'true'
+        and coalesce(d.data ->> 'suspended','false') <> 'true' and coalesce(d.data ->> 'demo','false') <> 'true'),
+    'families', (select count(*) from public.docs d where d.coll = 'users' and not d.deleted and d.data ->> 'role' = 'parent'
+        and coalesce(d.data ->> 'demo','false') <> 'true' and coalesce(d.data ->> 'anonymised','false') <> 'true'),
+    'kids', (select count(*) from public.docs d where d.coll = 'kids' and not d.deleted),
+    'rides_month', (select count(*) from public.docs d where d.coll = 'events' and not d.deleted and d.data ->> 'type' = 'dropoff'
+        and coalesce(d.data ->> 'ts','') ~ '^\d{1,16}$' and (d.data ->> 'ts')::bigint >= m0 and (d.data ->> 'ts')::bigint < m1),
+    'reviews', n,
+    'rating', case when n > 0 then (select round(avg((d.data ->> 'stars')::numeric), 1) from public.docs d
+        where d.coll = 'ratings' and not d.deleted and coalesce(d.data ->> 'stars','') ~ '^[1-5]$') end,
+    'city', left(coalesce(land ->> 'city', ''), 60),
+    'phone', left(coalesce(legal ->> 'phone', ''), 30),
+    'flags', jsonb_build_object(
+        'landingReviews', coalesce(flags -> 'landingReviews', 'true'::jsonb),
+        'pays', coalesce(flags -> 'pays', 'true'::jsonb),
+        'guarantee', coalesce(flags -> 'guarantee', 'false'::jsonb),
+        'kids', coalesce(flags -> 'kids', 'true'::jsonb)))
+  into r;
+  return r;
+end $$;
+revoke execute on function public.public_stats() from public;
+grant execute on function public.public_stats() to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- Latest real parent reviews for the landing page. First names only.
+-- Returns [] when the switch is off or there are no ratings with comments.
+-- ---------------------------------------------------------------------
+create or replace function public.public_reviews() returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare flags jsonb; r jsonb;
+begin
+  select coalesce(data, '{}'::jsonb) into flags from public.docs where coll = 'settings' and id = 'flags' and not deleted;
+  if coalesce(flags ->> 'landingReviews', 'true') = 'false' then return '[]'::jsonb; end if;
+  select coalesce(jsonb_agg(jsonb_build_object(
+      'stars', x.stars, 'comment', x.comment, 'name', x.pname, 'driver', x.dname, 'month', x.mon) order by x.ts desc), '[]'::jsonb)
+  into r from (
+    select (d.data ->> 'stars')::int stars, left(btrim(d.data ->> 'comment'), 220) comment,
+      left(split_part(btrim(coalesce(p.data ->> 'name','')), ' ', 1), 30) pname,
+      left(split_part(btrim(coalesce(v.data ->> 'name','')), ' ', 1), 30) dname,
+      to_char(to_timestamp((d.data ->> 'ts')::bigint / 1000), 'Mon YYYY') mon,
+      (d.data ->> 'ts')::bigint ts
+    from public.docs d
+    left join public.docs p on p.coll = 'users' and p.id = d.data ->> 'parentId'
+    left join public.docs v on v.coll = 'users' and v.id = d.data ->> 'driverId'
+    where d.coll = 'ratings' and not d.deleted and coalesce(d.data ->> 'stars','') ~ '^[1-5]$'
+      and (d.data ->> 'stars')::int >= 4 and length(btrim(coalesce(d.data ->> 'comment',''))) >= 12
+      and coalesce(d.data ->> 'ts','') ~ '^\d{1,16}$'
+      and coalesce(p.data ->> 'anonymised','false') <> 'true' and coalesce(p.data ->> 'demo','false') <> 'true'
+    order by (d.data ->> 'ts')::bigint desc limit 3) x;
+  return coalesce(r, '[]'::jsonb);
+end $$;
+revoke execute on function public.public_reviews() from public;
+grant execute on function public.public_reviews() to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- Admin: give credit (or a refund) to any user. Writes the credit, an
+-- audit row and a notification in one go. Admin only.
+-- ---------------------------------------------------------------------
+create or replace function public.admin_credit(p_user text, p_amount numeric, p_reason text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u public.docs%rowtype; newc numeric; nid text; aid text; nm text;
+begin
+  if auth.uid() is null or not public.is_admin() then raise exception 'Admin only'; end if;
+  if p_user is null or p_user !~ '^[A-Za-z0-9_-]{1,64}$' then raise exception 'Pick a user'; end if;
+  if p_amount is null or p_amount = 0 or abs(p_amount) > 100000 then raise exception 'Amount must be between -R100 000 and R100 000'; end if;
+  if length(btrim(coalesce(p_reason,''))) < 3 then raise exception 'Give a reason'; end if;
+  select * into u from public.docs where coll = 'users' and id = p_user and not deleted;
+  if not found then raise exception 'User not found'; end if;
+  newc := round(greatest(0, coalesce((u.data ->> 'credit')::numeric, 0) + p_amount), 2);
+  update public.docs set data = jsonb_set(data, '{credit}', to_jsonb(newc)), updated_at = now() where coll = 'users' and id = p_user;
+  select coalesce(data ->> 'name', 'Admin') into nm from public.docs where coll = 'users' and id = auth.uid()::text;
+  nid := 'crn' || substr(md5(random()::text || clock_timestamp()::text), 1, 12);
+  insert into public.docs (coll, id, data, owner, parties, deleted, updated_at) values ('notifications', nid,
+    jsonb_build_object('userId', p_user,
+      'text', case when p_amount > 0 then 'Enivel added R' || to_char(p_amount, 'FM999990.00') || ' credit: ' || left(btrim(p_reason), 200)
+                   else 'Enivel removed R' || to_char(abs(p_amount), 'FM999990.00') || ' credit: ' || left(btrim(p_reason), 200) end,
+      'type', 'pay', 'link', 'p-pay', 'ts', (extract(epoch from now())*1000)::bigint, 'read', false),
+    auth.uid(), array[p_user], false, now());
+  aid := 'cra' || substr(md5(random()::text || clock_timestamp()::text), 1, 12);
+  insert into public.docs (coll, id, data, owner, parties, deleted, updated_at) values ('audit', aid,
+    jsonb_build_object('actor', auth.uid()::text, 'actorName', nm, 'action', case when p_amount > 0 then 'credit.give' else 'credit.remove' end,
+      'target', p_user, 'detail', 'R' || to_char(p_amount, 'FM999990.00') || ' · ' || left(btrim(p_reason), 200) || ' · balance R' || to_char(newc, 'FM999990.00'),
+      'ts', (extract(epoch from now())*1000)::bigint),
+    auth.uid(), '{}', false, now());
+  return jsonb_build_object('credit', newc, 'notification', nid, 'audit', aid);
+end $$;
+revoke execute on function public.admin_credit(text, numeric, text) from public, anon;
+grant execute on function public.admin_credit(text, numeric, text) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- Promo codes. Kept in their own table so signed-in users never see the
+-- list of codes (settings docs are readable by every signed-in user).
+-- ---------------------------------------------------------------------
+create table if not exists public.promos (
+  code        text primary key,
+  credit      numeric not null,
+  max_uses    int not null default 100,
+  uses        int not null default 0,
+  expires     date,
+  role        text not null default 'any',
+  note        text,
+  created_at  timestamptz not null default now(),
+  created_by  uuid
+);
+revoke all on public.promos from anon, authenticated;
+create table if not exists public.promo_uses (
+  code     text not null,
+  user_id  text not null,
+  at       timestamptz not null default now(),
+  primary key (code, user_id)
+);
+revoke all on public.promo_uses from anon, authenticated;
+
+create or replace function public.promo_upsert(p_code text, p_credit numeric, p_max numeric, p_expires text, p_role text, p_note text default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare c text := upper(btrim(coalesce(p_code,''))); ex date;
+begin
+  if auth.uid() is null or not public.is_admin() then raise exception 'Admin only'; end if;
+  if c !~ '^[A-Z0-9]{3,20}$' then raise exception 'Code: 3 to 20 letters or digits'; end if;
+  if p_credit is null or p_credit <= 0 or p_credit > 5000 then raise exception 'Credit must be between R1 and R5 000'; end if;
+  if p_max is null or p_max < 1 or p_max > 100000 then raise exception 'Max uses must be 1 or more'; end if;
+  if coalesce(p_role,'any') not in ('any','parent','driver') then raise exception 'Role must be any, parent or driver'; end if;
+  if coalesce(btrim(p_expires),'') <> '' then
+    if p_expires !~ '^\d{4}-\d{2}-\d{2}$' then raise exception 'Expiry must be YYYY-MM-DD'; end if;
+    ex := p_expires::date;
+  end if;
+  insert into public.promos (code, credit, max_uses, expires, role, note, created_by)
+    values (c, round(p_credit, 2), p_max::int, ex, coalesce(p_role,'any'), left(p_note, 120), auth.uid())
+  on conflict (code) do update set credit = excluded.credit, max_uses = excluded.max_uses, expires = excluded.expires, role = excluded.role, note = excluded.note;
+  return (select to_jsonb(p) from public.promos p where p.code = c);
+end $$;
+create or replace function public.promo_delete(p_code text) returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null or not public.is_admin() then raise exception 'Admin only'; end if;
+  delete from public.promos where code = upper(btrim(coalesce(p_code,'')));
+  return found;
+end $$;
+create or replace function public.promo_list() returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if auth.uid() is null or not public.is_admin() then raise exception 'Admin only'; end if;
+  return coalesce((select jsonb_agg(to_jsonb(p) order by p.created_at desc) from public.promos p), '[]'::jsonb);
+end $$;
+-- A signed-in user redeems a code: once per user, within max uses and expiry, matching role.
+create or replace function public.promo_apply(p_code text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare c text := upper(btrim(coalesce(p_code,''))); p public.promos%rowtype; me text := auth.uid()::text; u jsonb; newc numeric;
+begin
+  if auth.uid() is null then raise exception 'Please sign in again'; end if;
+  if c !~ '^[A-Z0-9]{3,20}$' then raise exception 'That code is not valid'; end if;
+  select data into u from public.docs where coll = 'users' and id = me and not deleted;
+  if u is null then raise exception 'Create your profile first'; end if;
+  select * into p from public.promos where code = c for update;
+  if not found then raise exception 'That code is not valid'; end if;
+  if exists (select 1 from public.promo_uses where code = c and user_id = me) then raise exception 'You have already used this code'; end if;
+  if p.expires is not null and p.expires < current_date then raise exception 'That code has expired'; end if;
+  if p.uses >= p.max_uses then raise exception 'That code has been fully used'; end if;
+  if p.role <> 'any' and coalesce(u ->> 'role','') <> p.role then raise exception 'That code is for % accounts', p.role; end if;
+  insert into public.promo_uses (code, user_id) values (c, me);
+  update public.promos set uses = uses + 1 where code = c;
+  newc := round(coalesce((u ->> 'credit')::numeric, 0) + p.credit, 2);
+  update public.docs set data = jsonb_set(data, '{credit}', to_jsonb(newc)), updated_at = now() where coll = 'users' and id = me;
+  insert into public.docs (coll, id, data, owner, parties, deleted, updated_at) values ('notifications',
+    'prn' || substr(md5(random()::text || clock_timestamp()::text), 1, 12),
+    jsonb_build_object('userId', me, 'text', 'Promo code ' || c || ' applied: R' || to_char(p.credit, 'FM999990.00') || ' Enivel credit added.',
+      'type', 'pay', 'link', 'p-pay', 'ts', (extract(epoch from now())*1000)::bigint, 'read', false),
+    auth.uid(), array[me], false, now());
+  return jsonb_build_object('code', c, 'credit', p.credit, 'balance', newc);
+end $$;
+revoke execute on function public.promo_upsert(text, numeric, numeric, text, text, text), public.promo_delete(text), public.promo_list(), public.promo_apply(text) from public, anon;
+grant execute on function public.promo_upsert(text, numeric, numeric, text, text, text), public.promo_delete(text), public.promo_list(), public.promo_apply(text) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- Admin: reset a user's two-step verification (PIN / SMS) and passkeys.
+-- ---------------------------------------------------------------------
+create or replace function public.admin_reset_security(p_user text) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare nm text;
+begin
+  if auth.uid() is null or not public.is_admin() then raise exception 'Admin only'; end if;
+  if p_user is null or p_user !~ '^[A-Za-z0-9_-]{1,64}$' then raise exception 'Pick a user'; end if;
+  update public.docs set data = (data - 'twoFactor' - 'pinHash' - 'pinSalt' - 'passkeys') || '{"passkeys":[]}'::jsonb, updated_at = now()
+    where coll = 'users' and id = p_user and not deleted;
+  if not found then raise exception 'User not found'; end if;
+  select coalesce(data ->> 'name', 'Admin') into nm from public.docs where coll = 'users' and id = auth.uid()::text;
+  insert into public.docs (coll, id, data, owner, parties, deleted, updated_at) values ('audit',
+    'sra' || substr(md5(random()::text || clock_timestamp()::text), 1, 12),
+    jsonb_build_object('actor', auth.uid()::text, 'actorName', nm, 'action', 'security.reset', 'target', p_user,
+      'detail', 'Two-step verification and passkeys cleared', 'ts', (extract(epoch from now())*1000)::bigint),
+    auth.uid(), '{}', false, now());
+  insert into public.docs (coll, id, data, owner, parties, deleted, updated_at) values ('notifications',
+    'srn' || substr(md5(random()::text || clock_timestamp()::text), 1, 12),
+    jsonb_build_object('userId', p_user, 'text', 'Enivel support reset your two-step verification and passkeys. Set them up again under Settings → Security.',
+      'type', 'info', 'ts', (extract(epoch from now())*1000)::bigint, 'read', false),
+    auth.uid(), array[p_user], false, now());
+  return true;
+end $$;
+revoke execute on function public.admin_reset_security(text) from public, anon;
+grant execute on function public.admin_reset_security(text) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- Admin: anonymise an account (POPIA deletion request). Personal details
+-- become placeholders, photos and documents are removed, the account is
+-- suspended so it cannot log in. Money records (transactions) are kept
+-- untouched for the books. Children's names and photos are blanked too.
+-- Note: the login row in auth.users is NOT removed here (delete it in the
+-- Supabase dashboard → Authentication if the person asks for that too).
+-- ---------------------------------------------------------------------
+create or replace function public.admin_anonymise(p_user text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u public.docs%rowtype; nm text; tag text; nkids int := 0;
+begin
+  if auth.uid() is null or not public.is_admin() then raise exception 'Admin only'; end if;
+  if p_user is null or p_user !~ '^[A-Za-z0-9_-]{1,64}$' then raise exception 'Pick a user'; end if;
+  if p_user = auth.uid()::text then raise exception 'You cannot anonymise the admin account'; end if;
+  select * into u from public.docs where coll = 'users' and id = p_user and not deleted;
+  if not found then raise exception 'User not found'; end if;
+  tag := substr(md5(p_user), 1, 8);
+  update public.docs set data = (data - 'idNumber' - 'idPhoto' - 'docsMeta' - 'screen' - 'passkeys' - 'pushSubs' - 'pinHash' - 'pinSalt' - 'twoFactor'
+      - 'guardians' - 'journey' - 'photo' - 'avatar' - 'refCode' - 'utm' - 'notes')
+      || jsonb_build_object('name', 'Deleted user ' || tag, 'email', 'deleted-' || tag || '@anon.enivel', 'phone', null,
+           'phoneVerified', false, 'suspended', true, 'anonymised', true, 'anonymisedAt', (extract(epoch from now())*1000)::bigint,
+           'verification', jsonb_build_object('status', 'none'), 'idStatus', null, 'passkeys', '[]'::jsonb, 'pushSubs', '[]'::jsonb),
+    updated_at = now()
+    where coll = 'users' and id = p_user;
+  -- children's names, photos, notes
+  update public.docs set data = (data - 'photo' - 'notes' - 'geo' - 'schoolGeo' - 'handoverHash' - 'handoverSalt' - 'medical' - 'allergies')
+      || jsonb_build_object('name', 'Child', 'anonymised', true), updated_at = now()
+    where coll = 'kids' and not deleted and data ->> 'parentId' = p_user;
+  get diagnostics nkids = row_count;
+  -- vehicle photos (the make/model stay; plates are personal)
+  update public.docs set data = (data - 'photos') || jsonb_build_object('photos', '{}'::jsonb, 'plate', 'REMOVED'), updated_at = now()
+    where coll = 'vehicles' and not deleted and data ->> 'driverId' = p_user;
+  -- routes paused
+  update public.docs set data = data || '{"active":false}'::jsonb, updated_at = now()
+    where coll = 'routes' and not deleted and data ->> 'driverId' = p_user;
+  -- private messages wiped (the row stays so threads do not break)
+  update public.docs set data = data || jsonb_build_object('text', '[removed]'), updated_at = now()
+    where coll = 'messages' and not deleted and (data ->> 'from' = p_user or data ->> 'to' = p_user);
+  select coalesce(data ->> 'name', 'Admin') into nm from public.docs where coll = 'users' and id = auth.uid()::text;
+  insert into public.docs (coll, id, data, owner, parties, deleted, updated_at) values ('audit',
+    'ana' || substr(md5(random()::text || clock_timestamp()::text), 1, 12),
+    jsonb_build_object('actor', auth.uid()::text, 'actorName', nm, 'action', 'account.anonymise', 'target', p_user,
+      'detail', 'Was ' || left(coalesce(u.data ->> 'name',''), 60) || ' (' || coalesce(u.data ->> 'role','') || '); ' || nkids || ' child record(s) blanked; money records kept',
+      'ts', (extract(epoch from now())*1000)::bigint),
+    auth.uid(), '{}', false, now());
+  return jsonb_build_object('id', p_user, 'name', 'Deleted user ' || tag, 'kids', nkids);
+end $$;
+revoke execute on function public.admin_anonymise(text) from public, anon;
+grant execute on function public.admin_anonymise(text) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- Seat reservations (48 h, no payment). Bookings with status 'reserved'
+-- and reservedUntil (ms). Parents only see their own bookings, so this
+-- gives everyone the live count of unexpired reservations per route.
+-- reserve_expire() cancels expired ones; call it from the worker cron
+-- (service role) — the app also cancels its own expired ones on load.
+-- ---------------------------------------------------------------------
+create or replace function public.route_reserved() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_object_agg(x.rid, x.n), '{}'::jsonb) from (
+    select data ->> 'routeId' rid, count(*) n from public.docs
+    where coll = 'bookings' and not deleted and data ->> 'status' = 'reserved'
+      and coalesce(data ->> 'reservedUntil','') ~ '^\d{1,16}$'
+      and (data ->> 'reservedUntil')::bigint > (extract(epoch from now())*1000)::bigint
+    group by data ->> 'routeId') x
+$$;
+revoke execute on function public.route_reserved() from public, anon;
+grant execute on function public.route_reserved() to authenticated;
+
+create or replace function public.reserve_expire() returns int
+language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+  update public.docs set data = data || jsonb_build_object('status', 'expired', 'expiredAt', (extract(epoch from now())*1000)::bigint), updated_at = now()
+    where coll = 'bookings' and not deleted and data ->> 'status' = 'reserved'
+      and (coalesce(data ->> 'reservedUntil','') !~ '^\d{1,16}$' or (data ->> 'reservedUntil')::bigint <= (extract(epoch from now())*1000)::bigint);
+  get diagnostics n = row_count;
+  return n;
+end $$;
+revoke execute on function public.reserve_expire() from public, anon, authenticated;
+grant execute on function public.reserve_expire() to service_role;
+
+-- ---------------------------------------------------------------------
+-- Trust panel: the month of each approved driver's police clearance and
+-- PrDP (parents only see a stripped driver profile, so the dates come
+-- from here). Month precision only, nothing else from the documents.
+-- ---------------------------------------------------------------------
+create or replace function public.driver_trust() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_object_agg(d.id, jsonb_strip_nulls(jsonb_build_object(
+      'police', case when coalesce(d.data ->> 'policeDate','') ~ '^\d{4}-\d{2}' then left(d.data ->> 'policeDate', 7) end,
+      'prdp', case when coalesce(d.data ->> 'prdpExpiry','') ~ '^\d{4}-\d{2}' then left(d.data ->> 'prdpExpiry', 7) end))), '{}'::jsonb)
+  from public.docs d
+  where d.coll = 'users' and not d.deleted and d.data ->> 'role' = 'driver'
+    and coalesce(d.data #>> '{verification,status}','none') = 'approved'
+$$;
+revoke execute on function public.driver_trust() from public, anon;
+grant execute on function public.driver_trust() to authenticated;
+
+select 'Enivel growth 2 ready' as status;
+
+-- r10:reserve
+-- Reserved seats (48 h holds) count against route capacity on the server.
+create or replace function public._check_unique_and_capacity(p_coll text, p_id text, d jsonb) returns void
+language plpgsql stable security definer set search_path = public as $$
+declare seats int; used int; nowms bigint := (extract(epoch from now())*1000)::bigint;
+begin
+  if p_coll = 'users' and coalesce(d ->> 'phone','') <> '' and exists (
+       select 1 from public.docs where coll = 'users' and not deleted and id <> p_id and data ->> 'phone' = d ->> 'phone') then
+    raise exception 'That phone number already has an account'; end if;
+  if p_coll = 'bookings' and d ->> 'status' in ('active','reserved') and coalesce(d ->> 'once','false') <> 'true' then
+    if exists (select 1 from public.docs where coll = 'bookings' and id = p_id and data ->> 'status' in ('active','reserved')) then return; end if;
+    select nullif(data ->> 'seats','')::int into seats from public.docs where coll = 'routes' and id = d ->> 'routeId' and not deleted;
+    select count(*) into used from public.docs where coll = 'bookings' and not deleted and id <> p_id
+      and data ->> 'routeId' = d ->> 'routeId' and coalesce(data ->> 'once','false') <> 'true'
+      and (data ->> 'status' = 'active'
+           or (data ->> 'status' = 'reserved' and coalesce(data ->> 'reservedUntil','') ~ '^\d{1,16}$' and (data ->> 'reservedUntil')::bigint > nowms));
+    select used + count(*) into used from public.docs where coll = 'waitlist' and not deleted and data ->> 'routeId' = d ->> 'routeId'
+      and data ->> 'status' = 'offered' and data ->> 'parentId' <> coalesce(d ->> 'parentId','')
+      and (data ->> 'offeredAt')::bigint > nowms - 86400000;
+    if seats is not null and used >= seats then raise exception 'This route is full'; end if;
+  end if;
+end $$;
