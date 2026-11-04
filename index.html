@@ -8505,5 +8505,48 @@ function rpReview(){const L_=RP.list||[];if(!L_.length)return toast('All pins ar
 /* new map on → old cached routes are dropped so directions are recalculated with it */
 {let last='';setInterval(()=>{try{const now=rpBetter()?rpSrc():'free';if(last&&now!==last){if(typeof M2==='object'&&M2.plans)M2.plans.clear();if(typeof MAPS==='object')Object.values(MAPS).forEach(M=>{M.sig='';M.m2pinSig=''});RP.list=null;if(!document.querySelector('.overlay'))render()}last=now}catch(e){}},3000)}
 </script>
+<!-- r10:mapfix -->
+<style>
+.mf-row{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 14px}
+.mf-row .btn{flex:1;min-width:120px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.mf-row .btn svg{width:16px;height:16px}
+.rmap .tt-logo{display:none!important}
+.rmap .gm-hint{display:none!important}
+</style>
+<script>
+/* ===== Map fixes from the owner's screen recording (04 Nov):
+   1. pins on the Home map can't be moved by touch any more (dragging the map grabbed the pins);
+   2. clear "Change home" / "Change school" buttons under the map, opening the address sheet with search + pin preview;
+   3. TomTom map images: new "Orbis" keys use a different tile address. Try each TomTom address in turn,
+      remember the one that works, and fall back to the free map images if none do, so the map is never blank. ===== */
+const MF={modes:['orbis1','legacy','orbis2'],fails:{},cur:null};
+function mfTileUrl(mode,theme){const dark=(theme||(typeof m2Theme==='function'?m2Theme():'light'))==='dark';const k=encodeURIComponent(ttKey());
+  if(mode==='orbis1')return 'https://{s}.api.tomtom.com/maps/orbis/map-display/tile/{z}/{x}/{y}.png?apiVersion=1&tileSize=256&view=Unified&style='+(dark?'street-dark':'street-light')+'&key='+k;
+  if(mode==='orbis2')return 'https://api.tomtom.com/maps/orbis/display/raster/tile/{z}/{x}/{y}?apiVersion=2&tileSize=256&geopoliticalView=Unified&style='+(dark?'street-dark':'street-light')+'&key='+k;
+  return 'https://{s}.api.tomtom.com/map/1/tile/basic/'+(dark?'night':'main')+'/{z}/{x}/{y}.png?tileSize=256&view=Unified&key='+k}
+function mfMode(){const key=ttKey();if(!key)return null;try{const s=JSON.parse(ls.get('enivel_ttmode')||'null');if(s&&s.key===key&&(s.mode==='none'||MF.modes.includes(s.mode)))return s.mode}catch(e){}return MF.modes[0]}
+function mfSetMode(mode){try{ls.set('enivel_ttmode',JSON.stringify({key:ttKey(),mode,at:Date.now()}))}catch(e){}}
+/* the TomTom layer's tile URL is replaced by the working one (or the free one when TomTom images are unavailable) */
+if(typeof ttTileUrl==='function'){const _mfFree=()=>`https://{s}.basemaps.cartocdn.com/${(typeof m2Theme==='function'&&m2Theme()==='dark')?'dark_all':'light_all'}/{z}/{x}/{y}{r}.png`;
+  ttTileUrl=function(theme){const m=mfMode();if(!m||m==='none')return _mfFree();return mfTileUrl(m,theme)}}
+/* watch every map's tile layer: 4 failed images on one address → next address */
+function mfWatch(M){try{const tl=(typeof M2==='object'&&M2.tiles||[]).find(l=>l._map===M.map);if(!tl||tl._mfWatch)return;tl._mfWatch=true;tl.options.subdomains='abcd';
+  let bad=0,good=0;tl.on('tileload',()=>{if(/api\.tomtom\.com/.test(tl._url)){good++;bad=0;if(good===1){const m=mfMode();if(m&&m!=='none')mfSetMode(m)}}M.box.querySelectorAll('.nomap').forEach(n=>n.remove())});
+  tl.on('tileerror',()=>{if(!/api\.tomtom\.com/.test(tl._url)||good>0)return;if(++bad<4)return;bad=0;const m=mfMode();const i=MF.modes.indexOf(m);const next=i>=0&&i<MF.modes.length-1?MF.modes[i+1]:'none';mfSetMode(next);console.warn('TomTom tiles: '+m+' failed, trying '+next);(M2.tiles||[]).forEach(l=>{if(l._map&&/api\.tomtom\.com/.test(l._url))l.setUrl(m2TileUrl())});tl.setUrl(m2TileUrl())})}catch(e){console.warn('mf watch',e)}}
+/* the key changed → start the search for a working tile address again */
+if(typeof ttSaveKey==='function'){const _mfSave=ttSaveKey;ttSaveKey=async function(){try{ls.set('enivel_ttmode','')}catch(e){}return _mfSave.apply(this,arguments)}}
+const _mfRmap=MOUNT.rmap;MOUNT.rmap=async function(el){const key=[el.dataset.mode,el.dataset.route||'',el.dataset.kid||''].join(':');const res=await _mfRmap.call(this,el);try{const M=typeof MAPS==='object'?MAPS[key]:null;if(M&&M.box?.isConnected){mfWatch(M);
+  if(M.mode==='home'){M.map.off('click');M.pins&&M.pins.eachLayer(mk=>{try{mk.dragging&&mk.dragging.disable();mk.off('dragend');mk.off('dragstart')}catch(e){}})}
+  /* TomTom attribution text only (the logo chip covered the "show everything" button) */
+  const at=M.box.querySelector('.tt-attr');if(at&&!/api\.tomtom\.com/.test(m2TileUrl()))at.textContent='© TomTom · © OpenStreetMap © CARTO'}}catch(e){console.warn('mf map',e)}return res};
+/* pins are never draggable on the Home map, even if an older layer re-enables them */
+if(typeof r12Drag==='function')r12Drag=function(){};
+/* 2. buttons under the map */
+{const _mfScene=sceneSVG;sceneSVG=function(){let html=_mfScene.apply(this,arguments);const j=journey();const btns=`<div class="mf-row"><button class="btn sm ghost" onclick="pickPlace('pickup')">${ICON.home||''} ${j.pickupGeo?'Change home':'Set home'}</button><button class="btn sm ghost" onclick="pickPlace('dropoff')">${ICON.school||''} ${j.dropoffGeo?'Change school':'Set school'}</button></div>`;
+  html=html.replace(/<p class="tiny muted" style="margin-top:-8px">Real road route between your pins\. Tap the map to move a pin\.<\/p>/,'<p class="tiny muted" style="margin:-8px 0 8px">Road route from home to school. Use the buttons to change either one.</p>'+btns);
+  html=html.replace(/<p class="tiny muted" style="margin-top:-8px">Illustration\. Add your pickup and school to see the real road route\.<\/p>/,'<p class="tiny muted" style="margin:-8px 0 8px">Add your home and school to see the road route.</p>'+btns);return html}}
+/* the address sheet: typed text without a picked suggestion must still be saved and pinned */
+if(typeof pickPlace==='function'){const _mfPick=pickPlace;pickPlace=function(kind){_mfPick(kind);try{const m=$('.modal');if(!m)return;const h3=m.querySelector('h3');if(h3)h3.textContent={pickup:'Home (pickup) address',dropoff:'School (drop-off)',stop:'Extra stop'}[kind]||h3.textContent;const v=$('#pl-v',m);if(v){v.placeholder=kind==='dropoff'?'Type the school name':'Type the street address';setTimeout(()=>{try{v.focus()}catch(e){}},250)}}catch(e){}}}
+</script>
 
 </body></html>
