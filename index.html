@@ -8201,5 +8201,78 @@ const _g2Render=render;render=function(){if(S.viewAs&&S.admin&&typeof S.route===
     if(S.route==='landing'&&(!u||S.g2Preview))g2LandingDecorate();
     if(u&&S.ready)setTimeout(()=>g2ExpireHolds().catch(()=>{}),0)}}catch(e){console.warn('growth2 render',e)}return r};
 </script>
+<!-- r10:schools -->
+<style>
+/* r12 · map taps always work: the tile notice is a small chip that never covers the map */
+.rmap .nomap{inset:auto 10px 10px 10px!important;top:auto!important;display:block!important;padding:8px 12px!important;border-radius:12px!important;font-size:.75rem!important;line-height:1.3;pointer-events:none;background:color-mix(in srgb,var(--bg) 88%,transparent)!important;border:1px solid var(--line);box-shadow:var(--shadow);z-index:450}
+.rmap .nomap b{display:block}
+.rmap .nomap br{display:none}
+.m2pin.drag{transform:scale(1.08)}.leaflet-marker-draggable{cursor:grab}
+.sug .tag.dbe{background:color-mix(in srgb,var(--acc3) 16%,transparent);color:var(--acc3)}
+.sug .tag.near{background:color-mix(in srgb,var(--ok,#19a974) 16%,transparent);color:var(--ok,#19a974)}
+.mini{position:relative;height:170px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--bg2);margin-top:8px}
+.mini .lmap{position:absolute;inset:0}
+.mini .hint{position:absolute;left:8px;right:8px;bottom:8px;z-index:450;pointer-events:none;background:color-mix(in srgb,var(--bg) 90%,transparent);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:.72rem;color:var(--fg2);box-shadow:var(--shadow)}
+.mini .hint b{color:var(--fg)}
+.mini .mpin{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--acc);border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.3);margin:-26px 0 0 -13px}
+.mini .mpin.school{background:var(--acc3)}
+</style>
+<script>
+/* ===== r12 · 1. tile notice never blocks taps; it also disappears as soon as a tile loads ===== */
+(function(){if(typeof L==='undefined')return;const _tl=L.tileLayer;const w=function(url,opts){const layer=_tl.apply(this,arguments);try{layer.on('tileload',()=>{const c=layer._map&&layer._map.getContainer();const box=c&&c.closest('.rmap');box&&box.querySelectorAll('.nomap').forEach(n=>n.remove())})}catch(e){}return layer};Object.assign(w,_tl);if(_tl._m2)w._m2=true;L.tileLayer=w})();
+document.addEventListener('click',e=>{const n=e.target.closest&&e.target.closest('.rmap .nomap');if(n)n.remove()},true);
+
+/* Leaflet 1.9 leaves a focus listener behind after unbindTooltip (it then throws on tap/drag); strip it */
+(function(){if(typeof L==='undefined'||!L.Layer)return;const _ub=L.Layer.prototype.unbindTooltip;L.Layer.prototype.unbindTooltip=function(){const r=_ub.apply(this,arguments);try{const el=this.getElement&&this.getElement();if(el){L.DomEvent.off(el,'focus');L.DomEvent.off(el,'blur')}}catch(e){}return r}})();
+/* ===== r12 · 2. drag a pin to move it (home journey map) ===== */
+const R12={drag:new WeakSet()};
+function r12Drag(M){if(!M||M.mode!=='home'||!M.pins)return;const pts=M.pts||[];let i=0;M.pins.eachLayer(mk=>{const p=pts[i++];if(!p||!mk.dragging||R12.drag.has(mk))return;R12.drag.add(mk);try{mk.dragging.enable()}catch(e){return}
+  mk.on('dragstart',()=>{const el=mk.getElement&&mk.getElement();el&&el.querySelector('.m2pin')?.classList.add('drag')});
+  mk.on('dragend',async()=>{const ll=mk.getLatLng();const kind=p.kind==='home'?'pickup':p.kind==='school'?'dropoff':'stop';const j=journey();await setJourney({[kind+'Geo']:{lat:+ll.lat.toFixed(6),lng:+ll.lng.toFixed(6),label:(j[kind+'Geo']?.label)||'Pinned on map',address:j[kind+'Geo']?.address||null}});toast({pickup:'Pickup pin moved',dropoff:'Drop-off pin moved',stop:'Stop pin moved'}[kind]);try{typeof m2Flip==='function'&&m2Flip(M)}catch(e){}})})}
+const _r12Rmap=MOUNT.rmap;MOUNT.rmap=async function(el){const key=[el.dataset.mode,el.dataset.route||'',el.dataset.kid||''].join(':');const res=await _r12Rmap.call(this,el);try{const M=typeof MAPS==='object'?MAPS[key]:null;if(M&&M.box?.isConnected)r12Drag(M)}catch(e){console.warn('r12 drag',e)}return res};
+/* the "Pin this spot as…" sheet now confirms what moved */
+const _r12SetJourney=setJourney;setJourney=async function(p){const r=await _r12SetJourney(p);try{const k=Object.keys(p||{}).find(x=>/Geo$/.test(x)&&p[x]&&p[x].label==='Pinned on map');if(k&&document.querySelector('.modal'))setTimeout(()=>toast({pickupGeo:'Pickup pin moved. Drag it to fine-tune.',dropoffGeo:'Drop-off pin moved. Drag it to fine-tune.',stopGeo:'Stop pin moved.'}[k]||'Pin moved'),80)}catch(e){}return r};
+
+/* ===== r12 · 3. schools: official DBE list (bundled) + live 2023 coordinates + places, nearest first ===== */
+const SCH={idx:null,loading:null,live:new Map(),url:'schools.json',dpme:'https://dpmegis.dpme.gov.za/arcgis/rest/services/DPME_EnterpriseSQL_GDB/MTDP_Layers/FeatureServer/6/query',PH:{P:'Primary School',S:'Secondary School',C:'Combined School',I:'Intermediate School',E:'Pre-primary',O:'School'},PROV:{GT:'Gauteng',WC:'Western Cape',KZ:'KwaZulu-Natal',EC:'Eastern Cape',LP:'Limpopo',MP:'Mpumalanga',NW:'North West',FS:'Free State',NC:'Northern Cape'}};
+function schNorm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim()}
+const SCH_STOP=/^(school|skool|primary|primere|primêre|secondary|sekondere|sekondêre|high|hoer|hoërskool|hoerskool|laerskool|laer|combined|college|academy|prep|preparatory|of|the|and|en|die|van)$/;
+function schWords(q){return schNorm(q).split(' ').filter(w=>w&&!SCH_STOP.test(w))}
+async function schLoad(){if(SCH.idx)return SCH.idx;if(SCH.loading)return SCH.loading;SCH.loading=(async()=>{try{const r=await fetch(SCH.url,{cache:'force-cache'});if(!r.ok)throw new Error(r.status);const j=await r.json();SCH.idx=(j.s||[]).filter(s=>s[0]).map(s=>({name:s[0],ph:s[1].replace('i',''),ind:/i$/.test(s[1]),place:s[2],prov:s[3],pc:s[4],lat:s[5],lng:s[6],n:schNorm(s[0])}));return SCH.idx}catch(e){console.warn('schools list',e);SCH.idx=[];return SCH.idx}finally{SCH.loading=null}})();return SCH.loading}
+function schDisplay(s){const n=s.name;if(/school|skool|college|academy|primary|secondary|high|laerskool|ho[eë]rskool|prep|centre|center|kollege/i.test(n))return n;return n+' '+(SCH.PH[s.ph]||'School')}
+function schRef(){try{const u=me();const j=u?.journey||{};if(j.pickupGeo?.lat)return j.pickupGeo;const k=(typeof kidsOf==='function'&&u)?kidsOf(u.id).find(k=>k.geo?.lat):null;if(k)return k.geo;if(typeof S!=='undefined'&&S.gps?.lat)return S.gps;if(u?.geo?.lat)return u.geo}catch(e){}return null}
+function schScore(s,words,q){let sc=0;const n=s.n;if(n===q)sc+=100;else if(n.startsWith(q))sc+=60;for(const w of words){if(n.split(' ').some(t=>t.startsWith(w)))sc+=20;else if(n.includes(w))sc+=10;else if(schNorm(s.place).includes(w))sc+=6;else return -1}return sc}
+async function schLocal(q){const idx=await schLoad();const nq=schNorm(q);const words=schWords(q);if(!words.length&&nq.length<3)return [];const ws=words.length?words:[nq];const ref=schRef();const out=[];for(const s of idx){const sc=schScore(s,ws,nq);if(sc<0)continue;const d=ref?distM(ref,s):null;out.push({s,sc,d})}
+  out.sort((a,b)=>(b.sc-a.sc)||((a.d??1e12)-(b.d??1e12))||a.s.name.localeCompare(b.s.name));return out.slice(0,8).map(({s,d})=>schItem(s,d))}
+function schItem(s,d){const loc=[d!=null?schKm(d)+' away':'',s.place,SCH.PROV[s.prov]||s.prov,s.pc].filter(Boolean).join(' · ').replace(' · ',' · ');return {lat:s.lat,lng:s.lng,name:schDisplay(s),type:'school',isSchool:true,official:true,ind:s.ind,dist:d,loc,full:loc,address:{school:schDisplay(s),suburb:s.place.split(',')[0]||'',city:s.place.split(',').slice(-1)[0]?.trim()||'',state:SCH.PROV[s.prov]||'',postcode:s.pc||'',country:'South Africa'}}}
+/* live 2023 coordinates from the Presidency GIS mirror of the DBE list; silently skipped when unreachable */
+async function schLive(q){const key=schNorm(q);if(SCH.live.has(key))return SCH.live.get(key);const p=(async()=>{try{const words=schWords(q);const like=(words.length?words:[key]).map(w=>`upper(Official_Institution_Name) LIKE '%${w.toUpperCase().replace(/'/g,"''")}%'`).join(' AND ');const where=`Datayear=2023 AND GIS_Latitude IS NOT NULL AND ${like}`;const u=SCH.dpme+'?where='+encodeURIComponent(where)+'&outFields=Official_Institution_Name,Phase_PED,Sector,Suburb,Town_City,Province,GIS_Longitude,GIS_Latitude&returnGeometry=false&resultRecordCount=12&f=json';const c=new AbortController();const t=setTimeout(()=>c.abort(),3500);const r=await fetch(u,{signal:c.signal});clearTimeout(t);if(!r.ok)return [];const j=await r.json();const PHM={'PRIMARY SCHOOL':'P','SECONDARY SCHOOL':'S','COMBINED SCHOOL':'C','INTERMEDIATE SCHOOL':'I','PRE-PRIMARY SCHOOL':'E'};return (j.features||[]).map(f=>f.attributes).filter(a=>a.GIS_Latitude&&a.GIS_Longitude).map(a=>({name:schTitle(a.Official_Institution_Name),ph:PHM[a.Phase_PED]||'O',ind:a.Sector==='INDEPENDENT',place:[a.Suburb,a.Town_City].filter(x=>x&&x!=='NULL'&&x!=='OUTSIDE A TOWN').map(schTitle).filter((x,i,arr)=>arr.indexOf(x)===i).join(', '),prov:a.Province,pc:'',lat:+(+a.GIS_Latitude).toFixed(5),lng:+(+a.GIS_Longitude).toFixed(5),n:schNorm(a.Official_Institution_Name),live:true}))}catch(e){return []}})();SCH.live.set(key,p);return p}
+function schTitle(s){return String(s||'').replace(/\?/g,'ê').toLowerCase().replace(/(^|[\s\-'/.(])([a-z])/g,(m,a,b)=>a+b.toUpperCase())}
+/* merge: live record wins (newer pin) when the same school is in both */
+async function schMerge(q){const [loc,live]=await Promise.all([schLocal(q),schLive(q)]);const out=[];const used=new Set();for(const l of live){const i=loc.findIndex(x=>!used.has(x)&&(schNorm(x.name).startsWith(l.n)||l.n.startsWith(schNorm(x.name)))&&distM(x,l)<3000);const ref=schRef();const it=schItem(l,ref?distM(ref,l):null);it.live=true;if(i>=0){used.add(loc[i]);it.name=loc[i].name;it.loc=loc[i].loc||it.loc;it.full=it.loc;it.address.postcode=loc[i].address.postcode||''}out.push(it)}for(const x of loc)if(!used.has(x))out.push(x);const ref=schRef();if(ref)out.sort((a,b)=>((a.dist??1e12)-(b.dist??1e12)));return out.slice(0,8)}
+const _r12Suggest=suggestSchools;suggestSchools=async function(q){const [schools,places]=await Promise.all([schMerge(q).catch(()=>[]),_r12Suggest(q).catch(()=>null)]);const out=[...schools];for(const p of (places||[])){if(out.length>=10)break;if(p.isSchool&&out.some(s=>distM(s,p)<400))continue;out.push(p)}if(!out.length&&places===null)return null;return out};
+/* nicer rows: distance first, then suburb, province and postal code */
+function schKm(d){return d==null?'':d<950?Math.round(d/50)*50+' m':(d/1000).toFixed(d<9500?1:0)+' km'}
+/* ===== r12 · 4. "Is this pin right?" mini map under a picked address/school, drag to adjust ===== */
+function r12Mini(input){if(typeof L==='undefined'||typeof HAS_L==='undefined'||!HAS_L)return;const wrap=input.closest('.sugwrap')||input.parentNode;let box=wrap.parentNode.querySelector('.mini[data-for="'+input.id+'"]');const g=geoOf(input);if(!g){box&&box.remove();return}
+  const isSchool=input.dataset.school==='1'||['k-s','rq-s','r-sch'].includes(input.id);
+  if(!box){box=document.createElement('div');box.className='mini';box.dataset.for=input.id;box.innerHTML='<div class="lmap"></div><div class="hint"><b>Is the pin on the gate?</b> Drag it to fix the spot.</div>';wrap.insertAdjacentElement('afterend',box);
+    const map=L.map(box.querySelector('.lmap'),{zoomControl:false,attributionControl:false,dragging:true,scrollWheelZoom:false});L.tileLayer(typeof m2TileUrl==='function'?m2TileUrl():'https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,subdomains:'abcd'}).addTo(map);
+    const mk=L.marker([g.lat,g.lng],{draggable:true,icon:L.divIcon({className:'',html:`<div class="mpin ${isSchool?'school':''}"></div>`,iconSize:[0,0],iconAnchor:[0,0]})}).addTo(map);map.setView([g.lat,g.lng],17);
+    mk.on('dragend',()=>{const ll=mk.getLatLng();const cur=geoOf(input)||{};input.dataset.geo=JSON.stringify({...cur,lat:+ll.lat.toFixed(6),lng:+ll.lng.toFixed(6),adjusted:true});box.querySelector('.hint').innerHTML='<b>Pin moved.</b> Saved with the exact spot you chose.'});
+    box._map=map;box._mk=mk;setTimeout(()=>map.invalidateSize(),50)}
+  else{box._mk.setLatLng([g.lat,g.lng]);box._map.setView([g.lat,g.lng],17);box.querySelector('.hint').innerHTML='<b>Is the pin on the gate?</b> Drag it to fix the spot.';setTimeout(()=>box._map.invalidateSize(),50)}}
+document.addEventListener('change',e=>{const i=e.target;if(!(i instanceof HTMLInputElement))return;try{const g=geoOf(i);if(g&&g.label&&/ away · /.test(g.label)){g.label=g.label.replace(/, \d[\d.]* (?:km|m) away · /,', ');i.dataset.geo=JSON.stringify(g)}}catch(x){}if(['k-p','k-s','pl-v','pid-addr'].includes(i.id)&&i.closest('.modal'))setTimeout(()=>r12Mini(i),30)},true);
+document.addEventListener('input',e=>{const i=e.target;if(!(i instanceof HTMLInputElement))return;if(['k-p','k-s','pl-v','pid-addr'].includes(i.id)&&!i.dataset.geo){const b=i.closest('.modal')?.querySelector('.mini[data-for="'+i.id+'"]');b&&b.remove()}});
+const _r12Close=closeModal;closeModal=function(){try{document.querySelectorAll('.mini').forEach(b=>{try{b._map&&b._map.remove()}catch(e){}b.remove()})}catch(e){}return _r12Close.apply(this,arguments)};
+/* open the edit form with the pin already shown when a kid/journey already has one */
+const _r12AddKid=addKid;addKid=function(id){_r12AddKid(id);try{const m=$('.modal');const k=id?Store.get('kids',id):null;if(!m||!k)return;const p=$('#k-p',m),s=$('#k-s',m);if(p&&k.geo?.lat&&!p.dataset.geo)p.dataset.geo=JSON.stringify(k.geo);if(s&&k.schoolGeo?.lat&&!s.dataset.geo)s.dataset.geo=JSON.stringify(k.schoolGeo);setTimeout(()=>{p&&r12Mini(p);s&&r12Mini(s)},60)}catch(e){}};
+const _r12PickPlace=pickPlace;pickPlace=function(kind){_r12PickPlace(kind);try{const m=$('.modal');const j=journey();const v=$('#pl-v',m);if(m&&v&&j[kind+'Geo']?.lat&&!v.dataset.geo){v.dataset.geo=JSON.stringify(j[kind+'Geo']);setTimeout(()=>r12Mini(v),60)}}catch(e){}};
+/* status row: schools list reachable */
+if(typeof OWN_GUIDES==='object')OWN_GUIDES.schools={title:'School list',steps:['The app ships with the Department of Basic Education list of 25 000+ schools (schools.json next to index.html).','If this row is red, the file is missing from the site: re-upload schools.json with index.html.','Live 2023 pins come from the Presidency GIS server and are optional; the bundled list works without it.']};
+/* status row: is schools.json on the site? */
+SCH.stat=null;async function schStatusCheck(){if(SCH.stat&&Date.now()-SCH.stat.at<600000)return;SCH.stat={at:Date.now(),st:'wait'};try{const r=await fetch(SCH.url,{method:'HEAD',cache:'no-store'});SCH.stat={at:Date.now(),st:r.ok?'ok':'bad',v:r.ok?'Loaded':'Missing ('+r.status+')'}}catch(e){SCH.stat={at:Date.now(),st:'bad',v:'Not reachable'}}if(typeof S!=='undefined'&&S.admin&&['a-status','a-home'].includes(S.route)&&!document.querySelector('.overlay'))render()}
+if(typeof admStatusRows==='function'){const _schRows=admStatusRows;admStatusRows=function(){const rows=_schRows();if(!SCH.stat||Date.now()-SCH.stat.at>600000)setTimeout(schStatusCheck,0);const st=SCH.stat||{st:'wait'};rows.push(['schools','School list (DBE)',st.st==='wait'?{st:'wait',v:'Checking…',fix:''}:st.st==='ok'?{st:'ok',v:'25 000+ schools',fix:''}:{st:'bad',v:st.v,fix:'schools.json is missing next to index.html. Press ? for the steps.'}]);return rows}}
+</script>
 
 </body></html>

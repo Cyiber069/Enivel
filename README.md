@@ -6,6 +6,7 @@ Live app: https://cyiber069.github.io/Enivel/
 
 ## What's in this repository
 - `index.html` — the whole app (parents, drivers, private chauffeur, admin), built from the source by `build.sh`.
+- `schools.json` — the Department of Basic Education list of 25 000+ schools with their coordinates; the school search uses it (and the Presidency GIS 2023 pins when reachable). Keep it next to `index.html`.
 - `supabase/setup.sql` — the database and its security rules. Run it in Supabase → SQL Editor after every update (safe to re-run).
 - `worker.js` + `WORKER-SETUP.md` — the Cloudflare Worker for SMS codes (BulkSMS) and driver pop-up reminders.
 - `sw.js` — lets drivers get pickup reminders with Start trip buttons even when Enivel is closed.
