@@ -2534,3 +2534,13 @@ begin
     if seats is not null and used >= seats then raise exception 'This route is full'; end if;
   end if;
 end $$;
+
+-- r10:gmaps
+-- Google Maps key (a browser key restricted to the site) is read by every user through public_config.
+create or replace function public.public_config() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(
+    'otpEndpoint', coalesce((select data ->> 'otpEndpoint' from public.docs where coll = 'settings' and id = 'config' and not deleted), ''),
+    'gmapsKey', coalesce((select data ->> 'gmapsKey' from public.docs where coll = 'settings' and id = 'config' and not deleted), ''))
+$$;
+grant execute on function public.public_config() to anon, authenticated;
