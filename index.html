@@ -8564,6 +8564,16 @@ if(typeof r12Drag==='function')r12Drag=function(){};
   html=html.replace(/<p class="tiny muted" style="margin-top:-8px">Illustration\. Add your pickup and school to see the real road route\.<\/p>/,'<p class="tiny muted" style="margin:-8px 0 8px">Add your home and school to see the road route.</p>'+btns);return html}}
 /* the address sheet: typed text without a picked suggestion must still be saved and pinned */
 if(typeof pickPlace==='function'){const _mfPick=pickPlace;pickPlace=function(kind){_mfPick(kind);try{const m=$('.modal');if(!m)return;const h3=m.querySelector('h3');if(h3)h3.textContent={pickup:'Home (pickup) address',dropoff:'School (drop-off)',stop:'Extra stop'}[kind]||h3.textContent;const v=$('#pl-v',m);if(v){v.placeholder=kind==='dropoff'?'Type the school name':'Type the street address';setTimeout(()=>{try{v.focus()}catch(e){}},250)}}catch(e){}}}
+/* ===== 05 Nov: owner wants landmarks, buildings and roads visible. The minimal light style hid them.
+   Map pictures now always use CARTO Voyager (landmarks, schools, shops, parks, building outlines at street zoom,
+   street names); dark theme keeps the dark style. TomTom still does search and directions; Google key (if any) still wins. ===== */
+function mfDetailed(theme){return (theme||(typeof m2Theme==='function'?m2Theme():'light'))==='dark'?'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'}
+if(typeof ttTileUrl==='function')ttTileUrl=function(theme){return mfDetailed(theme)};
+mfProbe=async function(){};
+{const _mfM2=m2TileUrl;m2TileUrl=function(theme){const u=_mfM2(theme);if(/googleapis/.test(u))return u;return mfDetailed(theme)}}
+if(typeof admStatusRows==='function'){const _mfRows2=admStatusRows;admStatusRows=function(){return _mfRows2().filter(r=>r[0]!=='ttpics')}}
+/* street-level detail: allow closer zoom and never fit so far out that the area turns into a blur */
+{const _mfRmap2=MOUNT.rmap;MOUNT.rmap=async function(el){const key=[el.dataset.mode,el.dataset.route||'',el.dataset.kid||''].join(':');const res=await _mfRmap2.call(this,el);try{const M=typeof MAPS==='object'?MAPS[key]:null;if(M&&M.box?.isConnected){const tl=(typeof M2==='object'&&M2.tiles||[]).find(l=>l._map===M.map);if(tl){tl.options.maxZoom=20;tl.options.maxNativeZoom=19;tl.options.detectRetina=true;if(tl._url!==m2TileUrl())tl.setUrl(m2TileUrl())}M.map.setMaxZoom(19);const at=M.box.querySelector('.tt-attr');if(at)at.textContent='© OpenStreetMap © CARTO'+(typeof ttOn==='function'&&ttOn()?' · routes © TomTom':'');if(!M._mfZoomFix){M._mfZoomFix=true;M.map.on('zoomend',()=>{})}}}catch(e){}return res}}
 </script>
 
 </body></html>
