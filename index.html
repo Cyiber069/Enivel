@@ -8675,14 +8675,14 @@ if(typeof g2ReserveConfirm==='function'){const _ppRC=g2ReserveConfirm;g2ReserveC
    2. map pictures fall back through three servers (detailed CARTO → plain CARTO → OpenStreetMap) when one fails or hangs;
    3. a short note appears instead of a silent grey box if no server answers. ===== */
 const MF2={servers:['voyager','light','osm'],idx:0};
-try{const s=+ls.get('enivel_tilesrv');if(s>=0&&s<3)MF2.idx=s}catch(e){}
+try{const v=JSON.parse(ls.get('enivel_tilesrv')||'null');if(v&&v.idx>=0&&v.idx<3&&Date.now()-(+v.at||0)<3600e3)MF2.idx=v.idx}catch(e){}
 function mf2Url(theme){const dark=(theme||(typeof m2Theme==='function'?m2Theme():'light'))==='dark';const s=MF2.servers[MF2.idx];
   if(s==='osm')return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
   if(dark)return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
   return s==='light'?'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'}
 if(typeof mfDetailed==='function')mfDetailed=function(theme){return mf2Url(theme)};
 function mf2Next(M,why){if(MF2.idx>=MF2.servers.length-1){if(M&&M.box&&!M.box.querySelector('.mf2-note')){const n=document.createElement('div');n.className='mf2-note';n.textContent='Map pictures could not load on this connection. Your route and pins still work.';M.box.appendChild(n)}return}
-  MF2.idx++;try{ls.set('enivel_tilesrv',String(MF2.idx))}catch(e){}console.warn('map pictures: switching to',MF2.servers[MF2.idx],why);
+  MF2.idx++;try{ls.set('enivel_tilesrv',JSON.stringify({idx:MF2.idx,at:Date.now()}))}catch(e){}console.warn('map pictures: switching to',MF2.servers[MF2.idx],why);
   (typeof M2==='object'&&M2.tiles||[]).forEach(l=>{if(l._map){l.options.subdomains='abcd';l.setUrl(m2TileUrl())}})}
 function mf2Watch(M){if(!M||M._mf2)return;M._mf2=true;const tl=(typeof M2==='object'&&M2.tiles||[]).find(l=>l._map===M.map);if(!tl)return;
   let good=0,bad=0;tl.on('tileload',()=>{good++;bad=0;M.box.querySelector('.mf2-note')?.remove()});
@@ -8692,6 +8692,57 @@ function mf2Watch(M){if(!M||M._mf2)return;M._mf2=true;const tl=(typeof M2==='obj
   /* redraw on any size change */
   try{let last='';const ro=new ResizeObserver(()=>{const k=M.box.clientWidth+'x'+M.box.clientHeight;if(k===last||!M.box.clientWidth)return;last=k;M.map.invalidateSize();if(typeof fitMap==='function')fitMap(M)});ro.observe(M.box);M._mf2ro=ro}catch(e){}}
 {const _mf2Rmap=MOUNT.rmap;MOUNT.rmap=async function(el){const key=[el.dataset.mode,el.dataset.route||'',el.dataset.kid||''].join(':');const res=await _mf2Rmap.call(this,el);try{const M=typeof MAPS==='object'?MAPS[key]:null;if(M&&M.box?.isConnected){mf2Watch(M);const tl=(M2.tiles||[]).find(l=>l._map===M.map);if(tl&&tl._url!==m2TileUrl())tl.setUrl(m2TileUrl());const at=M.box.querySelector('.tt-attr');if(at)at.textContent=(MF2.servers[MF2.idx]==='osm'?'© OpenStreetMap':'© OpenStreetMap © CARTO')+(typeof ttOn==='function'&&ttOn()?' · routes © TomTom':'');setTimeout(()=>{try{M.map.invalidateSize();fitMap(M)}catch(e){}},250)}}catch(e){console.warn('mf2',e)}return res}}
+</script>
+<!-- r10:vmap -->
+<style>
+/* Google-style vector map underneath Enivel's pins and routes */
+.rmap .leaflet-maplibre-gl,.rmap .leaflet-gl-layer{z-index:1}
+.rmap.vm-on{background:#f5f3ef}
+:root[data-theme="dark"] .rmap.vm-on{background:#1b1d22}
+.rmap .vm-attr{position:absolute;right:6px;bottom:6px;z-index:441;pointer-events:none;font-size:10px;line-height:1.2;color:#5f6368;background:rgba(255,255,255,.85);border-radius:6px;padding:2px 6px}
+:root[data-theme="dark"] .rmap .vm-attr{background:rgba(0,0,0,.55);color:#cfd3da}
+.rmap.vm-on .tt-attr,.rmap.vm-on .nomap,.rmap.vm-on .mf2-note{display:none!important}
+</style>
+<script>
+/* ===== 06 Nov: owner wants the map to look like Google Maps (colourful roads, parks, water, buildings, shop/school icons)
+   instead of a grey block with a purple line.
+   - Vector base map from OpenFreeMap (free, no key, no card, no limits; OpenStreetMap data): "liberty" in light, "dark" in dark.
+   - Drawn with MapLibre GL inside the existing Leaflet map, so pins, routes, the car, turn-by-turn and progress keep working.
+   - Loaded only when a map is shown. If the phone can't draw it (no WebGL) or the style doesn't load in 10 s,
+     the picture map (with its backup servers) stays.
+   - Route line in Google-style blue. ===== */
+const VM={css:'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',js:'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js',
+  plugin:'https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.3/leaflet-maplibre-gl.js',
+  styles:{light:'https://tiles.openfreemap.org/styles/liberty',dark:'https://tiles.openfreemap.org/styles/dark'},loading:null,ok:null,failAt:0};
+function vmWebGL(){try{const c=document.createElement('canvas');return !!(c.getContext('webgl2')||c.getContext('webgl'))}catch(e){return false}}
+function vmLoadScript(src){return new Promise((res,rej)=>{if([...document.scripts].some(s=>s.src===src))return res();const s=document.createElement('script');s.src=src;s.crossOrigin='anonymous';s.onload=()=>res();s.onerror=()=>rej(new Error('load '+src));document.head.appendChild(s)})}
+function vmLoad(){if(VM.ok===false)return Promise.resolve(false);if(window.maplibregl&&L.maplibreGL)return Promise.resolve(true);if(VM.loading)return VM.loading;
+  VM.loading=(async()=>{try{if(typeof L==='undefined'||!vmWebGL())throw new Error('no webgl');if(![...document.styleSheets].some(s=>s.href===VM.css)){const l=document.createElement('link');l.rel='stylesheet';l.href=VM.css;document.head.appendChild(l)}
+      if(!window.maplibregl)await vmLoadScript(VM.js);if(!L.maplibreGL)await vmLoadScript(VM.plugin);VM.ok=!!(window.maplibregl&&L.maplibreGL);return VM.ok}catch(e){console.warn('vector map unavailable',e);VM.ok=false;return false}})();return VM.loading}
+function vmTheme(){return (typeof m2Theme==='function'?m2Theme():'light')==='dark'?'dark':'light'}
+function vmRasters(map){const out=[];map.eachLayer(l=>{if(l instanceof L.TileLayer)out.push(l)});return out}
+/* attach the vector map to any Leaflet map; the picture layers stay until the vector map has really drawn */
+async function vmAttach(map,box){if(!map||map._vm||map._vmPending)return;map._vmPending=true;try{if(!(await vmLoad()))return;if(map._vm||!map._loaded&&!map._container)return;if(!map._container||!map._container.isConnected&&!box)return;
+  const theme=vmTheme();let gl;try{gl=L.maplibreGL({style:VM.styles[theme],attribution:'',interactive:false,pane:'tilePane'});gl.addTo(map)}catch(e){console.warn('vm add',e);return}
+  map._vm={gl,theme,ready:false};const host=box||map._container.closest('.rmap')||map._container.parentElement;
+  const giveUp=setTimeout(()=>{if(map._vm&&!map._vm.ready){console.warn('vector map style did not load, keeping picture map');try{map.removeLayer(gl)}catch(e){}map._vm=null;VM.failAt=Date.now()}},10000);
+  const ml=gl.getMaplibreMap&&gl.getMaplibreMap();if(!ml){clearTimeout(giveUp);return}
+  ml.on('load',()=>{clearTimeout(giveUp);if(!map._vm)return;map._vm.ready=true;map._vm.rasters=vmRasters(map);map._vm.rasters.forEach(r=>{r._vmHidden=true;try{map.removeLayer(r)}catch(e){r.setOpacity(0)}});host&&host.classList&&host.classList.add('vm-on');
+    if(host&&!host.querySelector('.vm-attr')){const a=document.createElement('div');a.className='vm-attr';a.textContent='© OpenFreeMap © OpenMapTiles © OpenStreetMap'+(typeof ttOn==='function'&&ttOn()?' · routes © TomTom':'');host.appendChild(a)}});
+  ml.on('error',e=>{if(map._vm&&!map._vm.ready&&/style|Failed to fetch|404|403/i.test(String(e&&e.error&&e.error.message||'')))console.warn('vector map error',e.error)});
+  /* the phone's graphics dropped out → bring the picture map back */
+  try{ml.getCanvas().addEventListener('webglcontextlost',()=>{vmRestoreRasters(map,host)},{once:true})}catch(e){}}finally{map._vmPending=false}}
+function vmRestoreRasters(map,host){const v=map&&map._vm;if(!v)return;(v.rasters||[]).forEach(r=>{try{if(!r._map)r.addTo(map);r.setOpacity(1)}catch(e){}});try{map.removeLayer(v.gl)}catch(e){}map._vm=null;VM.failAt=Date.now();host&&host.classList&&host.classList.remove('vm-on');host&&host.querySelector&&host.querySelector('.vm-attr')?.remove()}
+function vmRetheme(map){const v=map&&map._vm;if(!v||!v.ready)return;const t=vmTheme();if(t===v.theme)return;v.theme=t;try{v.gl.getMaplibreMap().setStyle(VM.styles[t])}catch(e){}}
+/* every map in the app (home, trip, driver, admin live, address previews, pin re-check) */
+if(typeof L!=='undefined'&&L.map&&!L.map._vmWrapped){const _lm=L.map;const w=function(){const m=_lm.apply(L,arguments);setTimeout(()=>{if(Date.now()-VM.failAt>600000)vmAttach(m)},0);return m};Object.assign(w,_lm);w._vmWrapped=true;L.map=w}
+/* maps that already exist, and theme changes */
+{const _vmRmap=MOUNT.rmap;MOUNT.rmap=async function(el){const key=[el.dataset.mode,el.dataset.route||'',el.dataset.kid||''].join(':');const res=await _vmRmap.call(this,el);try{const M=typeof MAPS==='object'?MAPS[key]:null;if(M&&M.map){if(!M.map._vm&&Date.now()-VM.failAt>600000)vmAttach(M.map,M.box);else vmRetheme(M.map)}}catch(e){}return res}}
+/* Google-style blue route with a darker edge (was purple) */
+if(typeof m2Restyle==='function'){m2Restyle=function(M){try{if(!M?.route)return;M.route.eachLayer(l=>{if(!l.setStyle)return;if((l.options.weight||0)>=9)l.setStyle({color:'#1967d2',opacity:1,weight:9});else l.setStyle({color:'#4285f4',opacity:1,weight:6})})}catch(e){}}}
+if(typeof m2DrawNav==='function'){const _vmNav=m2DrawNav;m2DrawNav=function(M,routeId){const r=_vmNav.apply(this,arguments);try{m2Restyle(M)}catch(e){}return r}}
+/* picture-map warnings and server switching mean nothing while the vector map is showing */
+if(typeof mf2Next==='function'){const _vmNext=mf2Next;mf2Next=function(M,why){if(M&&M.map&&M.map._vm&&M.map._vm.ready)return;return _vmNext.apply(this,arguments)}}
 </script>
 
 </body></html>
