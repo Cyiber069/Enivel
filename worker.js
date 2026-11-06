@@ -248,8 +248,8 @@ async function payStart(b, env, origin) {
     ['merchant_id', env.PAYFAST_MERCHANT_ID], ['merchant_key', env.PAYFAST_MERCHANT_KEY],
     ['return_url', app + '#paid=' + id], ['cancel_url', app + '#paycancel=' + id], ['notify_url', origin + '/pay/itn'],
     ['m_payment_id', id], ['amount', Number(it.amount).toFixed(2)],
-    ['item_name', 'Enivel Pays ' + pfLabel(it.month)],
-    ['item_description', `School transport for ${fam} ${fam === 1 ? 'family' : 'families'}, ${kids} ${kids === 1 ? 'child' : 'children'}`]
+    ['item_name', (it.kind === 'parent' ? 'Enivel school transport ' : 'Enivel Pays ') + pfLabel(it.month)],
+    ['item_description', it.kind === 'parent' ? `Monthly school transport, ${kids} ${kids === 1 ? 'child' : 'children'}, incl. Enivel fee` : `School transport for ${fam} ${fam === 1 ? 'family' : 'families'}, ${kids} ${kids === 1 ? 'child' : 'children'}`]
   ].map(([k, v]) => [k, String(v ?? '').trim()]).filter(([, v]) => v !== '');
   const fieldsOut = Object.fromEntries(fields);
   fieldsOut.signature = pfSignature(fields, env.PAYFAST_PASSPHRASE);

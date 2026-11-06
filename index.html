@@ -2192,7 +2192,7 @@ const LEGAL_DOCS=[
 <tr><td>Parents</td><td>Transport Price set by the Driver, plus a 2% Enivel Platform Fee on that price</td><td>Monthly in advance for monthly Bookings; at booking for once-off trips</td></tr>
 <tr><td>Drivers</td><td>R100 per calendar month</td><td>Only in months in which the Driver has at least one active paying passenger</td></tr>
 <tr><td>Drivers</td><td>R49.99 per month per vehicle beyond the first three (“parking slot”)</td><td>From the month the extra vehicle is added, until it is removed</td></tr></table>
-<p>Example: Transport Price R1 000, Platform Fee 2% = R20, total R1 020. The exact amounts are always shown before you pay. ${L.VAT}</p>
+<p>Example: Transport Price R1 000, Platform Fee 5% = R50, total R1 050. The exact amounts are always shown before you pay. ${L.VAT}</p>
 <h2 id="m2">2. How payments work</h2>
 <p>2.1 Payments are processed by third-party payment providers using secure payment systems. Enivel does not store full card numbers. The payment provider’s own terms may apply.</p>
 <p>2.2 The Transport Price is collected on behalf of the Driver as limited collection agent and paid out to the Driver after deductions under the Driver Agreement. Payment to Enivel discharges the Parent’s obligation to the Driver for that amount.</p>
@@ -5815,7 +5815,7 @@ const EX_FAQ=[
  {r:'b',c:'safe',q:'Who can see where the car is?',a:'Only parents whose child is on board, and only while the trip is running. Other parents and strangers never see it.',k:'location gps live map privacy tracking'},
  {r:'b',c:'safe',q:'What does the SOS button do?',a:'The red SOS button is on the live tracking screen (parents) and the trip screen (drivers). It shows Police 10111, Ambulance 10177 and 112, and alerts the Enivel safety team with your name and the time. In danger, always call the police first.',k:'emergency button panic police ambulance'},
  {r:'b',c:'safe',q:'How does Enivel check drivers?',a:'Every driver uploads their ID, licence, PrDP, police clearance, roadworthy, operating licence, insurance, licence disc, proof of address and a selfie. Enivel reviews them before any parent can book. Police clearances older than 6 months are flagged.',k:'verification verified documents prdp police clearance'},
- {r:'b',c:'money',q:'What does Enivel cost?',a:'Parents pay the driver\'s monthly price plus a 2% Enivel fee (R1 000 + R20 = R1 020). Drivers pay R100 a month, only in months with a paying passenger, plus R49.99 a month for each vehicle after the first 3.',k:'fees price 2% r100 parking slot cost'},
+ {r:'b',c:'money',q:'What does Enivel cost?',a:'Parents pay the driver\'s monthly price plus a 2% Enivel fee (R1 000 + R50 = R1 050). Drivers pay R100 a month, only in months with a paying passenger, plus R49.99 a month for each vehicle after the first 3.',k:'fees price 2% r100 parking slot cost'},
  {r:'b',c:'money',q:'How do referral credits work?',a:'Share your code from Settings → Security. When a friend signs up with it, you both get R50 credit. Credit is used automatically on Enivel payments and can\'t be cashed out.',k:'referral code credit r50 invite friend'},
  {r:'b',c:'money',q:'Where are my statements?',a:'Parents: Settings → Payments and invoices. Drivers: Settings → Earnings and fees. Tap Statement (CSV) to download every payment.',k:'receipt invoice statement csv history'},
  {r:'b',c:'ride',q:'How do I get my rides into my calendar?',a:'Settings → Rides in my calendar. Download the next 4 weeks as a calendar file for Google, Apple or Outlook. Weekends, public holidays and days off are left out. Download again after times change.',k:'calendar ics google apple outlook schedule',act:['exCalModal()','Open calendar']},
@@ -7647,7 +7647,7 @@ const HC_FAQ=[
  {r:'d',c:'ride',q:'I can\'t drive one day',a:'Home → Not driving a day. Pick the date and a short reason. Every parent on your routes is told immediately and the day is skipped in their reminders and calendars.',k:'off day sick not driving',go:{fn:'driverOffModal()',label:'Not driving a day'}},
  {r:'d',c:'ride',q:'A parent asked for new times',a:'You get a notification and the request shows on the booking. Accept it or decline with a short note. Until you accept, the old times apply.',k:'schedule request times accept decline',go:hcGo('d-home','Open Home')},
  /* payments & fees */
- {r:'b',c:'money',q:'What does Enivel cost?',a:'Parents pay the driver\'s monthly price plus a 2% Enivel fee (R1 000 + R20 = R1 020). Drivers pay R100 a month, only in months with a paying passenger, plus R49.99 a month for each vehicle after the first 3.',k:'fees price 2% r100 r49.99 cost'},
+ {r:'b',c:'money',q:'What does Enivel cost?',a:'Parents pay the driver\'s monthly price plus a 2% Enivel fee (R1 000 + R50 = R1 050). Drivers pay R100 a month, only in months with a paying passenger, plus R49.99 a month for each vehicle after the first 3.',k:'fees price 2% r100 r49.99 cost'},
  {r:'p',c:'money',q:'How do monthly payments work?',a:'Each month is paid in advance from Settings → Payments and invoices. Enivel credit is used first. Card payments go through PayFast; Enivel never sees or stores your card. If the app says test mode, no money moves.',k:'pay payment monthly card payfast',go:hcGo('p-pay','Payments and invoices')},
  {r:'b',c:'money',q:'How do referral credits work?',a:'Share your code from Settings → Security or Invite friends. When a friend signs up with it, you both get R50 Enivel credit. Credit is used automatically on your next Enivel payment and cannot be cashed out.',k:'referral code credit r50 invite friend',go:hcGo('p-more','Open Settings')},
  {r:'b',c:'money',q:'Where are my statements and invoices?',a:'Parents: Settings → Payments and invoices. Drivers: Settings → Earnings and fees. Tap Statement (CSV) to download every payment for your records.',k:'receipt invoice statement csv history'},
@@ -7903,7 +7903,7 @@ function g2Flags(){let s={};try{s=(S.data&&S.data.settings&&Store.get('settings'
 function flagOn(k){return g2Flags()[k]!==false}
 /* ---------- pricing: one helper, every reader goes through it ---------- */
 const G2_DEF_PRICING={feePct:2,driverFee:100,parkingFee:49.99,freeVehicles:3,referralCredit:50};
-function pricing(){let s={};try{s=Store.get('settings','pricing')||{}}catch(e){}const n=(k,d)=>{const v=+s[k];return Number.isFinite(v)&&v>=0?v:d};const feePct=n('feePct',2);
+function pricing(){let s={};try{s=Store.get('settings','pricing')||{}}catch(e){}const n=(k,d)=>{const v=+s[k];return Number.isFinite(v)&&v>=0?v:d};const feePct=n('feePct',5);
   return {feePct,feeRate:feePct/100,driverFee:n('driverFee',100),parkingFee:n('parkingFee',49.99),freeVehicles:Math.round(n('freeVehicles',3)),referralCredit:n('referralCredit',50)}}
 function g2PricingChanged(){const p=pricing();return Object.keys(G2_DEF_PRICING).some(k=>p[k]!==G2_DEF_PRICING[k])}
 feeFor=function(amount){return Math.round((+amount||0)*pricing().feeRate*100)/100};
@@ -8383,8 +8383,9 @@ if(typeof admStatusRows==='function'){const _wkRows=admStatusRows;admStatusRows=
 {const _wkMore=VIEWS['a-more'];VIEWS['a-more']=function(){const html=_wkMore.apply(this,arguments);return html.replace(/<h3>SMS gateway (<span class="pill[^"]*">)(?:Live|Test mode)<\/span><\/h3><p class="small muted">[^<]*<\/p>/,(m,pill)=>`<h3>Worker URL ${pill}${/live/.test(pill)?'Connected':'Not set'}</span></h3><p class="small muted">Your Cloudflare Worker address, e.g. https://enivel.yourname.workers.dev. It runs payments, Face ID sign-in and phone pop-ups.</p>`)}}
 /* The Worker only answers the live site (ALLOWED_ORIGIN). Anywhere else (the claude.ai preview, a local copy) the browser blocks the check: say so instead of showing red. */
 const WK_LIVE='cyiber069.github.io';
-function wkElsewhere(){try{return location.hostname!==WK_LIVE}catch(e){return false}}
-if(typeof admStatusRows==='function'){const _wkRows2=admStatusRows;admStatusRows=function(){const rows=_wkRows2();if(!wkElsewhere())return rows;const ep=typeof otpEndpoint==='function'?otpEndpoint():'';if(!ep)return rows;return rows.map(r=>{if(!['worker','payfast','faceid','push','reminders'].includes(r[0]))return r;const st=r[2]||{};if(st.st==='ok'||st.st==='wait')return r;return [r[0],r[1],{st:'ok',v:'Live site only',fix:'',note:'Your Worker only answers https://'+WK_LIVE+' (security setting). Check this row there.'}]})}}
+const WK_LIVE_HOSTS=['cyiber069.github.io','enivel.co.za','www.enivel.co.za'];
+function wkElsewhere(){try{return !WK_LIVE_HOSTS.includes(location.hostname)}catch(e){return false}}
+if(typeof admStatusRows==='function'){const _wkRows2=admStatusRows;admStatusRows=function(){const rows=_wkRows2();if(!wkElsewhere())return rows;const ep=typeof otpEndpoint==='function'?otpEndpoint():'';if(!ep)return rows;return rows.map(r=>{if(!['worker','payfast','faceid','push','reminders'].includes(r[0]))return r;const st=r[2]||{};if(st.st==='ok'||st.st==='wait')return r;return [r[0],r[1],{st:'ok',v:'Live site only',fix:'',note:'Your Worker only answers your live site (security setting). Check this row there.'}]})}}
 if(typeof OWN_GUIDES==='object'){for(const k in OWN_GUIDES){const g=OWN_GUIDES[k];if(g&&Array.isArray(g.steps))g.steps=g.steps.map(x=>typeof x==='string'?x.replace(/Settings\s*(?:→|->)\s*SMS gateway/g,'Settings → Worker URL'):x)}}
 </script>
 <!-- r10:pwreset -->
@@ -8574,6 +8575,50 @@ mfProbe=async function(){};
 if(typeof admStatusRows==='function'){const _mfRows2=admStatusRows;admStatusRows=function(){return _mfRows2().filter(r=>r[0]!=='ttpics')}}
 /* street-level detail: allow closer zoom and never fit so far out that the area turns into a blur */
 {const _mfRmap2=MOUNT.rmap;MOUNT.rmap=async function(el){const key=[el.dataset.mode,el.dataset.route||'',el.dataset.kid||''].join(':');const res=await _mfRmap2.call(this,el);try{const M=typeof MAPS==='object'?MAPS[key]:null;if(M&&M.box?.isConnected){const tl=(typeof M2==='object'&&M2.tiles||[]).find(l=>l._map===M.map);if(tl){tl.options.maxZoom=20;tl.options.maxNativeZoom=19;tl.options.detectRetina=true;if(tl._url!==m2TileUrl())tl.setUrl(m2TileUrl())}M.map.setMaxZoom(19);const at=M.box.querySelector('.tt-attr');if(at)at.textContent='© OpenStreetMap © CARTO'+(typeof ttOn==='function'&&ttOn()?' · routes © TomTom':'');if(!M._mfZoomFix){M._mfZoomFix=true;M.map.on('zoomend',()=>{})}}}catch(e){}return res}}
+</script>
+<!-- r10:parentpay -->
+<style>
+.pp-sum{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:.9rem;margin:12px 0}
+.pp-sum .tot{font-weight:800;font-size:1.05rem;border-top:1px solid var(--line);padding-top:8px}
+.pp-safe{display:flex;gap:8px;align-items:flex-start;font-size:.75rem;color:var(--fg3);margin-top:10px}
+</style>
+<script>
+/* ===== Real parent payments (live site): the app never takes card numbers.
+   Pay now → server works out the amount (transport + parent fee) → PayFast's own secure page → back to Enivel.
+   The month only shows as paid when PayFast has confirmed the money (or Enivel credit covered it in full). ===== */
+function ppLive(){return !!(typeof S!=='undefined'&&S.cloud&&typeof sb!=='undefined'&&sb)}
+function ppPct(){try{return pricing().feePct}catch(e){return 5}}
+const _ppPayMonth=payMonth;
+payMonth=function(){if(!ppLive()||(typeof fmMember==='function'&&fmMember()))return _ppPayMonth.apply(this,arguments);const u=me();if(!u)return;const m=monthKey();const pm=parentMonth(u,m);if(!pm.unpaid.length)return toast('This month is already paid');
+  const lines=pm.unpaid.map(b=>`<span>${h(Store.get('kids',b.kidId)?.name||'Child')} · ${h(userName(b.driverId))}</span><b>${money(b.price)}</b>`).join('');
+  const fee=pm.unpaid.reduce((s,b)=>s+feeFor(b.price),0);const credit=Math.min(u.credit||0,pm.dueNow);const coversAll=credit>=pm.dueNow-0.005;
+  modal(`<h3>Pay ${h(typeof paysMonthLabel==='function'?paysMonthLabel(m):m)}</h3><div class="pp-sum">${lines}<span>Enivel fee ${ppPct()}%</span><b>${money(fee)}</b><span class="tot">Total</span><b class="tot">${money(pm.dueNow)}</b></div>
+    ${coversAll?`<p class="small muted">Your Enivel credit (${money(u.credit||0)}) covers this in full.</p>`:credit>0?`<p class="tiny muted">You have ${money(u.credit||0)} Enivel credit. Credit is used when it covers a whole month.</p>`:''}
+    <button class="btn wide" id="pp-go">${coversAll?'Pay with credit':'Pay '+money(pm.dueNow)+' securely'}</button>
+    <div class="pp-safe">${ICON.lock||'🔒'}<span>${coversAll?'':'You pay on PayFast\'s secure page: card, Instant EFT or Capitec Pay. Enivel never sees your card. '}The month shows as paid once the payment is confirmed.</span></div>`,mm=>{
+    $('#pp-go',mm).onclick=async()=>{const b=$('#pp-go',mm);b.disabled=true;b.textContent='Starting…';
+      try{const {data,error}=await sb.rpc('pay_intent_parent',{p_month:m});if(error)throw new Error(error.message);
+        if(data.method==='credit'&&data.status==='paid'){closeModal();await cloudPull(true);render();toast('Paid with credit');try{confetti()}catch(e){}return}
+        if(!otpEndpoint())throw new Error('Card payments are being switched on. Please try again later.');
+        b.textContent='Opening PayFast…';ls.set('enivel_pp_pending',{id:data.id,at:Date.now()});await paysGoPayFast({id:data.id})}
+      catch(e){b.disabled=false;b.textContent='Pay '+money(pm.dueNow)+' securely';toast(e.message||'Could not start the payment')}}})};
+/* back from PayFast: #paid=<id> / #paycancel=<id> for the parent's own payment */
+S.ppCheck=null;
+async function ppReturn(){const hs=location.hash||'';const mt=hs.match(/^#(paid|paycancel)=(pi[0-9a-f]{32})$/);if(!mt||!ppLive()||!me()||S.admin)return false;
+  try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
+  if(mt[1]==='paycancel'){try{await sb.rpc('pay_intent_mine',{p_id:mt[2],p_cancel:true})}catch(e){}go('p-pay');toast('Payment cancelled. Nothing was charged.');return true}
+  S.ppCheck={id:mt[2],n:0,state:'checking'};go('p-pay');ppPoll();return true}
+async function ppPoll(){const c=S.ppCheck;if(!c)return;c.n++;try{const {data}=await sb.rpc('pay_intent_mine',{p_id:c.id,p_cancel:false});c.state=data?.status||'checking'}catch(e){}
+  if(c.state==='paid'){S.ppCheck=null;await cloudPull(true);go('p-pay');toast('✅ Payment received. Thank you!');try{confetti()}catch(e){}return}
+  if(c.state==='cancelled'){S.ppCheck=null;render();return}
+  if(c.n<40)setTimeout(ppPoll,c.n<10?2000:5000);else{c.state='slow';render()}}
+(function ppBoot(){let n=0;const t=setInterval(()=>{if(!S.ready)return;n++;if(/^#(paid|paycancel)=pi/.test(location.hash||'')&&me()&&!S.admin){clearInterval(t);ppReturn();return}if(n>60)clearInterval(t)},300)})();
+window.addEventListener('hashchange',()=>{if(S.ready&&!S.admin)ppReturn()});
+{const _ppPPay=VIEWS['p-pay'];VIEWS['p-pay']=function(){let html=_ppPPay.apply(this,arguments);const c=S.ppCheck;if(!c)return html;
+  const card=c.state==='slow'?`<div class="notice" style="margin-bottom:12px">PayFast hasn't confirmed your payment yet. If money left your account it will show here within a few minutes. <button class="btn sm ghost" onclick="S.ppCheck.n=0;S.ppCheck.state='checking';ppPoll();render()">Check again</button></div>`:`<div class="notice" style="margin-bottom:12px">⏳ Confirming your payment with PayFast…</div>`;
+  const i=html.indexOf('<div class="card');return i>=0?html.slice(0,i)+card+html.slice(i):card+html}}
+/* the old test card form must never appear on the live site */
+{const _ppModal=payModal;payModal=function(total,done){if(ppLive()&&!S.admin&&me()?.role==='parent'&&S.route!=='p-requests')return toast('Use Pay now to pay securely with PayFast');return _ppModal.apply(this,arguments)}}
 </script>
 
 </body></html>
