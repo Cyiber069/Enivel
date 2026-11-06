@@ -8620,5 +8620,37 @@ window.addEventListener('hashchange',()=>{if(S.ready&&!S.admin)ppReturn()});
 /* the old test card form must never appear on the live site */
 {const _ppModal=payModal;payModal=function(total,done){if(ppLive()&&!S.admin&&me()?.role==='parent'&&S.route!=='p-requests')return toast('Use Pay now to pay securely with PayFast');return _ppModal.apply(this,arguments)}}
 </script>
+<!-- r10:mapfix2 -->
+<style>
+/* sensible map size: never taller than ~380px, wider ratio on big screens */
+.rmap{max-height:380px}
+@media(min-width:760px){.rmap{aspect-ratio:21/9}}
+@media(min-width:980px){.adm-livewrap>.rmap{max-height:none}}
+.rmap .mf2-note{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:430;pointer-events:none;background:color-mix(in srgb,var(--bg) 92%,transparent);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:.78rem;color:var(--fg2);text-align:center;max-width:80%}
+</style>
+<script>
+/* ===== 06 Nov: owner's desktop showed a huge, grey map with pins in the corner.
+   1. the map redraws (invalidateSize + refit) whenever its box changes size;
+   2. map pictures fall back through three servers (detailed CARTO → plain CARTO → OpenStreetMap) when one fails or hangs;
+   3. a short note appears instead of a silent grey box if no server answers. ===== */
+const MF2={servers:['voyager','light','osm'],idx:0};
+try{const s=+ls.get('enivel_tilesrv');if(s>=0&&s<3)MF2.idx=s}catch(e){}
+function mf2Url(theme){const dark=(theme||(typeof m2Theme==='function'?m2Theme():'light'))==='dark';const s=MF2.servers[MF2.idx];
+  if(s==='osm')return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  if(dark)return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+  return s==='light'?'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'}
+if(typeof mfDetailed==='function')mfDetailed=function(theme){return mf2Url(theme)};
+function mf2Next(M,why){if(MF2.idx>=MF2.servers.length-1){if(M&&M.box&&!M.box.querySelector('.mf2-note')){const n=document.createElement('div');n.className='mf2-note';n.textContent='Map pictures could not load on this connection. Your route and pins still work.';M.box.appendChild(n)}return}
+  MF2.idx++;try{ls.set('enivel_tilesrv',String(MF2.idx))}catch(e){}console.warn('map pictures: switching to',MF2.servers[MF2.idx],why);
+  (typeof M2==='object'&&M2.tiles||[]).forEach(l=>{if(l._map){l.options.subdomains='abcd';l.setUrl(m2TileUrl())}})}
+function mf2Watch(M){if(!M||M._mf2)return;M._mf2=true;const tl=(typeof M2==='object'&&M2.tiles||[]).find(l=>l._map===M.map);if(!tl)return;
+  let good=0,bad=0;tl.on('tileload',()=>{good++;bad=0;M.box.querySelector('.mf2-note')?.remove()});
+  tl.on('tileerror',()=>{if(good)return;if(++bad>=4){bad=0;mf2Next(M,'errors')}});
+  /* hanging: nothing loaded 8 s after the map is visible */
+  setTimeout(()=>{if(!good&&M.box.isConnected&&M.box.clientWidth>0)mf2Next(M,'timeout')},8000);
+  /* redraw on any size change */
+  try{let last='';const ro=new ResizeObserver(()=>{const k=M.box.clientWidth+'x'+M.box.clientHeight;if(k===last||!M.box.clientWidth)return;last=k;M.map.invalidateSize();if(typeof fitMap==='function')fitMap(M)});ro.observe(M.box);M._mf2ro=ro}catch(e){}}
+{const _mf2Rmap=MOUNT.rmap;MOUNT.rmap=async function(el){const key=[el.dataset.mode,el.dataset.route||'',el.dataset.kid||''].join(':');const res=await _mf2Rmap.call(this,el);try{const M=typeof MAPS==='object'?MAPS[key]:null;if(M&&M.box?.isConnected){mf2Watch(M);const tl=(M2.tiles||[]).find(l=>l._map===M.map);if(tl&&tl._url!==m2TileUrl())tl.setUrl(m2TileUrl());const at=M.box.querySelector('.tt-attr');if(at)at.textContent=(MF2.servers[MF2.idx]==='osm'?'© OpenStreetMap':'© OpenStreetMap © CARTO')+(typeof ttOn==='function'&&ttOn()?' · routes © TomTom':'');setTimeout(()=>{try{M.map.invalidateSize();fitMap(M)}catch(e){}},250)}}catch(e){console.warn('mf2',e)}return res}}
+</script>
 
 </body></html>
