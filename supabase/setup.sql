@@ -2724,3 +2724,160 @@ revoke execute on function public.pay_intent_complete(text, text, numeric), publ
 grant execute on function public.pay_intent_complete(text, text, numeric), public.pay_intent_get(text) to service_role;
 
 select 'Enivel parent payments ready' as status;
+
+-- ---------- round 2: booking → 48 h hold → PayFast; once-off trips; driver fee on the server ----------
+-- what a parent owes right now: unpaid monthly bookings (active, or held and not expired) + unpaid once-off trips
+create or replace function public._pp_family(p_parent text, p_month text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare u jsonb; b record; pr numeric; fee numeric; kid text; lines jsonb := '[]'::jsonb; tot numeric := 0; names text[] := '{}'; kids text[] := '{}'; bids text[] := '{}';
+  pct numeric := public._fee_pct(); nowms bigint := (extract(epoch from now()) * 1000)::bigint; once boolean;
+begin
+  select data into u from public.docs where coll = 'users' and id = p_parent and not deleted;
+  if u is null or coalesce(u ->> 'role','') <> 'parent' then return null; end if;
+  if coalesce(u ->> 'banned','false') = 'true' or coalesce(u ->> 'suspended','false') = 'true' then return null; end if;
+  for b in select d.id, d.data from public.docs d
+           where d.coll = 'bookings' and not d.deleted and d.data ->> 'parentId' = p_parent
+             and (   (coalesce(d.data ->> 'once','false') <> 'true' and (d.data ->> 'status' = 'active'
+                        or (d.data ->> 'status' = 'reserved' and coalesce(d.data ->> 'reservedUntil','') ~ '^\d{1,16}$' and (d.data ->> 'reservedUntil')::bigint > nowms)))
+                  or (coalesce(d.data ->> 'once','false') = 'true' and d.data ->> 'status' = 'trip'))
+           order by d.id loop
+    once := coalesce(b.data ->> 'once','false') = 'true';
+    if once then
+      if exists (select 1 from public.docs t where t.coll = 'transactions' and not t.deleted and t.data ->> 'bookingId' = b.id and t.data ->> 'type' = 'trip') then continue; end if;
+    elsif public._pays_booking_paid(b.id, b.data, p_month) then continue; end if;
+    pr := public._pays_price(b.data); if pr is null then continue; end if;
+    fee := round(pr * pct / 100, 2);
+    select data ->> 'name' into kid from public.docs where coll = 'kids' and id = b.data ->> 'kidId' and not deleted;
+    lines := lines || jsonb_build_object('bookingId', b.id, 'kidId', b.data ->> 'kidId', 'kidName', coalesce(kid, 'Child'),
+                                         'driverId', b.data ->> 'driverId', 'price', pr, 'fee', fee, 'once', once,
+                                         'held', b.data ->> 'status' = 'reserved', 'date', b.data ->> 'date');
+    tot := tot + pr + fee; bids := bids || b.id;
+    if not (coalesce(b.data ->> 'kidId','') = any (kids)) then kids := kids || coalesce(b.data ->> 'kidId',''); names := names || coalesce(kid, 'Child'); end if;
+  end loop;
+  if cardinality(bids) = 0 then return null; end if;
+  return jsonb_build_object('parentId', p_parent, 'name', u ->> 'name', 'bookingIds', to_jsonb(bids), 'kidIds', to_jsonb(kids),
+                            'kidNames', to_jsonb(names), 'amount', tot, 'lines', lines, 'feePct', pct);
+end $$;
+
+-- the pay sheet shows exactly what the server will charge
+create or replace function public.pay_quote_parent(p_month text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'Please log in'; end if;
+  perform public._pays_check_month(p_month);
+  return public._pp_family(auth.uid()::text, p_month);
+end $$;
+
+create or replace function public.pay_intent_parent(p_month text) returns jsonb
+language plpgsql volatile security definer set search_path = public as $$
+declare me uuid := auth.uid(); f jsonb; iid text; amt numeric; u jsonb; credit numeric; busy text;
+begin
+  if me is null then raise exception 'Please log in'; end if;
+  perform public._pays_check_month(p_month);
+  f := public._pp_family(me::text, p_month);
+  if f is null then raise exception 'Nothing to pay for %', public._pays_month_label(p_month); end if;
+  amt := round((f ->> 'amount')::numeric, 2);
+  select x.id into busy from public.pay_intents x where x.parent_id = me and x.status = 'pending' and x.month = p_month
+    and x.created_at > now() - interval '30 minutes' and x.amount = amt order by x.created_at desc limit 1;
+  if busy is not null then return jsonb_build_object('id', busy, 'amount', amt, 'method', 'card', 'status', 'pending', 'month', p_month); end if;
+  select data into u from public.docs where coll = 'users' and id = me::text and not deleted for update;
+  credit := coalesce(public._pays_num(u ->> 'credit'), 0);
+  iid := 'pi' || replace(gen_random_uuid()::text, '-', '');
+  if credit >= amt and amt > 0 then
+    insert into public.pay_intents (id, kind, method, admin_id, parent_id, month, items, amount)
+    values (iid, 'parent', 'credit', null, me, p_month, jsonb_build_array(f), amt);
+    perform set_config('enivel.paywrite', '1', true);
+    update public.docs set data = jsonb_set(data, '{credit}', to_jsonb(round(credit - amt, 2))), updated_at = now() where coll = 'users' and id = me::text;
+    insert into public.docs (coll, id, data, owner, parties)
+    select 'transactions', t.id, t.d, me, public._parties('transactions', t.d)
+    from (select 'tx' || replace(gen_random_uuid()::text, '-', '') as id,
+                 jsonb_build_object('type', 'credit_used', 'amount', amt, 'from', me::text, 'to', 'enivel', 'month', p_month,
+                   'ts', (extract(epoch from now()) * 1000)::bigint, 'note', 'Paid with Enivel credit', 'intentId', iid) as d) t;
+    perform public._pays_apply_parent(iid);
+    return jsonb_build_object('id', iid, 'amount', amt, 'method', 'credit', 'status', 'paid', 'month', p_month);
+  end if;
+  insert into public.pay_intents (id, kind, method, admin_id, parent_id, month, items, amount)
+  values (iid, 'parent', 'card', null, me, p_month, jsonb_build_array(f), amt);
+  return jsonb_build_object('id', iid, 'amount', amt, 'method', 'card', 'status', 'pending', 'month', p_month);
+end $$;
+
+-- paid: held seats become confirmed, once-off trips get a trip record, the driver's monthly fee is charged once
+create or replace function public._pays_apply_parent(p_id text) returns jsonb
+language plpgsql volatile security definer set search_path = public as $$
+declare i public.pay_intents%rowtype; it jsonb; l jsonb; b record; d jsonb; label text; names text[] := '{}';
+  nowms bigint := (extract(epoch from now()) * 1000)::bigint; done int := 0; skipped int := 0; pid text; via text; once boolean;
+  drivers text[] := '{}'; drv text; dfee numeric;
+begin
+  perform set_config('enivel.paywrite', '1', true);
+  select * into i from public.pay_intents where id = p_id;
+  label := public._pays_month_label(i.month); pid := i.parent_id::text;
+  via := case when i.method = 'credit' then 'Enivel credit' else 'card (PayFast)' end;
+  for it in select value from jsonb_array_elements(i.items) loop
+    for l in select value from jsonb_array_elements(it -> 'lines') loop
+      once := coalesce((l ->> 'once')::boolean, false);
+      select x.id, x.data into b from public.docs x where x.coll = 'bookings' and x.id = l ->> 'bookingId' and not x.deleted for update;
+      if not found then skipped := skipped + 1; continue; end if;
+      if once then
+        if exists (select 1 from public.docs t where t.coll = 'transactions' and not t.deleted and t.data ->> 'bookingId' = b.id and t.data ->> 'type' = 'trip') then skipped := skipped + 1; continue; end if;
+      elsif public._pays_booking_paid(b.id, b.data, i.month) then skipped := skipped + 1; continue; end if;
+      if b.data ->> 'status' = 'reserved' then
+        update public.docs set data = (data - 'reservedUntil') || jsonb_build_object('status', 'active', 'startedAt', nowms, 'confirmedAt', nowms), updated_at = now()
+        where coll = 'bookings' and id = b.id;
+      end if;
+      d := jsonb_build_object('id', 'tx' || replace(gen_random_uuid()::text, '-', ''), 'type', case when once then 'trip' else 'subscription' end,
+             'amount', (l ->> 'price')::numeric, 'from', pid, 'to', b.data ->> 'driverId', 'bookingId', b.id, 'kidId', b.data ->> 'kidId',
+             'parentId', pid, 'month', i.month, 'ts', nowms,
+             'note', case when once then 'Once-off trip ' || coalesce(b.data ->> 'date','') else 'Monthly transport ' || label end || ' (' || via || ')',
+             'method', i.method, 'intentId', i.id, 'pfPaymentId', i.pf_payment_id);
+      insert into public.docs (coll, id, data, owner, parties) values ('transactions', d ->> 'id', d, i.parent_id, public._parties('transactions', d));
+      d := jsonb_build_object('id', 'tx' || replace(gen_random_uuid()::text, '-', ''), 'type', 'platform_fee', 'amount', (l ->> 'fee')::numeric,
+             'from', pid, 'to', 'enivel', 'bookingId', b.id, 'parentId', pid, 'month', i.month, 'ts', nowms,
+             'note', 'Enivel fee ' || label, 'method', i.method, 'intentId', i.id);
+      insert into public.docs (coll, id, data, owner, parties) values ('transactions', d ->> 'id', d, i.parent_id, public._parties('transactions', d));
+      d := jsonb_build_object('id', 'nt' || replace(gen_random_uuid()::text, '-', ''), 'userId', b.data ->> 'driverId', 'type', 'pay', 'link', 'd-billing',
+             'read', false, 'ts', nowms, 'text', '💸 ' || coalesce(l ->> 'kidName', 'A child') || case when once then '''s once-off trip' else '''s transport for ' || label end
+                       || ' is paid' || case when b.data ->> 'status' = 'reserved' then ' and the seat is confirmed' else '' end || '. Enivel pays it out to you.');
+      insert into public.docs (coll, id, data, owner, parties) values ('notifications', d ->> 'id', d, i.parent_id, public._parties('notifications', d));
+      done := done + 1;
+      if not once and not (coalesce(b.data ->> 'driverId','') = any (drivers)) then drivers := drivers || coalesce(b.data ->> 'driverId',''); end if;
+      if not (coalesce(l ->> 'kidName','Child') = any (names)) then names := names || coalesce(l ->> 'kidName','Child'); end if;
+    end loop;
+  end loop;
+  -- the driver's monthly platform fee (once per month, only now that a passenger has paid)
+  select coalesce((select case when (data ->> 'driverFee') ~ '^[0-9]+(\.[0-9]+)?$' then (data ->> 'driverFee')::numeric end
+                   from public.docs where coll = 'settings' and id = 'pricing' and not deleted), 100) into dfee;
+  foreach drv in array drivers loop
+    if drv <> '' and dfee > 0 and not exists (select 1 from public.docs t where t.coll = 'transactions' and not t.deleted
+           and t.data ->> 'type' = 'driver_fee' and t.data ->> 'from' = drv and t.data ->> 'month' = i.month) then
+      d := jsonb_build_object('id', 'tx' || replace(gen_random_uuid()::text, '-', ''), 'type', 'driver_fee', 'amount', dfee, 'from', drv, 'to', 'enivel',
+             'month', i.month, 'ts', nowms, 'note', 'Monthly driver platform fee (first paying passenger)', 'intentId', i.id);
+      insert into public.docs (coll, id, data, owner, parties) values ('transactions', d ->> 'id', d, i.parent_id, public._parties('transactions', d));
+    end if;
+  end loop;
+  if done > 0 then
+    d := jsonb_build_object('id', 'nt' || replace(gen_random_uuid()::text, '-', ''), 'userId', pid, 'type', 'pay', 'link', 'p-pay', 'read', false, 'ts', nowms,
+           'text', '✅ Payment received: R' || to_char(i.amount, 'FM999999990.00') || ' (' || array_to_string(names, ', ') || '). Your booking is confirmed.');
+    insert into public.docs (coll, id, data, owner, parties) values ('notifications', d ->> 'id', d, i.parent_id, public._parties('notifications', d));
+  end if;
+  update public.pay_intents set status = 'paid', paid_at = now(), applied = jsonb_build_object('done', done, 'skipped', skipped) where id = p_id;
+  perform set_config('enivel.paywrite', '', true);
+  return jsonb_build_object('done', done, 'skipped', skipped);
+end $$;
+
+-- once-off trip records also come only from the server now
+create or replace function public._pay_tx_guard() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.coll = 'transactions' and coalesce(new.data ->> 'type','') in ('subscription','trip')
+     and coalesce(current_setting('enivel.paywrite', true), '') <> '1'
+     and auth.uid() is not null and not public.is_admin() then
+    raise exception 'Payments are recorded by PayFast, not by the app. Use Pay now.';
+  end if;
+  return new;
+end $$;
+
+revoke execute on function public._pp_family(text, text), public._pays_apply_parent(text) from public, anon, authenticated;
+revoke execute on function public.pay_quote_parent(text), public.pay_intent_parent(text) from public, anon;
+grant execute on function public.pay_quote_parent(text), public.pay_intent_parent(text) to authenticated;
+
+select 'Enivel bookings + payments ready' as status;
