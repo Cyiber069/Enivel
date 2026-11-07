@@ -8806,5 +8806,85 @@ function stWhen(){return journey().stopWhen==='after'?'after':'before'}
   const btn=`<button class="btn sm ghost" onclick="pickPlace('stop')">${ICON.pin||''} ${j.stopGeo||j.stop?'Change stop ('+(stWhen()==='after'?'after':'before')+' school)':'Add a stop'}</button>`;
   return html.replace(/(<div class="mf-row">[\s\S]*?)(<\/div>)/,(m0,a,b)=>a+btn+b)}}
 </script>
+<!-- r10:legal2 -->
+<style>
+.dl-row{display:flex;align-items:center;gap:10px}
+.dl-dot{width:10px;height:10px;border-radius:50%;background:#9ca3af;flex-shrink:0}
+.dl-dot.live{background:#16a34a;box-shadow:0 0 0 4px color-mix(in srgb,#16a34a 25%,transparent)}
+.dl-pin{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font:700 11px/1 Manrope,system-ui,sans-serif;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);margin:-15px 0 0 -15px;background:#6b7280}
+.dl-pin.live{background:#16a34a}
+#su-all-label a{text-decoration:underline}
+</style>
+<script>
+/* ===== 07 Nov: (1) the admin can see where every driver is: live while the driver has Enivel open, otherwise the last known spot;
+   (2) sign-up has ONE tick box that accepts ALL Enivel policies; (3) policy update (new version → everyone accepts once). ===== */
+const LG2_VERSION='2026-11-07.1',LG2_EFFECTIVE='7 November 2026';
+acceptedNow=function(){return {version:LG2_VERSION,at:Date.now(),ua:navigator.userAgent.slice(0,120)}};
+if(typeof legalVersion==='function')legalVersion=function(){return LG2_VERSION};
+if(typeof legalEffective==='function')legalEffective=function(){return LG2_EFFECTIVE};
+const LG2_DOCS=[['terms','Terms of Service'],['privacy','Privacy Policy'],['location','Location & Tracking'],['safeguarding','Child Safeguarding'],['payments','Payments & Refunds'],['parent','Parent Terms'],['driver','Driver Agreement'],['roadcard','Roadblock Card terms'],['kids','Children’s Accounts'],['conduct','Community Rules'],['promotions','Referral & Credit'],['enivel-pays','Enivel Pays Rules'],['storage','Cookies & Storage'],['disputes','Complaints']];
+function lg2Links(role){return LG2_DOCS.filter(([id])=>role==='driver'?id!=='parent'&&id!=='kids':id!=='driver'&&id!=='roadcard').filter(([id])=>typeof legalDoc!=='function'||legalDoc(id)).map(([id,t])=>`<a href="#" data-doc="${id}">${h(t)}</a>`).join(', ')}
+function lg2ConsentText(role){return `I am 18 or older and I accept <b>all Enivel policies</b>: ${lg2Links(role)}.${role==='driver'?' I agree that Enivel may see my location while the Enivel app is open on my phone, for safety and to run the service.':''} I have read the <a href="#" data-doc="key-terms">Important terms</a>.`}
+function lg2Wire(root){root.querySelectorAll('a[data-doc]').forEach(a=>{if(a._lg2)return;a._lg2=1;a.onclick=e=>{e.preventDefault();e.stopPropagation();if(a.closest('.overlay'))closeModal();go('doc',{legalDoc:a.dataset.doc})}})}
+/* sign-up: replace the tick-box text with the all-policies version */
+{const _lg2Render=render;render=function(){const r=_lg2Render.apply(this,arguments);try{const cb=document.getElementById('su-terms')||document.querySelector('form input[type=checkbox][required]');const lab=cb&&cb.closest('label');
+  if(lab&&!lab.dataset.lg2){lab.dataset.lg2='1';lab.id='su-all-label';const role=S.signupRole||'parent';[...lab.childNodes].forEach(n=>{if(n!==cb)n.remove()});const sp=document.createElement('span');sp.innerHTML=' '+lg2ConsentText(role);lab.appendChild(sp);lg2Wire(lab)}}catch(e){}return r}}
+/* everyone (not kids, not admin) accepts the new version once */
+function lg2Gate(){const u=me();if(!u||S.admin||u.role==='admin'||u.demo||S.demo)return;if(typeof lg10IsKid==='function'&&lg10IsKid(u))return;if(u.termsAccepted?.version===LG2_VERSION||document.querySelector('.overlay'))return;
+  const drv=u.role==='driver';
+  modal(`<div class="lg10-gate"><h3>We’ve updated our terms and policies</h3><div class="tiny muted">Version ${LG2_VERSION} · effective ${LG2_EFFECTIVE}</div>
+  <p class="small" style="margin:12px 0 6px"><b>What’s new</b></p><ul class="small" style="margin:0 0 8px 18px">
+   <li>Parent fee is now 5% of the transport price.</li><li>Booking holds a seat for 48 hours; it is confirmed when PayFast confirms your payment.</li>
+   ${drv?'<li><b>Driver location:</b> while the Enivel app is open on your phone, Enivel can see your location (live, or the last known spot) for safety and to run the service.</li>':'<li>Drivers share their location with Enivel while their app is open, for your children’s safety.</li>'}
+   <li>Second stop before or after school; payouts to drivers’ bank accounts.</li></ul>
+  <p class="muted small" style="margin:10px 0 6px">Please read the important points:</p><div class="card soft small" style="max-height:30vh;overflow:auto;margin-bottom:10px">${(typeof legalDoc==='function'&&legalDoc('key-terms'))?legalDoc('key-terms').body(typeof LX==='function'?LX():{}):''}</div>
+  <label class="small" style="display:flex;gap:8px;line-height:1.45"><input type="checkbox" id="tg-ok"> <span>${lg2ConsentText(drv?'driver':'parent')}</span></label>
+  <div class="row" style="margin-top:12px;flex-wrap:wrap"><button class="btn" id="tg-go">Accept and continue</button><button class="btn ghost" id="tg-no">Log out</button></div></div>`,m=>{lg2Wire(m);
+    $('#tg-go',m).onclick=async()=>{if(!$('#tg-ok',m).checked)return toast('Tick the box to accept');const b=$('#tg-go',m);b.disabled=true;
+      try{const cur=me();const hist=(Array.isArray(cur.termsHistory)?cur.termsHistory:[]).slice(-11);if(cur.termsAccepted?.version)hist.push({version:cur.termsAccepted.version,at:cur.termsAccepted.at||null});
+        await Store.patch('users',cur.id,{termsAccepted:acceptedNow(),termsHistory:hist});closeModal();toast('Thanks. Policies accepted.');setTimeout(dlStart,500)}catch(e){b.disabled=false;toast('Could not save. Check your connection and try again.')}};
+    $('#tg-no',m).onclick=()=>{closeModal();logout()}})}
+termsGate=lg2Gate;if(typeof lg10Gate==='function')lg10Gate=lg2Gate;
+/* legal centre shows the new version */
+for(const v of ['legal','doc']){if(!VIEWS[v])continue;const _v=VIEWS[v];VIEWS[v]=function(){let s=_v.apply(this,arguments);try{if(typeof LG10_VERSION!=='undefined')s=s.split(LG10_VERSION).join(LG2_VERSION);if(typeof LG10_EFFECTIVE!=='undefined')s=s.split(LG10_EFFECTIVE).join(LG2_EFFECTIVE)}catch(e){}return s}}
+/* policy text */
+function lg2Add(id,html){if(typeof legalDoc!=='function')return;const d=legalDoc(id);if(!d)return;const b=d.body;d.body=L=>b(L)+`<div class="lg10-div"><span>New in version ${LG2_VERSION}</span></div>`+html;d.lg10='updated'}
+lg2Add('privacy',`<h3>Driver location (from ${LG2_EFFECTIVE})</h3><p>While a Driver has the Enivel app open on their phone, the app sends the phone’s location to Enivel about once a minute. Enivel keeps only the most recent position and the time it was taken (each new position replaces the previous one), plus the trip records described elsewhere in this policy.</p><p><b>Who can see it:</b> only Enivel’s administrators and safety team. Parents only see a vehicle’s location during their own child’s trip, as before. Other Drivers and the public never see it.</p><p><b>Why:</b> child safety, responding to incidents and emergencies, checking that routes are actually being driven, and running the service (for example, finding the nearest Driver when one cannot drive).</p><p><b>Your choice:</b> a Driver agrees to this when accepting these policies. The location is only collected while the app is open; a Driver can stop it at any time by closing the app or by turning off location access for the Enivel site in the phone’s settings, but location must be on while driving a trip. Parents’ and children’s locations are not collected this way; a child’s location is only shared with their parent when the child presses the Emergency button.</p>`);
+lg2Add('location',`<h3>Driver location while the app is open</h3><p>In addition to live trip tracking, Enivel can see a Driver’s location whenever the Enivel app is open on the Driver’s phone (live, or the last known position with its time). Only Enivel administrators see this. See the Privacy Policy, “Driver location”.</p>`);
+lg2Add('driver',`<h3>Location while the app is open</h3><p>You agree that Enivel may see your phone’s location while the Enivel app is open (live, or the last known position), for safety and to run the service, as described in the Privacy Policy.</p>`);
+lg2Add('payments',`<h3>Changes from ${LG2_EFFECTIVE}</h3><ul><li>The Parent fee is 5% of the transport price, shown before payment.</li><li>Booking a route holds the seat for 48 hours. The booking is confirmed only when PayFast confirms the payment; an unpaid hold ends after 48 hours.</li><li>Once-off trips are paid through PayFast when an offer is accepted.</li><li>Driver fees (R100 per month with a paying passenger, parking slots) are deducted from the Driver’s payout.</li></ul>`);
+/* ---------- driver location sharing ---------- */
+const DL={t:0,last:null,busy:false};
+function dlEligible(){const u=me();return !!(u&&u.role==='driver'&&!S.admin&&!S.viewAs&&S.cloud&&u.termsAccepted?.version===LG2_VERSION&&navigator.geolocation)}
+function dlSend(){if(!dlEligible()||DL.busy||document.hidden)return;DL.busy=true;
+  navigator.geolocation.getCurrentPosition(async p=>{DL.busy=false;try{const c={lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),acc:Math.round(p.coords.accuracy||0),at:Date.now()};
+      const prev=DL.last;if(prev&&Date.now()-prev.at<110000&&distM(prev,c)<30)return;DL.last=c;await Store.patch('users',me().id,{lastLoc:c})}catch(e){}},
+    ()=>{DL.busy=false},{enableHighAccuracy:true,maximumAge:30000,timeout:15000})}
+function dlStart(){if(DL.t||!dlEligible())return;dlSend();DL.t=setInterval(dlSend,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)dlSend()})}
+(function dlBoot(){let n=0;const t=setInterval(()=>{n++;if(typeof S!=='undefined'&&S.ready&&me()){if(dlEligible()){clearInterval(t);dlStart()}}if(n>200)clearInterval(t)},3000)})();
+/* ---------- admin: Driver locations ---------- */
+function dlAgo(ms){const m=Math.round((Date.now()-ms)/60000);if(m<2)return 'live';if(m<60)return m+' min ago';const h_=Math.round(m/60);if(h_<48)return h_+' h ago';return Math.round(h_/24)+' days ago'}
+function dlDrivers(){return Store.all('users').filter(u=>u.role==='driver'&&!u.anonymised).map(u=>({u,loc:u.lastLoc&&u.lastLoc.lat!=null?u.lastLoc:null,live:!!(u.lastLoc&&Date.now()-u.lastLoc.at<180000)})).sort((a,b)=>(b.live-a.live)||((b.loc?.at||0)-(a.loc?.at||0)))}
+VIEWS['a-drvloc']=adminGate(()=>{const ds=dlDrivers();const live=ds.filter(d=>d.live).length,known=ds.filter(d=>d.loc).length;setTimeout(()=>{try{cloudPull(true)}catch(e){}},0);
+  return pageHead('Driver locations',`${live} live now · ${known} of ${ds.length} drivers with a known location`,`<button class="btn sm ghost" onclick="cloudPull(true).then(()=>render())">Refresh</button>`)+
+  `<div data-mount="dlmap" class="rmap" style="margin-bottom:14px"></div>
+  <p class="tiny muted" style="margin:-6px 0 10px">Live = Enivel open on the driver’s phone in the last 3 minutes. Otherwise the last known spot and when it was taken. Only you can see this.</p>
+  <div class="list">${ds.map(d=>`<div class="item"><div class="dl-row grow"><span class="dl-dot ${d.live?'live':''}"></span><div><b>${h(d.u.name||'Driver')}</b><div class="tiny muted">${d.loc?(d.live?'Live now':'Last seen '+dlAgo(d.loc.at))+' · ±'+d.loc.acc+' m':'No location yet (has not opened the app since this update)'}</div></div></div>${d.loc?`<a class="btn sm ghost" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${d.loc.lat},${d.loc.lng}">Open in Maps</a>`:''}</div>`).join('')||'<p class="muted small">No drivers yet.</p>'}</div>`});
+MOUNT.dlmap=el=>{if(typeof HAS_L==='undefined'||!HAS_L||typeof L==='undefined'){el.innerHTML='<div class="nomap"><div><b>Map not available here</b></div></div>';return}
+  if(el._map){try{el._map.remove()}catch(e){}}el.innerHTML='<div class="lmap" style="position:absolute;inset:0"></div>';el.style.position='relative';
+  const map=L.map(el.querySelector('.lmap'),{zoomControl:true,attributionControl:false});el._map=map;L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(map);
+  const pts=[];for(const d of dlDrivers()){if(!d.loc)continue;const ini=String(d.u.name||'D').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    L.marker([d.loc.lat,d.loc.lng],{icon:L.divIcon({className:'',html:`<div class="dl-pin ${d.live?'live':''}">${h(ini)}</div>`,iconSize:[0,0]})}).bindTooltip(`${h(d.u.name||'Driver')} · ${d.live?'live':dlAgo(d.loc.at)}`).addTo(map);pts.push([d.loc.lat,d.loc.lng])}
+  if(pts.length>1)map.fitBounds(pts,{padding:[40,40],maxZoom:15});else if(pts.length)map.setView(pts[0],14);else map.setView([-26.2041,28.0473],10);setTimeout(()=>map.invalidateSize(),60)};
+if(typeof ADMIN_TILES!=='undefined'&&Array.isArray(ADMIN_TILES))ADMIN_TILES.push({route:'a-drvloc',label:'Driver locations',icon:ICON.pin||'',tone:'green',count:()=>dlDrivers().filter(d=>d.live).length+' live',sub:()=>dlDrivers().filter(d=>d.loc).length+' with a location'});
+/* child consent and the admin's acceptance counter use the new version too */
+if(typeof legalConsentRecord==='function')legalConsentRecord=function(){const u=me();return {by:u?.id||null,at:Date.now(),version:LG2_VERSION}};
+{const _lg2More=VIEWS['a-more'];VIEWS['a-more']=function(){let s=_lg2More.apply(this,arguments);try{const us=Store.all('users').filter(u=>u.role==='parent'||u.role==='driver');const ok=us.filter(u=>u.termsAccepted?.version===LG2_VERSION).length;
+  s=s.replace(/Terms [0-9.\-]+ · \d+ of \d+ account(s?) accepted/,`Terms ${LG2_VERSION} · ${ok} of ${us.length} account${us.length===1?'':'s'} accepted`)}catch(e){}return s}}
+/* a child added now records consent under the new version (an older layer stamps the previous one) */
+if(typeof addKid==='function'){const _lg2AddKid=addKid;addKid=function(id){const r=_lg2AddKid.apply(this,arguments);const m=$('.modal');const b=m&&$('#k-save',m);
+  if(b&&typeof b.onclick==='function'){const o=b.onclick;b.onclick=async e=>{const t0=Date.now()-1000;await o.call(b,e);try{const u=me();if(!u)return;for(const k of Store.all('kids').filter(x=>x.parentId===u.id&&x.consent&&x.consent.version!==LG2_VERSION&&(x.consent.at||0)>=t0))await Store.patch('kids',k.id,{consent:{...k.consent,version:LG2_VERSION}})}catch(err){console.warn('consent version',err)}}}
+  return r}}
+</script>
 
 </body></html>
