@@ -169,3 +169,8 @@ Round 11 (in progress): 4 subagents → layers r10-maps2 (Carto light/dark tiles
 - Removed the unused Google Maps layer (moved to layers/retired). build.sh now minifies (tools/minify.mjs, html-minifier-terser 7.2.0): ~1.50 MB → 1.38 MB.
 - Layer sources now also kept in the repo under layers/.
 - Retired outdated tests: r10-grow (old SMS sign-up), r12-pin/pin2 (tap-to-move pins, removed on purpose), r12-gmaps. r10-ops "Checks this month" fails on Sundays only (date-dependent).
+
+## 08 Nov — enivel.co.za temporarily disconnected (owner pointing it at their Shopify store)
+- CNAME file removed from the repo, so the app now lives at https://cyiber069.github.io/Enivel/ (no redirect).
+- Nothing changed in Supabase, the Worker, PayFast or TomTom.
+- TO RECONNECT: add CNAME file back with "enivel.co.za", owner restores GoDaddy DNS (4 A records 185.199.108-111.153, CNAME www → cyiber069.github.io), removes the domain in Shopify, re-ticks Enforce HTTPS in GitHub Pages once the certificate is back.
