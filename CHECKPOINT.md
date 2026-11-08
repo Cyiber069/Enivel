@@ -157,3 +157,7 @@ Round 11 (in progress): 4 subagents → layers r10-maps2 (Carto light/dark tiles
 - New layer layers/r10-legal3.html (after legal2): every policy says the address is "given on written request to <support email>"; the address field is hidden in admin Legal details and no longer required; any saved address is deleted from settings/legal the next time the admin opens the app.
 - Test r13-legal3 (6/6), r10-legal 69+5, r13-legal2 15 all pass.
 - Suggested later: a PO Box / virtual office address (ECT Act s43 asks online sellers for an address for legal service).
+
+## 08 Nov — owner reports setup done (not checked from here; this session can't reach enivel.co.za or Supabase)
+- setup.sql rerun; Worker ALLOWED_ORIGIN/APP_URL = enivel.co.za; TomTom whitelist; Supabase Site URL; Enforce HTTPS.
+- Next: owner does a small real PayFast test (R5–R10) end to end. Big upgrade (bug sweep, live visits, curved graphs, role features) still not started.
