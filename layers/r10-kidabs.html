@@ -1,0 +1,10 @@
+<script>
+/* ===== 08 Nov: the kid app had the "Tell the driver not riding today" permission (parents switch it on/off)
+   but no button for it. Kid home now shows the button when the parent allows it and a ride is booked;
+   the parent and the driver get a message (kidMarkAbsent). Once marked, the card says so. ===== */
+{const _kaHome=VIEWS['k-home'];VIEWS['k-home']=function(){const html=_kaHome.apply(this,arguments);try{const k=myKidProfile();if(!k)return html;const i=kidRideInfo(k);if(!i||!kidPerms(k).absent||i.st?.onboard)return html;
+  const box=i.abs?`<div class="card ka-off" style="text-align:center"><b>You're not riding today.</b><div class="small muted">Your driver and your parent know. Ask your parent if this changes.</div></div>`
+    :`<button class="btn ghost wide" id="ka-abs" onclick="kaAbsent()">Not riding today</button>`;
+  return html.replace('<!--kid:home-->',box+'<!--kid:home-->')}catch(e){return html}}}
+function kaAbsent(){const k=myKidProfile();if(!k)return;confirmBox('Not riding today?','Your driver and your parent will get a message.',async()=>{const ok=await kidMarkAbsent();if(ok){toast('Your driver and parent have been told');render()}})}
+</script>

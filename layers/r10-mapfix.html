@@ -1,0 +1,69 @@
+<style>
+.mf-row{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 14px}
+.mf-row .btn{flex:1;min-width:120px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.mf-row .btn svg{width:16px;height:16px}
+.rmap .tt-logo{display:none!important}
+.rmap .gm-hint{display:none!important}
+</style>
+<script>
+/* ===== Map fixes from the owner's screen recording (04 Nov):
+   1. pins on the Home map can't be moved by touch any more (dragging the map grabbed the pins);
+   2. clear "Change home" / "Change school" buttons under the map, opening the address sheet with search + pin preview;
+   3. TomTom map images: new "Orbis" keys use a different tile address. Try each TomTom address in turn,
+      remember the one that works, and fall back to the free map images if none do, so the map is never blank. ===== */
+const MF={modes:['orbis1','legacy','orbis2'],fails:{},cur:null};
+function mfTileUrl(mode,theme){const dark=(theme||(typeof m2Theme==='function'?m2Theme():'light'))==='dark';const k=encodeURIComponent(ttKey());
+  if(mode==='orbis1')return 'https://{s}.api.tomtom.com/maps/orbis/map-display/tile/{z}/{x}/{y}.png?apiVersion=1&tileSize=256&view=Unified&style='+(dark?'street-dark':'street-light')+'&key='+k;
+  if(mode==='orbis2')return 'https://api.tomtom.com/maps/orbis/display/raster/tile/{z}/{x}/{y}?apiVersion=2&tileSize=256&geopoliticalView=Unified&style='+(dark?'street-dark':'street-light')+'&key='+k;
+  return 'https://{s}.api.tomtom.com/map/1/tile/basic/'+(dark?'night':'main')+'/{z}/{x}/{y}.png?tileSize=256&view=Unified&key='+k}
+/* Which TomTom picture address works is tested ON THIS DEVICE with real image loads (no guessing):
+   free pictures show until a TomTom address is proven, so the map is never blank. */
+function mfTileXY(lat,lng,z){const n=2**z;const x=Math.floor((lng+180)/360*n);const r=lat*Math.PI/180;const y=Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n);return {x,y,z}}
+function mfProbeOne(url){return new Promise(res=>{const img=new Image();let done=false;const fin=v=>{if(done)return;done=true;res(v)};const t=setTimeout(()=>fin('timeout'),7000);img.onload=()=>{clearTimeout(t);fin(img.naturalWidth>=64?'ok':'empty')};img.onerror=()=>{clearTimeout(t);fin('refused')};const c=(()=>{try{const r=schRef&&schRef();if(r)return r}catch(e){}return {lat:-26.2041,lng:28.0473}})();const {x,y,z}=mfTileXY(c.lat,c.lng,14);img.src=url.replace('{s}','a').replace('{z}',z).replace('{x}',x).replace('{y}',y).replace('{r}','')+(url.includes('?')?'&':'?')+'_p='+Date.now()})}
+MF.probing=false;
+async function mfProbe(force){const key=ttKey();if(!key||MF.probing)return;let cached=null;try{cached=JSON.parse(ls.get('enivel_ttmode')||'null')}catch(e){}if(!force&&cached&&cached.key===key&&cached.probed&&Date.now()-cached.at<86400000)return;MF.probing=true;const results={};let pick='none';
+  try{for(const m of MF.modes){const r=await mfProbeOne(mfTileUrl(m,'light'));results[m]=r;if(r==='ok'){pick=m;break}}
+    if(pick==='none'){results.free=await mfProbeOne('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png')}
+    try{ls.set('enivel_ttmode',JSON.stringify({key,mode:pick,at:Date.now(),probed:true,results}))}catch(e){}MF.results=results}finally{MF.probing=false}
+  try{(typeof M2==='object'&&M2.tiles||[]).forEach(l=>{if(l._map&&l._url!==m2TileUrl())l.setUrl(m2TileUrl())});Object.values(typeof MAPS==='object'?MAPS:{}).forEach(M=>{const at=M.box&&M.box.querySelector('.tt-attr');if(at)at.textContent=pick==='none'?'© OpenStreetMap © CARTO · routes © TomTom':'© 1992–'+new Date().getFullYear()+' TomTom'})}catch(e){}
+  if(typeof S!=='undefined'&&S.admin&&['a-status','a-home'].includes(S.route)&&!document.querySelector('.overlay'))render()}
+function mfMode(){const key=ttKey();if(!key)return null;try{const s=JSON.parse(ls.get('enivel_ttmode')||'null');if(s&&s.key===key&&(s.mode==='none'||MF.modes.includes(s.mode))){if(!s.probed)setTimeout(()=>mfProbe(),0);return s.mode}}catch(e){}setTimeout(()=>mfProbe(),0);return 'none'}
+function mfSetMode(mode){try{const s=JSON.parse(ls.get('enivel_ttmode')||'null')||{};ls.set('enivel_ttmode',JSON.stringify({...s,key:ttKey(),mode,at:Date.now()}))}catch(e){}}
+/* the TomTom layer's tile URL becomes the tested one (or the free pictures until a TomTom address is proven) */
+if(typeof ttTileUrl==='function'){const _mfFree=()=>`https://{s}.basemaps.cartocdn.com/${(typeof m2Theme==='function'&&m2Theme()==='dark')?'dark_all':'light_all'}/{z}/{x}/{y}{r}.png`;
+  ttTileUrl=function(theme){const m=mfMode();if(!m||m==='none')return _mfFree();return mfTileUrl(m,theme)}}
+/* watch every map's tile layer: 4 failed images on one address → next address */
+function mfWatch(M){try{const tl=(typeof M2==='object'&&M2.tiles||[]).find(l=>l._map===M.map);if(!tl||tl._mfWatch)return;tl._mfWatch=true;tl.options.subdomains='abcd';
+  let bad=0,good=0;tl.on('tileload',()=>{if(/api\.tomtom\.com/.test(tl._url)){good++;bad=0;if(good===1){const m=mfMode();if(m&&m!=='none')mfSetMode(m)}}M.box.querySelectorAll('.nomap').forEach(n=>n.remove())});
+  tl.on('tileerror',()=>{if(!/api\.tomtom\.com/.test(tl._url)||good>0)return;if(++bad<4)return;bad=0;const m=mfMode();console.warn('TomTom tiles failed on '+m+', using free pictures and re-testing');mfSetMode('none');setTimeout(()=>mfProbe(true),500);(M2.tiles||[]).forEach(l=>{if(l._map&&/api\.tomtom\.com/.test(l._url))l.setUrl(m2TileUrl())});tl.setUrl(m2TileUrl())})}catch(e){console.warn('mf watch',e)}}
+/* the key changed → start the search for a working tile address again */
+if(typeof ttSaveKey==='function'){const _mfSave=ttSaveKey;ttSaveKey=async function(){try{ls.set('enivel_ttmode','')}catch(e){}return _mfSave.apply(this,arguments)}}
+const _mfRmap=MOUNT.rmap;MOUNT.rmap=async function(el){const key=[el.dataset.mode,el.dataset.route||'',el.dataset.kid||''].join(':');const res=await _mfRmap.call(this,el);try{const M=typeof MAPS==='object'?MAPS[key]:null;if(M&&M.box?.isConnected){mfWatch(M);
+  if(M.mode==='home'){M.map.off('click');M.pins&&M.pins.eachLayer(mk=>{try{mk.dragging&&mk.dragging.disable();mk.off('dragend');mk.off('dragstart')}catch(e){}})}
+  /* TomTom attribution text only (the logo chip covered the "show everything" button) */
+  const at=M.box.querySelector('.tt-attr');if(at&&!/api\.tomtom\.com/.test(m2TileUrl()))at.textContent='© TomTom · © OpenStreetMap © CARTO'}}catch(e){console.warn('mf map',e)}return res};
+/* System status: what this device found */
+if(typeof admStatusRows==='function'){const _mfRows=admStatusRows;admStatusRows=function(){const rows=_mfRows();if(!ttKey())return rows;let st=null;try{st=JSON.parse(ls.get('enivel_ttmode')||'null')}catch(e){}const NM={orbis1:'TomTom Orbis',legacy:'TomTom classic',orbis2:'TomTom Orbis v2',free:'free pictures'};const det=st&&st.results?Object.entries(st.results).map(([k,v])=>NM[k]+': '+v).join(' · '):'';
+  const row=MF.probing||!st||!st.probed?{st:'wait',v:'Testing on this device…',fix:''}:st.mode!=='none'?{st:'ok',v:NM[st.mode],fix:''}:{st:'warn',v:'Free pictures (TomTom refused)',fix:'TomTom refused map pictures for this key ('+det+'). Directions and search still use TomTom. Press ? for the fix.'};
+  const i=rows.findIndex(r=>r[0]==='tomtom');rows.splice(i<0?rows.length:i+1,0,['ttpics','Map pictures',row]);return rows}}
+if(typeof OWN_GUIDES==='object')OWN_GUIDES.ttpics={t:'Map pictures',why:'The map pictures (roads, buildings, names) come from TomTom when your key allows it. This device tests each TomTom picture address with a real image. Until one works, Enivel shows free map pictures so the map is never blank.',steps:['Open my.tomtom.com → Keys → API & SDK Keys → click your Enivel key.','Make sure <b>Map Display API</b> is ticked. If you see an <b>Orbis Map Display</b> or <b>Maps</b> product, tick that too. Save.','Under Domain whitelisting, make sure <code>cyiber069.github.io</code> is in the list (no https://).','Wait 5 minutes (TomTom takes a moment to update keys), then come back here and press <b>Check again</b>.','If it still says refused, send a screenshot of this window and of the key\'s product list.']};
+{const _mfHelp=typeof ownHelp==='function'?ownHelp:null;if(_mfHelp)ownHelp=function(k){if(k==='ttpics'){try{ls.set('enivel_ttmode','')}catch(e){}setTimeout(()=>mfProbe(true),0)}return _mfHelp.apply(this,arguments)}}
+/* pins are never draggable on the Home map, even if an older layer re-enables them */
+if(typeof r12Drag==='function')r12Drag=function(){};
+/* 2. buttons under the map */
+{const _mfScene=sceneSVG;sceneSVG=function(){let html=_mfScene.apply(this,arguments);const j=journey();const btns=`<div class="mf-row"><button class="btn sm ghost" onclick="pickPlace('pickup')">${ICON.home||''} ${j.pickupGeo?'Change home':'Set home'}</button><button class="btn sm ghost" onclick="pickPlace('dropoff')">${ICON.school||''} ${j.dropoffGeo?'Change school':'Set school'}</button></div>`;
+  html=html.replace(/<p class="tiny muted" style="margin-top:-8px">Real road route between your pins\. Tap the map to move a pin\.<\/p>/,'<p class="tiny muted" style="margin:-8px 0 8px">Road route from home to school. Use the buttons to change either one.</p>'+btns);
+  html=html.replace(/<p class="tiny muted" style="margin-top:-8px">Illustration\. Add your pickup and school to see the real road route\.<\/p>/,'<p class="tiny muted" style="margin:-8px 0 8px">Add your home and school to see the road route.</p>'+btns);return html}}
+/* the address sheet: typed text without a picked suggestion must still be saved and pinned */
+if(typeof pickPlace==='function'){const _mfPick=pickPlace;pickPlace=function(kind){_mfPick(kind);try{const m=$('.modal');if(!m)return;const h3=m.querySelector('h3');if(h3)h3.textContent={pickup:'Home (pickup) address',dropoff:'School (drop-off)',stop:'Extra stop'}[kind]||h3.textContent;const v=$('#pl-v',m);if(v){v.placeholder=kind==='dropoff'?'Type the school name':'Type the street address';setTimeout(()=>{try{v.focus()}catch(e){}},250)}}catch(e){}}}
+/* ===== 05 Nov: owner wants landmarks, buildings and roads visible. The minimal light style hid them.
+   Map pictures now always use CARTO Voyager (landmarks, schools, shops, parks, building outlines at street zoom,
+   street names); dark theme keeps the dark style. TomTom still does search and directions; Google key (if any) still wins. ===== */
+function mfDetailed(theme){return (theme||(typeof m2Theme==='function'?m2Theme():'light'))==='dark'?'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'}
+if(typeof ttTileUrl==='function')ttTileUrl=function(theme){return mfDetailed(theme)};
+mfProbe=async function(){};
+{const _mfM2=m2TileUrl;m2TileUrl=function(theme){const u=_mfM2(theme);if(/googleapis/.test(u))return u;return mfDetailed(theme)}}
+if(typeof admStatusRows==='function'){const _mfRows2=admStatusRows;admStatusRows=function(){return _mfRows2().filter(r=>r[0]!=='ttpics')}}
+/* street-level detail: allow closer zoom and never fit so far out that the area turns into a blur */
+{const _mfRmap2=MOUNT.rmap;MOUNT.rmap=async function(el){const key=[el.dataset.mode,el.dataset.route||'',el.dataset.kid||''].join(':');const res=await _mfRmap2.call(this,el);try{const M=typeof MAPS==='object'?MAPS[key]:null;if(M&&M.box?.isConnected){const tl=(typeof M2==='object'&&M2.tiles||[]).find(l=>l._map===M.map);if(tl){tl.options.maxZoom=20;tl.options.maxNativeZoom=19;tl.options.detectRetina=true;if(tl._url!==m2TileUrl())tl.setUrl(m2TileUrl())}M.map.setMaxZoom(19);const at=M.box.querySelector('.tt-attr');if(at)at.textContent='© OpenStreetMap © CARTO'+(typeof ttOn==='function'&&ttOn()?' · routes © TomTom':'');if(!M._mfZoomFix){M._mfZoomFix=true;M.map.on('zoomend',()=>{})}}}catch(e){}return res}}
+</script>

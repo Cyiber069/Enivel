@@ -1,0 +1,63 @@
+<style>
+.p2-hero{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:20px;padding:18px;margin-bottom:14px}
+.p2-hero .eyebrow{color:rgba(255,255,255,.8)}
+.p2-hero .big{font-size:2rem;font-weight:800;line-height:1.1;margin:4px 0}
+.p2-hero .sub{font-size:.85rem;opacity:.9}
+.p2-list{display:flex;flex-direction:column;gap:12px;margin-bottom:18px}
+.p2-card{border:1px solid var(--line);border-radius:18px;padding:14px;background:var(--card,var(--bg))}
+.p2-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.p2-due{font-size:1.35rem;font-weight:800;white-space:nowrap}
+.p2-due.done{color:var(--ok,#1e8e3e);font-size:1rem}
+.p2-brk{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:.85rem;margin:10px 0;padding:10px 0;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line)}
+.p2-brk .neg{color:#c5221f}
+.p2-brk .tot{font-weight:800}
+.p2-bank{background:var(--bg2,rgba(127,127,127,.08));border-radius:14px;padding:10px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-size:.85rem}
+.p2-bank .k{color:var(--fg2);font-size:.75rem}
+.p2-bank .v{font-weight:700;word-break:break-all}
+.p2-bank .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em}
+.p2-copy{font-size:.72rem;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;min-height:30px}
+.p2-warn{background:#fdecea;color:#8a1c12;border-radius:12px;padding:8px 10px;font-size:.8rem;margin-top:8px}
+:root[data-theme="dark"] .p2-warn{background:#3a1714;color:#ffb4ab}
+.p2-actions{display:flex;gap:8px;margin-top:10px}
+.p2-actions .btn{flex:1}
+.p2-mlink{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
+</style>
+<script>
+/* ===== 08 Nov owner: "how will I know which account to send drivers their money, show all their details,
+   and how much I have to pay them in total after all deductions".
+   Driver payouts page (Money → Driver payouts) now starts with:
+   - the total still to pay all drivers this month;
+   - one card per driver: what parents paid, sponsored, minus the R100 driver fee, minus parking slots,
+     minus what was already paid out = amount to pay; their bank, account holder, full account number,
+     branch code and a payment reference, each with a Copy button; warnings for missing bank details or
+     a holder name that doesn't match; "I've paid this" records the payout.
+   The full table stays underneath. The Money tab shows a "Driver payouts" card with the amount due. ===== */
+function p2Month(m){try{return new Date(+m.slice(0,4),+m.slice(5,7)-1,1).toLocaleDateString('en-ZA',{month:'long',year:'numeric'})}catch(e){return m}}
+function p2Ref(d,m){const first=String(d.name||'DRIVER').trim().split(/\s+/)[0].toUpperCase().replace(/[^A-Z]/g,'').slice(0,10);const mon=new Date(+m.slice(0,4),+m.slice(5,7)-1,1).toLocaleDateString('en-ZA',{month:'short'}).toUpperCase().replace('.','');return ('ENIVEL '+mon+' '+first).slice(0,20)}
+function p2Split(d,m){const tx=Store.all('transactions').filter(t=>t.month===m&&t.from===d.id);const sum=ty=>g2R2(tx.filter(t=>t.type===ty).reduce((s,t)=>s+(+t.amount||0),0));return {driverFee:sum('driver_fee'),parking:sum('parking_slot')}}
+function p2CopyBtn(text,label){return `<button class="p2-copy" onclick="poCopy(${h(JSON.stringify(String(text)))},${h(JSON.stringify(label))})">Copy</button>`}
+function p2Card(r,m){const d=r.d,p=typeof poOf==='function'?poOf(d):null,sp=p2Split(d,m);const done=r.due<=0;
+  const line=(k,v,neg)=>v?`<span>${k}</span><b class="${neg?'neg':''}">${neg?'−':''}${money(v)}</b>`:'';
+  const brk=`<div class="p2-brk">${line('Paid by parents',r.paid)}${line('Sponsored by Enivel',r.sponsored)}${line('Driver monthly fee',sp.driverFee,true)}${line('Parking slots',sp.parking,true)}${(r.fees-sp.driverFee-sp.parking)>0.004?line('Other driver fees',g2R2(r.fees-sp.driverFee-sp.parking),true):''}${line('Already paid out',r.paidOut,true)}<span class="tot">${done?'Nothing left to pay':'You pay'}</span><b class="tot">${money(Math.max(0,r.due))}</b></div>`;
+  const bank=p?`<div class="p2-bank"><span class="k">Bank</span><span class="v">${h(p.bank)}${p.type?' · '+h(p.type):''}</span><span></span>
+      <span class="k">Holder</span><span class="v">${h(p.holder)}</span>${p2CopyBtn(p.holder,'Account holder')}
+      <span class="k">Account</span><span class="v mono">${h(p.number)}</span>${p2CopyBtn(p.number,'Account number')}
+      <span class="k">Branch</span><span class="v mono">${h(p.branch||'—')}</span>${p.branch?p2CopyBtn(p.branch,'Branch code'):'<span></span>'}
+      <span class="k">Amount</span><span class="v">${money(Math.max(0,r.due))}</span>${p2CopyBtn(Math.max(0,r.due).toFixed(2),'Amount')}
+      <span class="k">Reference</span><span class="v mono">${h(p2Ref(d,m))}</span>${p2CopyBtn(p2Ref(d,m),'Reference')}</div>${poNameMatch(d)?'':'<div class="p2-warn"><b>Check first:</b> the account holder name is different from the driver\'s name. Confirm with the driver before you pay.</div>'}`
+    :`<div class="p2-warn"><b>No bank details yet.</b> ${h(String(d.name||'This driver').split(' ')[0])} must add them in the app: Earnings &amp; fees → "Where should Enivel pay you?".</div>`;
+  const acts=done?'':`<div class="p2-actions">${p?`<button class="btn sm" onclick="g2MarkPaid('${h(d.id)}','${m}')">I've paid this</button>`:`<button class="btn sm ghost" onclick="poNudge()">Remind to add bank details</button>`}${d.phone?`<a class="btn sm ghost" href="tel:${h(d.phone)}">Call</a>`:''}</div>`;
+  return `<div class="p2-card" data-p2="${h(d.id)}"><div class="p2-top"><div><b>${h(d.name||'Driver')}</b><div class="tiny muted">${r.bookings} passenger${r.bookings===1?'':'s'}${d.phone?' · '+h(d.phone):''}</div></div><div class="p2-due ${done?'done':''}">${done?'Paid ✓':money(r.due)}</div></div>${done?p2PaidLine(d,m):''}${brk}${done?'':bank}${acts}</div>`}
+function p2PaidLine(d,m){const ps=Store.all('transactions').filter(t=>t.type==='payout'&&t.to===d.id&&t.month===m).sort((a,b)=>(b.paidAt||b.ts||0)-(a.paidAt||a.ts||0));if(!ps.length)return '';const tot=g2R2(ps.reduce((s,t)=>s+(+t.amount||0),0));const last=new Date(ps[0].paidAt||ps[0].ts||Date.now()).toLocaleDateString('en-ZA',{day:'numeric',month:'short'});return `<div class="small" style="margin-top:4px;color:var(--ok,#1e8e3e)">You paid ${money(tot)} on ${h(last)}${ps.length>1?' ('+ps.length+' payments)':''}</div>`}
+function p2Section(m){const rows=g2Payouts(m).filter(r=>r.net>0||r.paidOut>0||r.due>0);const due=rows.filter(r=>r.due>0).sort((a,b)=>b.due-a.due),done=rows.filter(r=>r.due<=0);
+  const total=g2R2(due.reduce((s,r)=>s+r.due,0)),paidOut=g2R2(rows.reduce((s,r)=>s+r.paidOut,0)),noBank=due.filter(r=>!poOf(r.d)).length;
+  const hero=`<div class="p2-hero"><div class="eyebrow">${h(p2Month(m))} · still to pay drivers</div><div class="big">${money(total)}</div><div class="sub">${due.length?`${due.length} driver${due.length>1?'s':''} to pay`:'Nobody is waiting for money'}${paidOut?` · ${money(paidOut)} already paid out`:''}${noBank?` · ${noBank} without bank details`:''}</div></div>`;
+  const howto=due.length?`<p class="small muted" style="margin:0 0 10px">Pay each driver by EFT from your bank app: copy the account number, branch, amount and reference below, then tap <b>I've paid this</b> so it's recorded and the driver sees it.</p>`:'';
+  const hd=(t,n)=>`<h3 style="margin:4px 0 0">${t} <span class="pill tiny">${n}</span></h3>`;
+  return hero+howto+`<div class="p2-list">${due.length?hd('Still to pay',due.length):''}${due.map(r=>p2Card(r,m)).join('')}${done.length?hd('Paid this month',done.length):''}${done.map(r=>p2Card(r,m)).join('')}${rows.length?'':'<div class="card">'+empty('No driver earnings this month yet. When parents pay through PayFast, each driver shows up here with the amount to pay them.','money')+'</div>'}</div><h3 style="margin:6px 0 8px">Full breakdown</h3>`}
+{const _p2Pay=VIEWS['a-payouts'];VIEWS['a-payouts']=function(){const html=_p2Pay.apply(this,arguments);try{if(!S.admin)return html;const m=S.g2PayM;if(!m)return html;const i=html.indexOf('<div class="kpi">');if(i<0)return html;return html.slice(0,i)+p2Section(m)+html.slice(i)}catch(e){console.warn('p2',e);return html}}}
+/* Money tab: a clear way in */
+{const _p2Money=VIEWS['a-money'];if(_p2Money)VIEWS['a-money']=function(){let html=_p2Money.apply(this,arguments);html=html.split('>Paid to drivers<').join(">Drivers' share (before payout)<");try{if(!S.admin)return html;const m=monthKey();const due=g2Payouts(m).filter(r=>r.due>0);const total=g2R2(due.reduce((s,r)=>s+r.due,0));
+  const card=`<div class="card p2-mlink" onclick="S.g2PayM='${m}';go('a-payouts')" style="margin-bottom:14px"><div><div class="eyebrow">Driver payouts · ${h(p2Month(m))}</div><div style="font-size:1.3rem;font-weight:800">${money(total)} to pay</div><div class="tiny muted">${due.length?due.length+' driver'+(due.length>1?'s':'')+' · bank details, amounts and references':'All drivers paid'}</div></div><button class="btn sm">Open</button></div>`;
+  const j=html.indexOf('</div>',html.indexOf('class="hdr'));const k=html.search(/<div class="(kpi|card|grid)/);return k>0?html.slice(0,k)+card+html.slice(k):card+html}catch(e){return html}}}
+</script>

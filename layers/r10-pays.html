@@ -1,0 +1,414 @@
+<style>
+/* ===== Round 10 · pays: Pay for parents + Enivel Pays ===== */
+.pays .btn{min-height:44px}
+.pays input[type=search],.pays .field input{font-size:16px}
+.pays-hero{position:relative;isolation:isolate;overflow:hidden;border-radius:24px;padding:22px 20px;color:#fff;background:radial-gradient(120% 90% at 100% 0%,rgba(34,211,238,.55),transparent 55%),radial-gradient(90% 80% at 0% 100%,rgba(245,158,11,.22),transparent 60%),linear-gradient(135deg,#3b2fd1,#6d5dfc 55%,#0e7490);box-shadow:0 18px 50px -20px rgba(76,61,240,.6)}
+.pays-hero::after{content:"";position:absolute;z-index:-1;right:-50px;top:-60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.09)}
+.pays-hero .eyebrow{color:rgba(255,255,255,.82);font-weight:700;letter-spacing:.02em}
+.pays-hero .big{font-family:var(--display);font-weight:800;font-size:clamp(2.8rem,13vw,4.6rem);letter-spacing:-.05em;line-height:.95;font-variant-numeric:tabular-nums;margin:6px 0 2px}
+.pays-hero .lead{font-weight:600;font-size:1.02rem;color:rgba(255,255,255,.92)}
+.pays-hero .btn{background:#fff;color:#21177a;border-color:#fff}
+.pays-hero .btn.glass{background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.3);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.pays-hero .btn svg{width:18px;height:18px}
+.pays-hero .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.pays-hero .acts .btn{flex:1 1 auto}
+.pays-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.pays-chips span{padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.24);font-size:.82rem;font-weight:600;font-variant-numeric:tabular-nums}
+.pays-brand{display:inline-flex;align-items:center;gap:8px;font-weight:800;letter-spacing:-.01em;padding:6px 12px 6px 8px;border-radius:999px;background:rgba(255,255,255,.16)}
+.pays-brand svg{width:20px;height:20px}
+.pays-fam{position:relative;display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;border:1px solid var(--line);background:var(--bg);cursor:pointer;min-height:62px;transition:border-color .15s,background .15s,transform .1s}
+.pays-fam+.pays-fam{margin-top:8px}
+.pays-fam:active{transform:scale(.99)}
+.pays-fam input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.pays-fam .tick{width:26px;height:26px;border-radius:50%;border:2px solid var(--fg3);display:grid;place-items:center;flex-shrink:0;transition:background .15s,border-color .15s}
+.pays-fam .tick svg{width:14px;height:14px;opacity:0;color:#fff;transition:opacity .15s}
+.pays-fam.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 9%,var(--bg))}
+.pays-fam.on .tick{background:var(--acc);border-color:var(--acc)}
+.pays-fam.on .tick svg{opacity:1}
+.pays-fam.off{cursor:default}
+.pays-fam.off .tick{opacity:.25}
+.pays-fam.off .grow,.pays-fam.off .avatar{opacity:.7}
+.pays-fam input:focus-visible+.tick{outline:2px solid var(--acc);outline-offset:2px}
+.pays-fam .avatar{width:38px;height:38px;font-size:.85rem}
+.pays-fam .grow{flex:1;min-width:0;display:flex;flex-direction:column}
+.pays-fam .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pays-fam .kd{font-size:.8rem;color:var(--fg3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pays-fam .amt{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;font-variant-numeric:tabular-nums;font-weight:700}
+@media(max-width:370px){.pays-fam .avatar{display:none}}
+.pays-bar{position:sticky;bottom:calc(74px + env(safe-area-inset-bottom,0px));z-index:5;margin-top:14px;padding:12px;border-radius:20px;background:color-mix(in srgb,var(--bg) 90%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid var(--line);box-shadow:var(--shadow);display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+@media(min-width:900px){.pays-bar{bottom:16px}}
+.pays-bar .sum{flex:1 1 120px;min-width:0}
+.pays-bar .sum b{font-family:var(--display);font-size:1.35rem;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pays-bar .btn{flex:1 1 200px;white-space:normal;text-align:center;line-height:1.2}
+.pays-lock{display:flex;gap:10px;align-items:flex-start;font-size:.8rem;color:var(--fg2);padding:10px 12px;border-radius:14px;background:color-mix(in srgb,var(--live) 9%,var(--bg2));margin-top:12px}
+.pays-lock svg{width:18px;height:18px;color:var(--live);flex-shrink:0;margin-top:1px}
+.pays-hist .item{gap:10px}
+.pays-hist .item .grow{min-width:0}
+.pays-hist .item .grow>div:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pays-hist .item .btn{min-height:44px}
+.pays-draw{text-align:center;padding:4px 0}
+.pays-reel{margin:16px auto 12px;height:104px;display:grid;place-items:center;border-radius:22px;background:var(--bg2);overflow:hidden;position:relative;transition:background .4s}
+.pays-reel b{font-family:var(--display);font-size:clamp(2rem,10vw,2.9rem);font-weight:800;letter-spacing:-.03em;display:block;max-width:92%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pays-reel b.t{animation:paysTick .1s ease-out}
+.pays-reel.win{background:linear-gradient(135deg,#3b2fd1,#6d5dfc 55%,#0e7490)}
+.pays-reel.win b{color:#fff;animation:paysPop .55s cubic-bezier(.2,.8,.2,1.35)}
+@keyframes paysTick{from{transform:translateY(-35%);opacity:.25}to{transform:none;opacity:1}}
+@keyframes paysPop{from{transform:scale(.55)}to{transform:scale(1)}}
+.pays-win{animation:pageIn .35s ease both}
+.pays-cert{position:relative;overflow:hidden;border-radius:24px;padding:20px;border:2px solid transparent;background:linear-gradient(var(--bg),var(--bg)) padding-box,linear-gradient(135deg,#6d5dfc,#22d3ee 55%,#f59e0b) border-box}
+.pays-cert::after{content:"";position:absolute;right:-60px;top:-60px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--acc) 18%,transparent),transparent 70%);pointer-events:none}
+.pays-cert .seal{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#6d5dfc,#22d3ee);color:#fff;box-shadow:0 10px 26px -10px #6d5dfc}
+.pays-cert .seal svg{width:26px;height:26px}
+.pays-cert h3{font-size:1.3rem;font-weight:800;letter-spacing:-.02em;margin:4px 0 10px;line-height:1.2}
+.pays-cert .meta{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.78rem;color:var(--fg3)}
+.pays-cert .no{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--fg);font-weight:700;letter-spacing:.02em}
+.pays-opt{display:flex;align-items:center;gap:14px;cursor:pointer;min-height:44px}
+.pays-opt .grow{flex:1;min-width:0}
+.pays-homecard{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;cursor:pointer;padding:14px 16px;border-radius:20px;color:#fff;font:inherit;background:radial-gradient(110% 120% at 100% 0%,rgba(34,211,238,.5),transparent 55%),linear-gradient(135deg,#3b2fd1,#6d5dfc 60%,#0e7490);box-shadow:0 14px 34px -18px rgba(76,61,240,.7);min-height:64px}
+.pays-homecard .ic{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.18);flex-shrink:0}
+.pays-homecard .ic svg{width:22px;height:22px}
+.pays-homecard .grow{flex:1;min-width:0;display:flex;flex-direction:column}
+.pays-homecard .grow span{font-size:.8rem;opacity:.88}
+.pays-homecard .go{font-size:.8rem;font-weight:700;white-space:nowrap;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.18)}
+@media(max-width:360px){.pays-homecard .go{display:none}}
+.pays-pub{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.pays-pub .pays-hero{text-align:center;padding:28px 18px 24px}
+.pays-pub .pays-hero .big{font-size:clamp(4rem,24vw,7rem);margin:4px 0 0}
+.pays-pub .pays-chips{justify-content:center}
+.pays-months{display:flex;align-self:center;max-width:100%}
+.pays-months button{min-height:44px}
+.pays-wall{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.pays-wall span{padding:9px 14px;border-radius:999px;font-weight:600;font-size:.9rem;background:color-mix(in srgb,var(--acc) 10%,var(--bg2));border:1px solid color-mix(in srgb,var(--acc) 22%,transparent);animation:pageIn .4s ease both}
+.pays-skel{height:1.1em;border-radius:8px;background:rgba(255,255,255,.22);margin:10px auto;max-width:220px;animation:bl 1.2s infinite}
+.pays-preview{display:grid;place-items:center;margin:14px 0;padding:12px;border-radius:18px;background:var(--bg2)}
+.pays-preview img{max-width:100%;max-height:52vh;border-radius:14px;box-shadow:var(--shadow);display:block}
+.pays-check{display:grid;place-items:center;text-align:center;gap:10px;padding:26px 10px}
+.pays-ring{width:64px;height:64px;border-radius:50%;border:5px solid var(--bg3);border-top-color:var(--acc);animation:paysSpin 1s linear infinite}
+.pays-done{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:var(--live);color:#fff;animation:paysPop .5s cubic-bezier(.2,.8,.2,1.35)}
+.pays-done svg{width:36px;height:36px}
+@keyframes paysSpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.pays-reel b,.pays-reel.win b,.pays-wall span,.pays-done,.pays-win{animation:none}.pays-ring{animation-duration:3s}}
+</style>
+<script>
+/* ===== Round 10 · pays: "Pay for parents" (admin pays a family's month by card on PayFast, or records an EFT)
+   and "Enivel Pays" (random monthly draw, parent certificate + share card, public #pays wall, TikTok card).
+   Data written (same shapes as sponsor()): bookings.sponsoredMonths, bookings.paysCerts{month:{no,at,kind,method}},
+   transactions type 'sponsorship' (price, from 'enivel' to the driver) and 'platform_fee' (2%, from the admin) with
+   paidBy:'admin', method:'card'|'manual', intentId, parentId. users.paysWall = parent opted in to the public wall.
+   Cloud: amounts, payments, draws and the public counter are done by the r10-pays.sql functions. ===== */
+const PAYS_FONT='"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
+const PAYS_SHARE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3m0 0L7.5 7.5M12 3l4.5 4.5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
+const PAYS_DICE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>';
+S.paysSel=S.paysSel||new Set();
+
+/* ---------- small helpers ---------- */
+function paysMonthLabel(m){const [y,mm]=String(m||monthKey()).split('-').map(Number);return new Date(y,(mm||1)-1,1).toLocaleDateString('en-ZA',{month:'long',year:'numeric'})}
+function paysMonthName(m){return paysMonthLabel(m).split(' ')[0]}
+function paysMonthShort(m){const [y,mm]=String(m).split('-').map(Number);return new Date(y,mm-1,1).toLocaleDateString('en-ZA',{month:'short'})}
+function paysNextMonth(){const d=new Date();return monthKey(new Date(d.getFullYear(),d.getMonth()+1,1))}
+function paysLastMonths(n){const d=new Date();return Array.from({length:n},(_,i)=>monthKey(new Date(d.getFullYear(),d.getMonth()-i,1))).reverse()}
+function paysR2(n){return Math.round((Number(n)||0)*100)/100}
+function paysFirst(n){return String(n||'').trim().split(/\s+/)[0]||'Parent'}
+function paysWallName(n){const p=String(n||'').trim().split(/\s+/).filter(Boolean);return p.length>1?p[0]+' '+p[p.length-1][0].toUpperCase()+'.':(p[0]||'')}
+function paysPossessive(names){const n=(names||[]).filter(Boolean);const list=!n.length?'Your children':n.length===1?n[0]:n.slice(0,-1).join(', ')+' & '+n[n.length-1];return list+(/s$/i.test(list)?'’':'’s')}
+function paysHash6(s){let x=0x811c9dc5;for(const ch of String(s)){x^=ch.codePointAt(0);x=Math.imul(x,0x01000193)>>>0}return x.toString(16).toUpperCase().padStart(8,'0').slice(0,6)}
+/* fair pick: uniform integer in [0,n) from crypto.getRandomValues (rejection sampling, no modulo bias) */
+function paysRandInt(n){if(!(n>0))return -1;const a=new Uint32Array(1);const lim=Math.floor(4294967296/n)*n;do{crypto.getRandomValues(a)}while(a[0]>=lim);return a[0]%n}
+function paysCovered(b,m){return Array.isArray(b.sponsoredMonths)&&b.sponsoredMonths.includes(m)}
+/* same rule as the server: a booking never costs more than its route's (or accepted offer's) price */
+function paysPrice(b){let p=Number(b.price);if(!(p>0)||p>100000)return 0;let ref=null;if(b.fromRequest){const rq=Store.get('requests',b.fromRequest);const o=rq&&rq.acceptedOffer?Store.get('offers',rq.acceptedOffer):null;ref=o?Number(o.price):null}else{const r=Store.get('routes',b.routeId);ref=r?Number(r.price):null}if(ref>0&&ref<p)p=ref;return paysR2(p)}
+function paysSoftRender(){const a=document.activeElement;if(a&&a.closest&&a.closest('#app')&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)&&a.type!=='checkbox')return;if($('.overlay'))return;render()}
+
+/* ---------- families (admin) ---------- */
+/* every parent with an active monthly booking: what is still due for month m (transport + 2% fee per booking) */
+function paysFamilies(m){const by={};
+  for(const b of Store.all('bookings')){if(b.status!=='active'||b.once)continue;const u=Store.get('users',b.parentId);if(!u||u.role!=='parent')continue;(by[u.id]=by[u.id]||{u,bs:[]}).bs.push(b)}
+  return Object.values(by).map(f=>{const due=f.bs.filter(b=>!bookingPaidFor(b,m)&&paysPrice(b)>0);const covered=f.bs.filter(b=>paysCovered(b,m));const blocked=!!(f.u.banned||f.u.suspended);
+    const amount=paysR2(due.reduce((s,b)=>s+paysPrice(b)+feeFor(paysPrice(b)),0));const kids=[...new Set(f.bs.map(b=>Store.get('kids',b.kidId)?.name).filter(Boolean))];
+    const status=blocked?'blocked':due.length?(covered.length?'partial':'due'):covered.length?'covered':'paid';
+    return {...f,due,covered,blocked,amount,kids,status}}).sort((a,b)=>((b.due.length&&!b.blocked)-(a.due.length&&!a.blocked))||String(a.u.name).localeCompare(String(b.u.name)))}
+/* who can win the draw: still something due that month, not banned or suspended */
+function paysEligible(m){return paysFamilies(m).filter(f=>f.due.length&&!f.blocked)}
+
+/* ---------- public numbers ---------- */
+function paysStatsLocal(m){const bs=Store.all('bookings').filter(b=>paysCovered(b,m));const kids=new Set(bs.map(b=>b.kidId).filter(Boolean)),fams=new Set(bs.map(b=>b.parentId).filter(Boolean));
+  const total=paysR2(Store.all('transactions').filter(t=>t.type==='sponsorship'&&t.month===m).reduce((s,t)=>s+(Number(t.amount)||0),0));
+  const wall=[...fams].map(id=>Store.get('users',id)).filter(u=>u&&u.paysWall===true).map(u=>paysWallName(u.name)).filter(Boolean).sort();
+  return {month:m,label:paysMonthLabel(m),kids:kids.size,families:fams.size,total,wall}}
+/* on the live site only the admin can see everyone's data; others (and visitors) ask the server for the totals */
+function paysStats(m){if(!(S.cloud&&!S.admin))return paysStatsLocal(m);S.paysPub=S.paysPub||{};const c=S.paysPub[m];
+  if(!c||(!c.loading&&Date.now()-(c.at||0)>60000))paysFetchPub(m);return c&&c.data?c.data:null}
+async function paysFetchPub(m){S.paysPub=S.paysPub||{};const c=S.paysPub[m]=S.paysPub[m]||{};if(c.loading)return;c.loading=true;
+  try{if(typeof sb==='undefined'||!sb)throw new Error('offline');const {data,error}=await sb.rpc('enivel_pays_public',{p_month:m});if(error)throw error;c.data=data;c.err=null}
+  catch(e){c.err=e.message||String(e)}finally{c.loading=false;c.at=Date.now();if(S.route==='pays'||S.route==='p-cert')paysSoftRender()}}
+function paysPublicUrl(){return location.origin+location.pathname+'#pays'}
+
+/* ---------- PayFast status (from the Worker's /health) ---------- */
+function paysPfState(){return S.paysPf?.state||(S.cloud?'unknown':'local')}
+async function paysPfCheck(force){if(!S.cloud){S.paysPf={state:'local',at:Date.now()};return S.paysPf}
+  const ep=typeof otpEndpoint==='function'?otpEndpoint():'';if(!ep){S.paysPf={state:'noworker',at:Date.now()};return S.paysPf}
+  if(!force&&S.paysPf&&S.paysPf.state!=='checking'&&Date.now()-S.paysPf.at<60000)return S.paysPf;
+  const prev=S.paysPf?.state;S.paysPf={state:'checking',at:Date.now()};
+  try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),6000);const r=await fetch(ep+'/health',{signal:ac.signal});clearTimeout(t);const j=await r.json();S.paysPf={state:j&&j.payfast?'on':'off',at:Date.now()}}
+  catch(e){S.paysPf={state:'off',at:Date.now(),err:true}}
+  if(prev!==S.paysPf.state&&S.route==='a-pays')paysSoftRender();return S.paysPf}
+
+/* ---------- certificates (parent) ---------- */
+function paysCertsOf(pid){const out={};
+  for(const b of Store.all('bookings')){if(b.parentId!==pid||!Array.isArray(b.sponsoredMonths))continue;
+    for(const m of b.sponsoredMonths){if(!/^\d{4}-\d{2}$/.test(m))continue;const o=out[m]=out[m]||{month:m,kids:[],no:null,at:null,kind:null};const c=b.paysCerts&&b.paysCerts[m];const kn=Store.get('kids',b.kidId)?.name;
+      if(kn&&!o.kids.includes(kn))o.kids.push(kn);if(c){o.no=o.no||c.no;o.at=o.at||c.at;o.kind=o.kind||c.kind}}}
+  return Object.values(out).map(o=>{if(!o.at){const tx=Store.all('transactions').filter(t=>t.type==='sponsorship'&&t.month===o.month&&Store.get('bookings',t.bookingId)?.parentId===pid).sort((a,b)=>a.ts-b.ts)[0];const [y,mm]=o.month.split('-').map(Number);o.at=tx?.ts||new Date(y,mm-1,1).getTime()}
+    o.no=o.no||('EP-'+o.month.replace('-','')+'-'+paysHash6(pid+':'+o.month));return o}).sort((a,b)=>b.month.localeCompare(a.month))}
+async function paysSetWall(on){const u=me();if(!u)return;await Store.patch('users',u.id,{paysWall:!!on});S.paysPub=null;toast(on?'Your first name shows on the Enivel Pays wall':'Your name is hidden from the wall')}
+
+/* ---------- applying a payment in local / preview mode (the server does this on the live site) ---------- */
+async function paysApplyLocal(ids,m,kind,method,note){const fams=paysFamilies(m).filter(f=>ids.includes(f.u.id)&&f.due.length&&!f.blocked);if(!fams.length)throw new Error('Nothing to pay: already paid for '+paysMonthLabel(m));
+  const intentId='pl'+uid();const label=paysMonthLabel(m);const at=Date.now();const adm=me()?.id||'admin';const tail=m===monthKey()?'Nothing to pay this month.':'Nothing to pay for '+label+'.';let amount=0,done=0;
+  S.silent=true;
+  try{for(const f of fams){const cert='EP-'+m.replace('-','')+'-'+paysHash6(intentId+':'+f.u.id);const names=[];
+      for(const b of f.due){const price=paysPrice(b),fee=feeFor(price);const kn=Store.get('kids',b.kidId)?.name||'Child';
+        await Store.patch('bookings',b.id,{sponsoredMonths:[...new Set([...(b.sponsoredMonths||[]),m])],paysCerts:{...(b.paysCerts||{}),[m]:{no:cert,at,kind,method}}});
+        await pushTx({type:'sponsorship',amount:price,from:'enivel',to:b.driverId,bookingId:b.id,kidId:b.kidId,parentId:f.u.id,month:m,note:`Transport for ${label} paid by Enivel admin`,paidBy:'admin',method,intentId});
+        await pushTx({type:'platform_fee',amount:fee,from:adm,to:'enivel',bookingId:b.id,parentId:f.u.id,month:m,note:`2% fee for ${label}, paid by Enivel admin`,paidBy:'admin',method,intentId,...(note?{memo:String(note).slice(0,200)}:{})});
+        await notify(b.driverId,`💸 Enivel paid ${kn}'s transport for ${label}. You receive the full price.`,'pay','d-billing');
+        if(!names.includes(kn))names.push(kn);amount+=price+fee;done++}
+      await notify(f.u.id,`${kind==='draw'?'🎉 Enivel Pays picked your family! ':''}🎁 Your transport fee for ${label} (${names.join(', ')}) has been paid by Enivel admin. ${tail}`,'pay','p-cert')}}
+  finally{S.silent=false}
+  render();return {id:intentId,amount:paysR2(amount),families:fams.length,bookings:done}}
+
+/* ---------- admin actions ---------- */
+function paysOpen(parentId){S.paysSel=new Set(parentId?[parentId]:[]);S.paysQ='';S.paysMonth=monthKey();go('a-pays')}
+function paysSelected(m){return paysFamilies(m).filter(f=>S.paysSel.has(f.u.id)&&f.due.length&&!f.blocked)}
+function paysSyncBar(){const root=$('.pays');if(!root)return;const fams=paysSelected(S.paysMonth||monthKey());const total=paysR2(fams.reduce((s,f)=>s+f.amount,0));const n=fams.length;
+  const sum=$('#pays-sum',root),cnt=$('#pays-cnt',root),card=$('#pays-card',root),man=$('#pays-manual',root);
+  if(sum)sum.textContent=money(total);if(cnt)cnt.textContent=n?`${n} ${n===1?'family':'families'} · ${fams.reduce((s,f)=>s+f.due.length,0)} ${fams.reduce((s,f)=>s+f.due.length,0)===1?'child':'children'}`:'Pick families above';
+  if(card){card.disabled=!n;const t=$('[data-pays-total]',card);if(t)t.textContent=money(total)}if(man)man.disabled=!n}
+function paysSetupModal(ids,kind){const st=paysPfState();const status=typeof VIEWS!=='undefined'&&typeof VIEWS['a-status']==='function';
+  modal(`<div class="pays"><h3>Card payments aren’t switched on yet</h3><p class="muted small" style="margin:8px 0 12px">${st==='noworker'?'The Enivel Worker isn’t connected.':'The Enivel Worker has no PayFast details yet.'} To pay by card:</p>
+    <ol class="small" style="margin:0 0 14px;padding-left:20px;color:var(--fg2);display:grid;gap:6px"><li>Open a PayFast merchant account.</li><li>Add your PayFast details to the Enivel Worker (WORKER-SETUP.md → Card payments).</li><li>Put the Worker URL in Settings → Worker URL.</li></ol>
+    <div class="stack" style="gap:8px"><button class="btn wide" id="pays-s-man">Record as paid (EFT / other)</button>${status?'<button class="btn ghost wide" id="pays-s-st">Open System status</button>':'<button class="btn ghost wide" id="pays-s-set">Open Settings</button>'}<button class="btn ghost wide" id="pays-s-x">Close</button></div></div>`,mm=>{
+    $('#pays-s-man',mm).onclick=()=>paysManual(ids,kind);$('#pays-s-x',mm).onclick=closeModal;const st2=$('#pays-s-st',mm);if(st2)st2.onclick=()=>{closeModal();go('a-status')};const se=$('#pays-s-set',mm);if(se)se.onclick=()=>{closeModal();go('a-more')}})}
+async function paysPayCard(ids,kind='admin'){ids=[...new Set(ids||[])];if(!ids.length)return toast('Pick at least one family');const m=S.paysMonth||monthKey();
+  if(!S.cloud)return modal(`<div class="pays"><h3>Card payments work on the live site</h3><p class="muted small" style="margin:8px 0 16px">This copy keeps its data in this browser, so there’s no card checkout here. You can record a payment you made another way.</p><div class="stack" style="gap:8px"><button class="btn wide" id="pays-l-man">Record as paid (EFT / other)</button><button class="btn ghost wide" id="pays-l-x">Cancel</button></div></div>`,mm=>{$('#pays-l-man',mm).onclick=()=>paysManual(ids,kind);$('#pays-l-x',mm).onclick=closeModal});
+  const card=$('#pays-card');if(card){card.disabled=true}
+  const pf=await paysPfCheck(true);if(card)card.disabled=false;
+  if(pf.state!=='on')return paysSetupModal(ids,kind);
+  let it;try{const {data,error}=await sb.rpc('pay_intent_create',{p_parents:ids,p_month:m,p_kind:kind});if(error)throw error;it=data}catch(e){return toast(e.message||'Could not start the payment')}
+  auditLog('pays_card_start',it.id,`${money(it.amount)} · ${it.items.length} ${it.items.length===1?'family':'families'} · ${m}`);S.paysRecent=null;
+  let going=false;
+  const o=modal(`<div class="pays"><h3>Pay ${money(it.amount)} by card</h3><p class="muted small" style="margin-top:4px">${h(paysMonthLabel(m))} · checked by Enivel’s server</p>
+    <div class="fee" style="margin-top:12px">${it.items.map(f=>`<span>${h(f.name||'Parent')} <span class="tiny muted">${h((f.kidNames||[]).join(', '))}</span></span><b>${money(f.amount)}</b>`).join('')}<span class="tot">Total</span><b class="tot">${money(it.amount)}</b></div>
+    <div class="pays-lock">${ICON.lock}<span>You pay on PayFast’s secure page. Parents never see your card. Enivel never stores it.</span></div>
+    <div class="stack" style="gap:8px;margin-top:14px"><button class="btn wide" id="pays-go">${ICON.lock} Continue to PayFast</button><button class="btn ghost wide" id="pays-x">Cancel</button></div></div>`,mm=>{
+    const cancel=async()=>{if(going)return;closeModal();try{await sb.rpc('pay_intent_cancel',{p_id:it.id})}catch(e){}S.paysRecent=null;paysSoftRender()};
+    $('#pays-x',mm).onclick=cancel;mm.parentElement.addEventListener('click',e=>{if(e.target===mm.parentElement)cancel()});
+    $('#pays-go',mm).onclick=async e=>{const b=e.currentTarget;b.disabled=true;b.textContent='Opening PayFast…';going=true;try{await paysGoPayFast(it)}catch(err){going=false;b.disabled=false;b.innerHTML=ICON.lock+' Continue to PayFast';toast(err.message||'PayFast could not be reached')}}});
+  return o}
+/* full-page redirect to PayFast's hosted checkout; the card is typed there, never in Enivel */
+async function paysGoPayFast(it){const ep=otpEndpoint();const r=await fetch(ep+'/pay/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({intentId:it.id})});const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.action)throw new Error(j.error||('The Worker answered '+r.status));
+  if(!/^https:\/\/(www|sandbox)\.payfast\.co\.za\/eng\/process$/.test(j.action))throw new Error('Unexpected payment page');
+  ls.set('enivel_pays_pending',{id:it.id,at:Date.now()});
+  const f=document.createElement('form');f.method='POST';f.action=j.action;f.style.display='none';
+  for(const [k,v] of Object.entries(j.fields||{})){const i=document.createElement('input');i.type='hidden';i.name=k;i.value=String(v);f.appendChild(i)}
+  document.body.appendChild(f);f.submit();return true}
+function paysManual(ids,kind='admin'){ids=[...new Set(ids||[])];const m=S.paysMonth||monthKey();const fams=paysFamilies(m).filter(f=>ids.includes(f.u.id)&&f.due.length&&!f.blocked);if(!fams.length)return toast('Nothing to pay for these families');
+  const total=paysR2(fams.reduce((s,f)=>s+f.amount,0));
+  modal(`<div class="pays"><h3>Record ${money(total)} as paid</h3><p class="muted small" style="margin-top:6px">For money you paid another way (EFT, cash). No card is charged. Parents get the same “paid by Enivel admin” message.</p>
+    <div class="fee" style="margin-top:12px">${fams.map(f=>`<span>${h(f.u.name)}</span><b>${money(f.amount)}</b>`).join('')}<span class="tot">Total · ${h(paysMonthLabel(m))}</span><b class="tot">${money(total)}</b></div>
+    <div class="field" style="margin-top:12px"><label for="pays-note">Note (optional)</label><input id="pays-note" maxlength="200" placeholder="e.g. EFT ref 1234" autocomplete="off"></div>
+    <div class="stack" style="gap:8px;margin-top:14px"><button class="btn wide" id="pays-rec">Record as paid</button><button class="btn ghost wide" id="pays-cx">Cancel</button></div></div>`,mm=>{
+    $('#pays-cx',mm).onclick=closeModal;
+    $('#pays-rec',mm).onclick=async e=>{const b=e.currentTarget;b.disabled=true;b.textContent='Saving…';const note=($('#pays-note',mm).value||'').trim().slice(0,200);
+      try{let res;
+        if(S.cloud){const {data,error}=await sb.rpc('pay_record_manual',{p_parents:ids,p_month:m,p_note:note,p_kind:kind});if(error)throw error;res={id:data.id,amount:data.amount,families:data.applied?.families??data.items.length}}
+        else res=await paysApplyLocal(ids,m,kind,'manual',note);
+        auditLog('pays_manual',res.id,`${money(res.amount)} · ${res.families} ${res.families===1?'family':'families'} · ${m}${note?' · '+note:''}`);
+        closeModal();ids.forEach(id=>S.paysSel.delete(id));S.paysRecent=null;if(S.cloud&&typeof cloudPull==='function')await cloudPull(false);
+        render();confetti();buzz([20,40,20]);toast(`Paid · ${res.families} ${res.families===1?'family':'families'} notified`)}
+      catch(err){b.disabled=false;b.textContent='Record as paid';toast(err.message||'Could not record the payment')}}})}
+async function paysCancelIntent(id){if(!S.cloud)return;try{const {data,error}=await sb.rpc('pay_intent_cancel',{p_id:id});if(error)throw error;auditLog('pays_card_cancel',id,'Cancelled by admin');toast(data==='paid'?'Already paid, nothing to cancel':'Cancelled. Nothing was charged.')}catch(e){toast(e.message||'Could not cancel')}S.paysRecent=null;paysSoftRender()}
+async function paysLoadRecent(){if(!S.cloud||typeof sb==='undefined'||!sb||!S.admin)return;const c=S.paysRecent=S.paysRecent||{};if(c.loading)return;c.loading=true;
+  try{const [a,b]=await Promise.all([sb.rpc('pay_intents_list',{p_limit:12}),sb.rpc('pays_draws_list',{p_limit:8})]);if(a.error)throw a.error;if(b.error)throw b.error;c.list=a.data||[];c.draws=b.data||[];c.err=null}
+  catch(e){c.err=e.message||String(e)}finally{c.loading=false;c.at=Date.now();if(S.route==='a-pays')paysSoftRender()}}
+/* history shown on a-pays: server list on the live site; local payments are grouped from the transactions */
+function paysHistory(){if(S.cloud)return {list:S.paysRecent?.list||null,draws:S.paysRecent?.draws||null};
+  const g={};for(const t of Store.all('transactions')){if(t.paidBy!=='admin'||!t.intentId)continue;const x=g[t.intentId]=g[t.intentId]||{id:t.intentId,amount:0,status:'paid',method:t.method,month:t.month,createdAt:t.ts,paidAt:t.ts,names:[]};x.amount=paysR2(x.amount+(Number(t.amount)||0));const n=userName(t.parentId);if(t.parentId&&!x.names.includes(n))x.names.push(n)}
+  return {list:Object.values(g).sort((a,b)=>b.createdAt-a.createdAt).slice(0,12),draws:(Store.get('settings','paysDraws')?.list||[]).slice(0,8)}}
+
+/* ---------- Enivel Pays draw ---------- */
+async function paysDraw(){const m=S.paysMonth||monthKey();const pool=paysEligible(m);if(!pool.length)return toast(`No families left to draw for ${paysMonthLabel(m)}`);
+  const win=pool[paysRandInt(pool.length)];let rec;
+  try{if(S.cloud){const {data,error}=await sb.rpc('pays_draw_record',{p_month:m,p_winner:win.u.id});if(error)throw error;rec=data}
+    else{rec={id:'dr'+uid(),month:m,winnerId:win.u.id,eligible:pool.length,at:Date.now()};const cur=Store.get('settings','paysDraws')?.list||[];await Store.put('settings','paysDraws',{list:[rec,...cur].slice(0,60)})}}
+  catch(e){return toast(e.message||'The draw did not work. Try again.')}
+  auditLog('pays_draw',rec.id,`${paysMonthLabel(m)} · picked 1 of ${rec.eligible} eligible families`);S.paysRecent=null;S.paysLastDraw={id:rec.id,winnerId:win.u.id,month:m,eligible:rec.eligible};
+  const names=pool.map(f=>paysFirst(f.u.name));
+  modal(`<div class="pays pays-draw"><div class="eyebrow">Enivel Pays · ${h(paysMonthLabel(m))}</div><div class="pays-reel"><b id="pays-reel-n">${h(names[0])}</b></div>
+    <p class="small muted" id="pays-draw-sub">Drawing from ${pool.length} ${pool.length===1?'family':'families'}…</p><div id="pays-draw-out"></div></div>`,mm=>{
+    const el=$('#pays-reel-n',mm),reel=$('.pays-reel',mm);const t0=performance.now();let delay=55;const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+    const finish=()=>{if(!document.body.contains(el))return;el.textContent=paysFirst(win.u.name);reel.classList.add('win');el.classList.remove('t');confetti();buzz([20,40,20]);
+      const canCard=S.cloud;
+      $('#pays-draw-sub',mm).innerHTML=`<b style="color:var(--fg)">${h(win.u.name)}</b> · ${h(win.kids.join(', ')||'')}<br>${win.due.length} ${win.due.length===1?'child':'children'} · ${money(win.amount)} for ${h(paysMonthName(m))}`;
+      $('#pays-draw-out',mm).innerHTML=`<div class="stack pays-win" style="gap:8px;margin-top:14px">${canCard?`<button class="btn wide" id="pays-d-card">${ICON.lock} Pay ${money(win.amount)} by card</button>`:''}<button class="btn ${canCard?'ghost ':''}wide" id="pays-d-man">Record as paid (EFT / other)</button><button class="btn ghost wide" id="pays-d-x">Later</button></div>`;
+      const c=$('#pays-d-card',mm);if(c)c.onclick=()=>{closeModal();paysPayCard([win.u.id],'draw')};$('#pays-d-man',mm).onclick=()=>paysManual([win.u.id],'draw');$('#pays-d-x',mm).onclick=()=>{closeModal();paysSoftRender()}};
+    const step=()=>{if(!document.body.contains(el))return;if(reduce||performance.now()-t0>2600)return finish();el.textContent=names[paysRandInt(names.length)];el.classList.remove('t');void el.offsetWidth;el.classList.add('t');delay=Math.min(delay*1.1,320);setTimeout(step,delay)};
+    setTimeout(step,delay)})}
+
+/* ---------- share cards (drawn on a canvas in the browser, no outside services) ---------- */
+function paysCanvas(w,hh){const c=document.createElement('canvas');c.width=w;c.height=hh;return c}
+function paysFont(x,weight,px){x.font=`${weight} ${px}px ${PAYS_FONT}`}
+function paysFit(x,text,weight,maxPx,maxW,minPx=24){let px=maxPx;for(;px>minPx;px-=4){paysFont(x,weight,px);if(x.measureText(text).width<=maxW)break}paysFont(x,weight,px);return px}
+function paysWrap(x,text,maxW){const words=String(text).split(/\s+/).filter(Boolean);const lines=[];let cur='';for(const w of words){const t=cur?cur+' '+w:w;if(cur&&x.measureText(t).width>maxW){lines.push(cur);cur=w}else cur=t}if(cur)lines.push(cur);return lines}
+function paysSpacing(x,px){try{if('letterSpacing' in x)x.letterSpacing=px+'px'}catch(e){}}
+function paysRound(x,X,Y,w,hh,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+hh,r);x.arcTo(X+w,Y+hh,X,Y+hh,r);x.arcTo(X,Y+hh,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath()}
+function paysBrandBg(x,w,hh){const g=x.createLinearGradient(0,0,w,hh);g.addColorStop(0,'#3b2fd1');g.addColorStop(.55,'#6d5dfc');g.addColorStop(1,'#0e7490');x.fillStyle=g;x.fillRect(0,0,w,hh);
+  const blob=(cx,cy,r,col)=>{const rg=x.createRadialGradient(cx,cy,0,cx,cy,r);rg.addColorStop(0,col);rg.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=rg;x.fillRect(0,0,w,hh)};
+  blob(w*.95,hh*.05,w*.75,'rgba(34,211,238,.55)');blob(w*.02,hh*.98,w*.85,'rgba(245,158,11,.30)');blob(w*.5,hh*.45,w*.5,'rgba(255,255,255,.06)')}
+function paysGift(x,cx,cy,s,col){x.save();x.strokeStyle=col;x.lineWidth=s*.09;x.lineJoin='round';x.lineCap='round';const w=s,hh=s*.78;x.strokeRect(cx-w/2,cy-hh*.25,w,hh*.75);x.strokeRect(cx-w*.58,cy-hh*.5,w*1.16,hh*.27);x.beginPath();x.moveTo(cx,cy-hh*.5);x.lineTo(cx,cy+hh*.5);x.stroke();
+  x.beginPath();x.moveTo(cx,cy-hh*.5);x.bezierCurveTo(cx-s*.5,cy-hh*1.15,cx-s*.62,cy-hh*.45,cx,cy-hh*.5);x.moveTo(cx,cy-hh*.5);x.bezierCurveTo(cx+s*.5,cy-hh*1.15,cx+s*.62,cy-hh*.45,cx,cy-hh*.5);x.stroke();x.restore()}
+function paysDomain(){return paysPublicUrl().replace(/^https?:\/\//,'')}
+/* TikTok / Instagram card with the real monthly number: fmt 'story' 1080×1920 or 'square' 1080×1080 */
+function paysTikTokCanvas(fmt,st){const W=1080,H=fmt==='square'?1080:1920;const c=paysCanvas(W,H);const x=c.getContext('2d');paysBrandBg(x,W,H);x.textAlign='center';x.textBaseline='alphabetic';x.fillStyle='#fff';
+  const kidsWord=st.kids===1?'kid':'kids';const line=`had their school transport paid by Enivel in ${st.label}`;const stats=[`${st.families} ${st.families===1?'family':'families'}`,`${money(st.total)} covered`];
+  const pill=(cx,cy,text,px)=>{paysFont(x,800,px);paysSpacing(x,px*.12);const tw=x.measureText(text).width+px*1.6;x.fillStyle='rgba(255,255,255,.18)';paysRound(x,cx-tw/2,cy-px*1.05,tw,px*1.6,px*.8);x.fill();x.fillStyle='#fff';x.fillText(text,cx,cy);paysSpacing(x,0)};
+  if(fmt==='square'){paysFont(x,800,84);paysSpacing(x,-3);x.fillText('Enivel',W/2,150);paysSpacing(x,0);pill(W/2,250,'ENIVEL PAYS',34);
+    paysFit(x,String(st.kids),800,330,900);paysSpacing(x,-8);x.fillText(String(st.kids),W/2,610);paysSpacing(x,0);paysFont(x,800,92);x.fillText(kidsWord,W/2,710);
+    paysFont(x,600,44);x.fillStyle='rgba(255,255,255,.92)';paysWrap(x,line,880).slice(0,2).forEach((l,i)=>x.fillText(l,W/2,800+i*56));
+    paysFont(x,700,38);x.fillStyle='#fff';x.fillText(stats.join('  ·  '),W/2,940);paysFont(x,600,32);x.fillStyle='rgba(255,255,255,.8)';x.fillText(paysDomain(),W/2,1020)}
+  else{paysFont(x,800,110);paysSpacing(x,-4);x.fillText('Enivel',W/2,230);paysSpacing(x,0);pill(W/2,350,'ENIVEL PAYS',42);
+    paysFont(x,700,64);x.fillStyle='rgba(255,255,255,.9)';x.fillText(`This month we paid for`,W/2,600);x.fillStyle='#fff';
+    paysFit(x,String(st.kids),800,460,940);paysSpacing(x,-12);x.fillText(String(st.kids),W/2,1010);paysSpacing(x,0);paysFont(x,800,130);x.fillText(kidsWord,W/2,1160);
+    paysFont(x,600,58);x.fillStyle='rgba(255,255,255,.92)';paysWrap(x,line,900).slice(0,3).forEach((l,i)=>x.fillText(l,W/2,1290+i*74));
+    stats.forEach((s,i)=>{const bw=440,bx=W/2-bw-10+i*(bw+20),by=1500;x.fillStyle='rgba(255,255,255,.16)';paysRound(x,bx,by,bw,120,36);x.fill();x.fillStyle='#fff';paysFit(x,s,700,52,bw-40);x.fillText(s,bx+bw/2,by+78)});
+    paysFont(x,700,44);x.fillStyle='#fff';x.fillText('See the Enivel Pays wall',W/2,1755);paysFont(x,600,38);x.fillStyle='rgba(255,255,255,.82)';paysFit(x,paysDomain(),600,38,960);x.fillText(paysDomain(),W/2,1815)}
+  return c}
+/* parent's certificate share card, 1080×1920 */
+function paysCertCanvas(cert){const W=1080,H=1920;const c=paysCanvas(W,H);const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,'#0b0b14');g.addColorStop(.6,'#1c1b2e');g.addColorStop(1,'#0e2a33');x.fillStyle=g;x.fillRect(0,0,W,H);
+  const glow=(cx,cy,r,col)=>{const rg=x.createRadialGradient(cx,cy,0,cx,cy,r);rg.addColorStop(0,col);rg.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=rg;x.fillRect(0,0,W,H)};glow(W*.9,H*.08,700,'rgba(109,93,252,.45)');glow(W*.1,H*.92,700,'rgba(34,211,238,.28)');
+  const fg=x.createLinearGradient(0,0,W,H);fg.addColorStop(0,'#6d5dfc');fg.addColorStop(.55,'#22d3ee');fg.addColorStop(1,'#f59e0b');x.strokeStyle=fg;x.lineWidth=8;paysRound(x,56,56,W-112,H-112,48);x.stroke();
+  x.textAlign='center';x.textBaseline='alphabetic';x.fillStyle='#fff';paysFont(x,800,96);paysSpacing(x,-3);x.fillText('Enivel',W/2,250);paysSpacing(x,0);
+  paysFont(x,800,36);paysSpacing(x,8);x.fillStyle='#a5b4fc';x.fillText('ENIVEL PAYS · CERTIFICATE',W/2,330);paysSpacing(x,0);
+  const sg=x.createLinearGradient(W/2-150,470,W/2+150,770);sg.addColorStop(0,'#6d5dfc');sg.addColorStop(1,'#22d3ee');x.fillStyle=sg;x.beginPath();x.arc(W/2,620,150,0,Math.PI*2);x.fill();
+  x.strokeStyle='rgba(255,255,255,.35)';x.lineWidth=4;x.beginPath();x.arc(W/2,620,172,0,Math.PI*2);x.stroke();paysGift(x,W/2,640,150,'#fff');
+  const ml=paysMonthLabel(cert.month);const mg=x.createLinearGradient(200,0,880,0);mg.addColorStop(0,'#c4b5fd');mg.addColorStop(1,'#67e8f9');x.fillStyle=mg;paysFit(x,ml,800,96,900);x.fillText(ml,W/2,930);
+  x.fillStyle='#fff';const head=`${paysPossessive(cert.kids)} school transport is on us`;let px=96,lines=[];for(;;){paysFont(x,800,px);lines=paysWrap(x,head,880);if(lines.length<=4||px<=56)break;px-=6}
+  lines.slice(0,5).forEach((l,i)=>x.fillText(l,W/2,1080+i*px*1.15));
+  const y0=1080+Math.min(lines.length,5)*px*1.15+90;
+  x.fillStyle='rgba(255,255,255,.1)';paysRound(x,140,y0,W-280,250,36);x.fill();
+  paysFont(x,700,30);paysSpacing(x,6);x.fillStyle='rgba(255,255,255,.6)';x.fillText('CERTIFICATE NUMBER',W/2,y0+70);paysSpacing(x,0);
+  x.fillStyle='#fff';x.font=`700 62px ui-monospace,SFMono-Regular,Menlo,monospace`;x.fillText(cert.no,W/2,y0+150);
+  paysFont(x,600,34);x.fillStyle='rgba(255,255,255,.75)';x.fillText(`Issued by Enivel · ${new Date(cert.at).toLocaleDateString('en-ZA',{day:'numeric',month:'long',year:'numeric'})}`,W/2,y0+210);
+  paysFont(x,700,40);x.fillStyle='#fff';x.fillText('Safe scholar transport',W/2,H-190);paysFont(x,600,34);x.fillStyle='rgba(255,255,255,.7)';paysFit(x,paysDomain(),600,34,900);x.fillText(paysDomain(),W/2,H-135);
+  return c}
+async function paysFontsReady(){try{if(document.fonts&&document.fonts.ready)await Promise.race([document.fonts.ready,new Promise(r=>setTimeout(r,800))])}catch(e){}}
+function paysBlob(c){return new Promise(r=>c.toBlob(b=>r(b),'image/png'))}
+async function paysShareCanvas(c,name,title,text){const blob=await paysBlob(c);if(!blob||!blob.size){toast('Could not make the image');return 'failed'}const file=new File([blob],name,{type:'image/png'});
+  try{if(navigator.canShare&&navigator.share&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title,text});return 'shared'}}catch(e){if(e&&e.name==='AbortError')return 'cancelled'}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast('Image saved to your downloads');return 'downloaded'}
+async function paysShareCert(month){const u=me();if(!u)return;const cert=paysCertsOf(u.id).find(c=>c.month===month);if(!cert)return toast('Certificate not found');await paysFontsReady();
+  return paysShareCanvas(paysCertCanvas(cert),`enivel-pays-${cert.month}.png`,'Enivel Pays',`${paysPossessive(cert.kids)} school transport for ${paysMonthLabel(cert.month)} is on Enivel 🎁 ${paysPublicUrl()}`)}
+async function paysTikTok(){const m=monthKey();const st=paysStats(m)||paysStatsLocal(m);await paysFontsReady();let fmt='story';
+  const draw=mm=>{const img=$('#pays-tt-img',mm);img.src=paysTikTokCanvas(fmt,st).toDataURL('image/png');mm.querySelectorAll('[data-fmt]').forEach(b=>b.classList.toggle('on',b.dataset.fmt===fmt))};
+  modal(`<div class="pays"><h3>TikTok card</h3><p class="muted small" style="margin-top:4px">Real numbers for ${h(st.label)}: ${st.kids} ${st.kids===1?'kid':'kids'}, ${st.families} ${st.families===1?'family':'families'}.</p>
+    <div class="seg" style="margin-top:12px;display:flex"><button data-fmt="story" style="flex:1;min-height:44px">Story 9:16</button><button data-fmt="square" style="flex:1;min-height:44px">Square 1:1</button></div>
+    <div class="pays-preview"><img id="pays-tt-img" alt="Enivel Pays card"></div>
+    <div class="row" style="gap:8px"><button class="btn" id="pays-tt-share" style="flex:1">${PAYS_SHARE} Share</button><button class="btn ghost" id="pays-tt-x" style="flex:1">Close</button></div></div>`,mm=>{
+    mm.querySelectorAll('[data-fmt]').forEach(b=>b.onclick=()=>{fmt=b.dataset.fmt;draw(mm)});draw(mm);$('#pays-tt-x',mm).onclick=closeModal;
+    $('#pays-tt-share',mm).onclick=()=>paysShareCanvas(paysTikTokCanvas(fmt,st),`enivel-pays-${m}-${fmt}.png`,'Enivel Pays',`Enivel paid for ${st.kids} ${st.kids===1?'kid':'kids'} this month 🎁 ${paysPublicUrl()}`)})}
+
+/* ---------- views ---------- */
+MOUNT.paysCount=el=>{const n=Number(el.dataset.count)||0;const key=el.dataset.key||'';S.paysCounted=S.paysCounted||{};if(S.paysCounted[key]===n||matchMedia('(prefers-reduced-motion:reduce)').matches){el.textContent=n;S.paysCounted[key]=n;return}S.paysCounted[key]=n;const t0=performance.now(),d=900;const f=t=>{const k=Math.min(1,(t-t0)/d);el.textContent=Math.round(n*(1-Math.pow(1-k,3)));if(k<1&&document.body.contains(el))requestAnimationFrame(f)};requestAnimationFrame(f)};
+MOUNT.paysAdmin=el=>{const root=el.closest('.pays')||document;const q=$('#pays-q',root);
+  const apply=()=>{const v=((q&&q.value)||'').trim().toLowerCase();S.paysQ=q?q.value:'';let shown=0;el.querySelectorAll('.pays-fam').forEach(r=>{const hit=!v||(r.dataset.q||'').includes(v);r.style.display=hit?'':'none';if(hit)shown++});const nm=$('#pays-nomatch',root);if(nm)nm.style.display=(v&&!shown)?'':'none'};
+  if(q){q.oninput=apply;apply()}
+  el.querySelectorAll('.pays-fam input').forEach(inp=>inp.onchange=()=>{const row=inp.closest('.pays-fam');const id=row.dataset.pid;if(inp.checked)S.paysSel.add(id);else S.paysSel.delete(id);row.classList.toggle('on',inp.checked);buzz(8);paysSyncBar()});
+  const all=$('#pays-all',root);if(all)all.onclick=()=>{const rows=[...el.querySelectorAll('.pays-fam:not(.off)')].filter(r=>r.style.display!=='none');const every=rows.length&&rows.every(r=>S.paysSel.has(r.dataset.pid));rows.forEach(r=>{const inp=$('input',r);if(every)S.paysSel.delete(r.dataset.pid);else S.paysSel.add(r.dataset.pid);inp.checked=!every;r.classList.toggle('on',!every)});paysSyncBar()};
+  const card=$('#pays-card',root);if(card)card.onclick=()=>paysPayCard([...S.paysSel]);const man=$('#pays-manual',root);if(man)man.onclick=()=>paysManual([...S.paysSel]);
+  root.querySelectorAll('[data-pays-check]').forEach(b=>b.onclick=()=>{S.paysCheck={id:b.dataset.paysCheck,n:0,state:'checking'};go('a-paycheck')});
+  root.querySelectorAll('[data-pays-cancel]').forEach(b=>b.onclick=()=>paysCancelIntent(b.dataset.paysCancel));
+  paysSyncBar();if(S.cloud){paysPfCheck(false);if(!S.paysRecent||(!S.paysRecent.loading&&Date.now()-(S.paysRecent.at||0)>30000))paysLoadRecent()}};
+VIEWS['a-pays']=adminGate(()=>{const m=[monthKey(),paysNextMonth()].includes(S.paysMonth)?S.paysMonth:monthKey();S.paysMonth=m;const fams=paysFamilies(m);const st=paysStatsLocal(monthKey());const pf=paysPfState();
+  const payable=new Set(fams.filter(f=>f.due.length&&!f.blocked).map(f=>f.u.id));for(const id of [...S.paysSel])if(!payable.has(id))S.paysSel.delete(id);
+  const pill=f=>f.blocked?`<span class="pill warn">${f.u.banned?'Banned':'Suspended'}</span>`:f.status==='covered'?'<span class="pill live">🎁 Covered</span>':f.status==='paid'?'<span class="pill">Paid</span>':f.status==='partial'?'<span class="pill info">Part covered</span>':'';
+  const row=f=>{const can=f.due.length&&!f.blocked;const on=can&&S.paysSel.has(f.u.id);const p=pill(f);
+    return `<label class="pays-fam${on?' on':''}${can?'':' off'}" data-pid="${h(f.u.id)}" data-q="${h((f.u.name+' '+f.kids.join(' ')).toLowerCase())}"><input type="checkbox"${on?' checked':''}${can?'':' disabled'} aria-label="${h(f.u.name)}"><span class="tick">${ICON.check}</span><span class="avatar">${h(initials(f.u.name))}</span><span class="grow"><span class="nm">${h(f.u.name)}</span><span class="kd">${h(f.kids.join(', ')||'No children listed')}</span></span><span class="amt">${can?`<span>${money(f.amount)}</span>`:''}${p}</span></label>`};
+  const hist=paysHistory();const stPill=s=>s==='paid'?'<span class="pill live">Paid</span>':s==='pending'?'<span class="pill warn">Waiting</span>':'<span class="pill">Cancelled</span>';
+  const histList=hist.list===null?`<p class="small muted" style="margin-top:8px">${S.paysRecent?.err?'Could not load: '+h(S.paysRecent.err):'Loading…'}</p>`:hist.list.length?`<div class="list pays-hist" style="margin-top:6px">${hist.list.map(x=>{const nm=(x.names||[]).filter(Boolean);return `<div class="item"><div class="grow"><div><b>${money(x.amount)}</b> · ${h(nm.slice(0,2).join(', '))}${nm.length>2?` +${nm.length-2}`:''}</div><div class="tiny muted">${x.method==='manual'?'Recorded (EFT / other)':'Card · PayFast'}${x.kind==='draw'?' · draw':''} · ${h(paysMonthLabel(x.month))} · ${fmtDT(x.paidAt||x.createdAt)}</div></div>${x.status==='pending'?`<button class="btn sm ghost" data-pays-check="${h(x.id)}">Check</button><button class="btn sm ghost" data-pays-cancel="${h(x.id)}" aria-label="Cancel payment">${ICON.x}</button>`:stPill(x.status)}</div>`}).join('')}</div>`:'<p class="small muted" style="margin-top:8px">No payments yet.</p>';
+  const drawList=hist.draws===null?'<p class="small muted" style="margin-top:8px">Loading…</p>':hist.draws.length?`<div class="list pays-hist" style="margin-top:6px">${hist.draws.map(d=>`<div class="item"><span class="avatar sm">${h(initials(userName(d.winnerId)))}</span><div class="grow"><div><b>${h(userName(d.winnerId))}</b></div><div class="tiny muted">${h(paysMonthLabel(d.month))} · 1 of ${Number(d.eligible)||0} · ${fmtDT(d.at)}</div></div>${fams.some(f=>f.u.id===d.winnerId&&f.status==='covered')||Store.all('bookings').some(b=>b.parentId===d.winnerId&&paysCovered(b,d.month))?'<span class="pill live">Paid</span>':''}</div>`).join('')}</div>`:'<p class="small muted" style="margin-top:8px">No draws yet. Tap “Draw a family”.</p>';
+  const sel=paysSelected(m);const total=paysR2(sel.reduce((s,f)=>s+f.amount,0));
+  return `<div class="pays">${pageHead('Enivel Pays','Pay parents’ school transport',`<button class="btn sm ghost" onclick="go('pays')">${ICON.eye} Public wall</button>`)}
+  <div class="pays-hero"><div class="eyebrow">${h(paysMonthLabel(monthKey()))}</div><div class="lead" style="margin-top:6px">Enivel paid for</div><div class="big"><span data-mount="paysCount" data-key="admin" data-count="${st.kids}">${st.kids}</span> <span style="font-size:.42em;letter-spacing:-.02em">${st.kids===1?'kid':'kids'}</span></div><div class="lead">this month</div>
+    <div class="pays-chips"><span>${st.families} ${st.families===1?'family':'families'}</span><span>${money(st.total)} covered</span></div>
+    <div class="acts"><button class="btn" onclick="paysDraw()">${PAYS_DICE} Draw a family</button><button class="btn glass" onclick="paysTikTok()">${PAYS_SHARE} TikTok card</button></div></div>
+  <div class="card" style="margin-top:14px"><div class="row between" style="gap:10px"><h3>Pay for parents</h3><div class="seg"><button class="${m===monthKey()?'on':''}" onclick="S.paysMonth='${monthKey()}';S.paysSel.clear();render()">${h(paysMonthName(monthKey()))}</button><button class="${m!==monthKey()?'on':''}" onclick="S.paysMonth='${paysNextMonth()}';S.paysSel.clear();render()">${h(paysMonthName(paysNextMonth()))}</button></div></div>
+    <p class="small muted" style="margin-top:4px">Pick families. Each shows what’s still due for ${h(paysMonthName(m))} (transport + 2% fee).</p>
+    ${fams.length?`<div class="row" style="margin-top:12px;gap:8px;flex-wrap:nowrap"><input id="pays-q" type="search" placeholder="Search parent or child" autocomplete="off" value="${h(S.paysQ||'')}" style="flex:1;min-width:0;padding:12px 14px;border-radius:14px;border:1px solid transparent;background:var(--bg2);outline:none;min-height:44px"><button class="btn ghost sm" id="pays-all" type="button">All due</button></div>
+    <div class="pays-list" style="margin-top:12px" data-mount="paysAdmin">${fams.map(row).join('')}</div><p class="small muted" id="pays-nomatch" style="display:none;margin-top:10px">No family matches that search.</p>`:`<div data-mount="paysAdmin">${empty('No parents with active transport yet.','users')}</div>`}
+    <div class="pays-bar"><div class="sum"><b id="pays-sum">${money(total)}</b><div class="tiny muted" id="pays-cnt">Pick families above</div></div>
+      ${S.cloud?`<button class="btn" id="pays-card"${sel.length?'':' disabled'}>${ICON.lock} Pay <span data-pays-total>${money(total)}</span> by card</button>`:''}<button class="btn ${S.cloud?'ghost':''}" id="pays-manual"${sel.length?'':' disabled'}>Record as paid (EFT / other)</button></div>
+    <div class="pays-lock">${ICON.lock}<span>${S.cloud?`You pay on PayFast’s secure page. Parents never see your card. Enivel never stores it.${pf==='off'||pf==='noworker'?' <b>Card payments aren’t set up yet.</b>':''}`:'Card payments work on the live site. Here you can record a payment you made another way.'}</span></div></div>
+  <div class="grid g2" style="margin-top:14px"><div class="card"><h3>Recent payments</h3>${histList}</div><div class="card"><h3>Draws</h3>${drawList}</div></div></div>`});
+MOUNT.paysCheck=el=>{const c=S.paysCheck;if(c&&c.state==='checking'&&!c.timer&&!c.busy)c.timer=setTimeout(paysPoll,500)};
+async function paysPoll(){const c=S.paysCheck;if(!c||c.state!=='checking'||c.busy)return;c.timer=null;c.busy=true;c.n=(c.n||0)+1;
+  try{const {data,error}=await sb.rpc('pay_intent_status',{p_id:c.id});if(error)throw error;c.data=data;c.err=null;
+    if(!data)c.state='missing';else if(data.status==='paid'){c.state='paid';ls.set('enivel_pays_pending',null);S.paysRecent=null;if(typeof cloudPull==='function')await cloudPull(false)}else if(data.status==='cancelled')c.state='cancelled'}
+  catch(e){c.err=e.message||String(e)}
+  c.busy=false;if(c.state==='checking'){if(c.n>=36)c.state='timeout';else c.timer=setTimeout(paysPoll,2500)}
+  if(S.route==='a-paycheck'){render();if(c.state==='paid'&&!c.party){c.party=true;confetti();buzz([20,40,20])}}}
+VIEWS['a-paycheck']=adminGate(()=>{const c=S.paysCheck;if(!c)return `<div class="pays">${pageHead('Payment')}${empty('No payment to check.','money')}<button class="btn wide" onclick="go('a-pays')">Back to Enivel Pays</button></div>`;
+  const d=c.data;const fams=(d?.items||[]).map(f=>f.name).filter(Boolean);
+  const body=c.state==='paid'?`<div class="pays-done">${ICON.check}</div><h2>Paid!</h2><p class="muted">${money(d.amount)} · ${fams.length} ${fams.length===1?'family':'families'} told it’s paid by Enivel admin.</p>${fams.length?`<p class="small" style="max-width:420px">${h(fams.join(', '))}</p>`:''}`
+    :c.state==='cancelled'?`<div class="pays-done" style="background:var(--bg3);color:var(--fg)">${ICON.x}</div><h2>Cancelled</h2><p class="muted">Nothing was charged.</p>`
+    :c.state==='missing'?`<h2>Payment not found</h2><p class="muted small">It may belong to another admin session.</p>`
+    :c.state==='timeout'?`<div class="pays-done" style="background:var(--warn)">${ICON.bell}</div><h2>Still waiting for PayFast</h2><p class="muted small" style="max-width:420px">If you paid, it turns to Paid under Recent payments as soon as PayFast confirms. Parents are told then.</p><button class="btn" onclick="S.paysCheck.state='checking';S.paysCheck.n=0;render()">Check again</button>`
+    :`<div class="pays-ring" aria-hidden="true"></div><h2>Checking your payment…</h2><p class="muted small">Waiting for PayFast to confirm. Usually a few seconds.</p>${d?`<p class="small"><b>${money(d.amount)}</b> · ${h(paysMonthLabel(d.month))}</p>`:''}`;
+  return `<div class="pays">${pageHead('Enivel Pays','Card payment')}<div class="card"><div class="pays-check" data-mount="paysCheck">${body}</div></div><button class="btn ghost wide" style="margin-top:14px" onclick="go('a-pays')">Back to Enivel Pays</button></div>`});
+MOUNT.paysCert=el=>{el.querySelectorAll('[data-pays-share]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await paysShareCert(b.dataset.paysShare)}finally{b.disabled=false}});const w=$('#pays-wall',el);if(w)w.onchange=()=>paysSetWall(w.checked)};
+VIEWS['p-cert']=()=>{const u=me();if(!u)return VIEWS.login();const certs=paysCertsOf(u.id);
+  const card=c=>`<div class="pays-cert"><div class="row between" style="align-items:flex-start;flex-wrap:nowrap"><span class="seal">${ICON.gift}</span><span class="pill live">${c.kind==='draw'?'🎉 Draw winner':'Paid by Enivel'}</span></div>
+    <div class="eyebrow" style="margin-top:12px">Enivel Pays · ${h(paysMonthLabel(c.month))}</div><h3>${h(paysPossessive(c.kids))} school transport is on us</h3>
+    <div class="meta"><span>Certificate <span class="no">${h(c.no)}</span></span><span>${h(new Date(c.at).toLocaleDateString('en-ZA',{day:'numeric',month:'long',year:'numeric'}))}</span><span>Issued by Enivel</span></div>
+    <button class="btn" style="margin-top:16px" data-pays-share="${h(c.month)}">${PAYS_SHARE} Share</button></div>`;
+  return `<div class="pays" data-mount="paysCert">${pageHead('Enivel Pays','Months Enivel paid for you')}
+  ${certs.length?`<div class="stack">${certs.map(card).join('')}</div>`:`<div class="card">${empty('No covered months yet. Each month Enivel Pays picks families at random and pays their transport.','gift')}</div>`}
+  <div class="card" style="margin-top:14px"><label class="pays-opt"><span class="grow"><b>Show my first name on the public Enivel Pays wall</b><span class="tiny muted" style="display:block;margin-top:4px">Shows “${h(paysWallName(u.name))}” only. Never your children. Off unless you switch it on.</span></span><span class="switch"><input id="pays-wall" type="checkbox"${u.paysWall===true?' checked':''}><i></i></span></label>
+  <button class="btn ghost wide" style="margin-top:12px" onclick="go('pays')">See the Enivel Pays wall</button></div></div>`};
+VIEWS.pays=()=>{const months=paysLastMonths(6);const m=months.includes(S.paysPubMonth)?S.paysPubMonth:monthKey();const st=paysStats(m);const cur=m===monthKey();const c=S.paysPub?.[m];
+  const hero=st?`<div class="lead">Enivel paid for</div><div class="big" data-mount="paysCount" data-key="pub-${m}" data-count="${Number(st.kids)||0}">${Number(st.kids)||0}</div><div class="lead">${st.kids===1?'kid':'kids'} ${cur?'this month':'in '+h(paysMonthName(m))}</div>
+    <div class="pays-chips"><span>${Number(st.families)||0} ${st.families===1?'family':'families'}</span><span>${money(st.total)} of school transport</span></div>`
+    :c?.err?`<p style="margin:16px 0 6px;font-weight:600">The numbers can’t load right now.</p><button class="btn" onclick="S.paysPub=null;render()">Try again</button>`:`<div class="pays-skel" style="height:4rem;max-width:120px"></div><div class="pays-skel"></div>`;
+  return `<div class="pays pays-pub"><div class="pays-hero"><div class="pays-brand">${ICON.gift}<span>Enivel Pays</span></div><div style="margin-top:14px">${hero}</div></div>
+  <div class="seg pays-months" role="tablist" aria-label="Month">${months.map(x=>`<button role="tab" class="${x===m?'on':''}" aria-selected="${x===m}" onclick="S.paysPubMonth='${x}';render()">${h(paysMonthShort(x))}</button>`).join('')}</div>
+  <div class="card"><div class="row between"><h3>The wall</h3><span class="tiny muted">${h(paysMonthLabel(m))}</span></div>${st&&st.wall&&st.wall.length?`<div class="pays-wall">${st.wall.map(n=>`<span>${h(n)}</span>`).join('')}</div>`:`<p class="small muted" style="margin-top:8px">${st&&st.families?'Families choose whether their first name shows here.':'No families yet for this month.'}</p>`}</div>
+  <div class="card soft"><h3>How it works</h3><p class="small muted" style="margin-top:6px">Every month Enivel picks families at random and pays their school transport. They get a certificate in the app.</p>${me()?'':`<button class="btn wide" style="margin-top:12px" onclick="go('landing',{authMode:'signup'})">Join Enivel</button>`}</div></div>`};
+
+/* ---------- hooks into existing screens ---------- */
+const _paysPhome=VIEWS['p-home'];VIEWS['p-home']=()=>{const html=_paysPhome();try{const u=me();if(!u)return html;const m=monthKey();const mine=Store.all('bookings').filter(b=>b.parentId===u.id&&paysCovered(b,m));if(!mine.length)return html;
+  const kids=[...new Set(mine.map(b=>Store.get('kids',b.kidId)?.name).filter(Boolean))];
+  const card=`<button class="pays-homecard" onclick="go('p-cert')"><span class="ic">${ICON.gift}</span><span class="grow"><b>Enivel paid your transport for ${h(paysMonthName(m))}</b><span>${h(kids.join(', '))}${kids.length?' · ':''}nothing to pay this month</span></span><span class="go">Certificate ›</span></button>`;
+  const i=html.indexOf('class="searchbar"');const j=i>=0?html.indexOf('</form></div>',i):-1;return j>=0?html.slice(0,j+13)+card+html.slice(j+13):card+html}catch(e){return html}};
+const _paysPmore=VIEWS['p-more'];VIEWS['p-more']=()=>{const html=_paysPmore();try{const u=me();if(!u||viewRole()!=='parent')return html;const n=paysCertsOf(u.id).length;if(!n)return html;
+  return html+`<button class="pays-homecard" style="margin-top:14px" onclick="go('p-cert')"><span class="ic">${ICON.gift}</span><span class="grow"><b>Enivel Pays certificates</b><span>${n} ${n===1?'month':'months'} paid by Enivel</span></span><span class="go">Open ›</span></button>`}catch(e){return html}};
+/* Settings → Pages list gets "Enivel Pays" */
+const _paysAmore=VIEWS['a-more'];VIEWS['a-more']=()=>{const html=_paysAmore();if(!S.admin)return html;const item=`<div class="item" style="cursor:pointer" onclick="go('a-pays')"><div class="grow">🎁 Enivel Pays · pay for parents</div>›</div>`;
+  const k='<h3>Pages</h3><div class="list" style="margin-top:6px">';if(html.includes(k))return html.replace(k,k+item);
+  return `<div class="card" style="margin-bottom:14px"><div class="list">${item}</div></div>`+html};
+/* Accounts: the per-parent gift button opens Pay for parents with that parent picked (sponsor() itself is unchanged) */
+const _paysAcc=VIEWS['a-accounts'];VIEWS['a-accounts']=()=>_paysAcc().replace(/onclick="sponsor\('([A-Za-z0-9_-]{1,64})'\)"/g,'onclick="paysOpen(\'$1\')"');
+/* admin Control grid tile (the admin layer defines ADMIN_TILES) */
+try{if(typeof ADMIN_TILES!=='undefined'&&Array.isArray(ADMIN_TILES)&&!ADMIN_TILES.some(t=>t&&t.route==='a-pays'))ADMIN_TILES.push({route:'a-pays',label:'Enivel Pays',icon:'gift',count:()=>paysStatsLocal(monthKey()).kids,alert:()=>false})}catch(e){console.warn('pays tile',e)}
+/* keep the address bar honest: #pays only while on the public wall */
+const _paysGo=go;go=function(r,extra){try{if(r==='pays'&&location.hash!=='#pays')history.replaceState(null,'','#pays');else if(r!=='pays'&&location.hash==='#pays')history.replaceState(null,'',location.pathname+location.search)}catch(e){}return _paysGo(r,extra)};
+/* links: #pays (public wall, no sign-in), #paid=<id> / #paycancel=<id> (back from PayFast) */
+function paysHashRoute(){const hs=location.hash||'';if(hs==='#pays'){if(S.route!=='pays')go('pays');return 'done'}
+  const mt=hs.match(/^#(paid|paycancel)=(pi[0-9a-f]{32})$/);if(!mt)return 'none';if(!S.admin||!me())return 'wait';
+  try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
+  if(mt[1]==='paid'){S.paysCheck={id:mt[2],n:0,state:'checking'};go('a-paycheck')}
+  else{(async()=>{try{if(S.cloud&&sb)await sb.rpc('pay_intent_cancel',{p_id:mt[2]})}catch(e){}auditLog('pays_card_cancel',mt[2],'Cancelled on PayFast');S.paysRecent=null;go('a-pays');toast('Payment cancelled. Nothing was charged.')})()}
+  return 'done'}
+(function paysBoot(){let n=0;const t=setInterval(()=>{if(!S.ready)return;n++;const r=paysHashRoute();if(r!=='wait'||n>60)clearInterval(t)},300)})();
+window.addEventListener('hashchange',()=>{if(S.ready)paysHashRoute()});
+</script>

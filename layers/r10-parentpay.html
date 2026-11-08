@@ -1,0 +1,84 @@
+<style>
+.pp-sum{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:.9rem;margin:12px 0}
+.pp-sum .tot{font-weight:800;font-size:1.05rem;border-top:1px solid var(--line);padding-top:8px}
+.pp-safe{display:flex;gap:8px;align-items:flex-start;font-size:.75rem;color:var(--fg3);margin-top:10px}
+</style>
+<script>
+/* ===== Real parent payments (live site): the app never takes card numbers.
+   Pay now → server works out the amount (transport + parent fee) → PayFast's own secure page → back to Enivel.
+   The month only shows as paid when PayFast has confirmed the money (or Enivel credit covered it in full). ===== */
+function ppLive(){return !!(typeof S!=='undefined'&&S.cloud&&typeof sb!=='undefined'&&sb)}
+function ppPct(){try{return pricing().feePct}catch(e){return 5}}
+const _ppPayMonth=payMonth;
+payMonth=function(){if(!ppLive()||(typeof fmMember==='function'&&fmMember()))return _ppPayMonth.apply(this,arguments);const u=me();if(!u)return;const m=monthKey();const pm=parentMonth(u,m);if(!pm.unpaid.length)return toast('This month is already paid');
+  const lines=pm.unpaid.map(b=>`<span>${h(Store.get('kids',b.kidId)?.name||'Child')} · ${h(userName(b.driverId))}</span><b>${money(b.price)}</b>`).join('');
+  const fee=pm.unpaid.reduce((s,b)=>s+feeFor(b.price),0);const credit=Math.min(u.credit||0,pm.dueNow);const coversAll=credit>=pm.dueNow-0.005;
+  modal(`<h3>Pay ${h(typeof paysMonthLabel==='function'?paysMonthLabel(m):m)}</h3><div class="pp-sum">${lines}<span>Enivel fee ${ppPct()}%</span><b>${money(fee)}</b><span class="tot">Total</span><b class="tot">${money(pm.dueNow)}</b></div>
+    ${coversAll?`<p class="small muted">Your Enivel credit (${money(u.credit||0)}) covers this in full.</p>`:credit>0?`<p class="tiny muted">You have ${money(u.credit||0)} Enivel credit. Credit is used when it covers a whole month.</p>`:''}
+    <button class="btn wide" id="pp-go">${coversAll?'Pay with credit':'Pay '+money(pm.dueNow)+' securely'}</button>
+    <div class="pp-safe">${ICON.lock||'🔒'}<span>${coversAll?'':'You pay on PayFast\'s secure page: card, Instant EFT or Capitec Pay. Enivel never sees your card. '}The month shows as paid once the payment is confirmed.</span></div>`,mm=>{
+    $('#pp-go',mm).onclick=async()=>{const b=$('#pp-go',mm);b.disabled=true;b.textContent='Starting…';
+      try{const {data,error}=await sb.rpc('pay_intent_parent',{p_month:m});if(error)throw new Error(error.message);
+        if(data.method==='credit'&&data.status==='paid'){closeModal();await cloudPull(true);render();toast('Paid with credit');try{confetti()}catch(e){}return}
+        if(!otpEndpoint())throw new Error('Card payments are being switched on. Please try again later.');
+        b.textContent='Opening PayFast…';ls.set('enivel_pp_pending',{id:data.id,at:Date.now()});await paysGoPayFast({id:data.id})}
+      catch(e){b.disabled=false;b.textContent='Pay '+money(pm.dueNow)+' securely';toast(e.message||'Could not start the payment')}}})};
+/* back from PayFast: #paid=<id> / #paycancel=<id> for the parent's own payment */
+S.ppCheck=null;
+async function ppReturn(){const hs=location.hash||'';const mt=hs.match(/^#(paid|paycancel)=(pi[0-9a-f]{32})$/);if(!mt||!ppLive()||!me()||S.admin)return false;
+  try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
+  if(mt[1]==='paycancel'){try{await sb.rpc('pay_intent_mine',{p_id:mt[2],p_cancel:true})}catch(e){}go('p-pay');toast('Payment cancelled. Nothing was charged.');return true}
+  S.ppCheck={id:mt[2],n:0,state:'checking'};go('p-pay');ppPoll();return true}
+async function ppPoll(){const c=S.ppCheck;if(!c)return;c.n++;try{const {data}=await sb.rpc('pay_intent_mine',{p_id:c.id,p_cancel:false});c.state=data?.status||'checking'}catch(e){}
+  if(c.state==='paid'){S.ppCheck=null;await cloudPull(true);go('p-pay');toast('✅ Payment received. Thank you!');try{confetti()}catch(e){}return}
+  if(c.state==='cancelled'){S.ppCheck=null;render();return}
+  if(c.n<40)setTimeout(ppPoll,c.n<10?2000:5000);else{c.state='slow';render()}}
+(function ppBoot(){let n=0;const t=setInterval(()=>{if(!S.ready)return;n++;if(/^#(paid|paycancel)=pi/.test(location.hash||'')&&me()&&!S.admin){clearInterval(t);ppReturn();return}if(n>60)clearInterval(t)},300)})();
+window.addEventListener('hashchange',()=>{if(S.ready&&!S.admin)ppReturn()});
+{const _ppPPay=VIEWS['p-pay'];VIEWS['p-pay']=function(){let html=_ppPPay.apply(this,arguments);const c=S.ppCheck;if(!c)return html;
+  const card=c.state==='slow'?`<div class="notice" style="margin-bottom:12px">PayFast hasn't confirmed your payment yet. If money left your account it will show here within a few minutes. <button class="btn sm ghost" onclick="S.ppCheck.n=0;S.ppCheck.state='checking';ppPoll();render()">Check again</button></div>`:`<div class="notice" style="margin-bottom:12px">⏳ Confirming your payment with PayFast…</div>`;
+  const i=html.indexOf('<div class="card');return i>=0?html.slice(0,i)+card+html.slice(i):card+html}}
+/* the old test card form must never appear on the live site */
+{const _ppModal=payModal;payModal=function(total,done){if(ppLive()&&!S.admin&&me()?.role==='parent'&&S.route!=='p-requests')return toast('Use Pay now to pay securely with PayFast');return _ppModal.apply(this,arguments)}}
+</script>
+<script>
+/* ===== round 2: every parent payment on the live site goes through PayFast =====
+   Booking a route / accepting an offer / booking a once-off trip → the seat is HELD for 48 h (no fake payment),
+   then the pay sheet opens. Paying on PayFast confirms the seat. Drivers' extra parking slots come off their payouts. */
+function ppParent(){const u=me();return ppLive()&&!!u&&u.role==='parent'&&!S.admin&&!S.viewAs}
+function ppDriver(){const u=me();return ppLive()&&!!u&&u.role==='driver'&&!S.admin&&!S.viewAs}
+const PP_HOLD_MS=48*3600e3;
+/* run a booking callback with payments switched off: active → held 48 h, payment records skipped, wording fixed */
+async function ppHoldRun(done){const _put=Store.put,_tx=pushTx,_toast=toast,_notify=notify,_go=go,_close=closeModal;const until=Date.now()+PP_HOLD_MS;let n=0;
+  Store.put=function(coll,id,d,...a){if(coll==='bookings'&&d&&d.status==='active'&&!d.once){d={...d,status:'reserved',reservedAt:Date.now(),reservedUntil:until};n++}else if(coll==='bookings'&&d&&d.once)n++;return _put.call(this,coll,id,d,...a)};
+  pushTx=async function(t){if(t&&['subscription','platform_fee','trip'].includes(t.type))return null;return _tx.apply(this,arguments)};
+  notify=function(uid_,text,...a){if(typeof text==='string'){text=text.replace(/^Booking confirmed with ([^.]+)\..*$/,'Seat held for 48 h with $1. Pay to confirm the booking.');if(uid_!==me()?.id&&!/held|hold/i.test(text))text+=' (seat held, payment pending)'}return _notify.call(this,uid_,text,...a)};
+  toast=function(m){if(/paid|booked/i.test(String(m||'')))return;return _toast.apply(this,arguments)};
+  go=function(r){if(r==='p-home')return;return _go.apply(this,arguments)};
+  try{await done()}finally{Store.put=_put;pushTx=_tx;toast=_toast;notify=_notify;go=_go;closeModal=_close}
+  return n}
+{const _ppModal2=payModal;payModal=function(total,done){
+  if(ppParent())return (async()=>{try{const n=await ppHoldRun(done);try{closeModal()}catch(e){}if(n){toast('Seat held for 48 hours. Pay now to confirm.');setTimeout(()=>payMonth(),350)}else toast('Nothing new to pay')}catch(e){toast(e.message||'Could not book')}})();
+  if(ppDriver())return (async()=>{try{await done();toast(`Done. ${money(total)} a month comes off your Enivel payouts.`)}catch(e){toast(e.message||'Could not save')}})();
+  return _ppModal2.apply(this,arguments)}}
+/* held seat → Pay */
+if(typeof g2ReserveConfirm==='function'){const _ppRC=g2ReserveConfirm;g2ReserveConfirm=function(bid){if(ppParent())return payMonth();return _ppRC.apply(this,arguments)}}
+/* the pay sheet shows the server's own quote (monthly + held seats + once-off trips) */
+{const _ppPM2=payMonth;payMonth=async function(){if(!ppLive()||(typeof fmMember==='function'&&fmMember())||!me()||me().role!=='parent')return _ppPM2.apply(this,arguments);
+  const m=monthKey();let q=null;try{const r=await sb.rpc('pay_quote_parent',{p_month:m});if(r.error)throw r.error;q=r.data}catch(e){if(/pay_quote_parent/.test(e.message||''))return _ppPM2.apply(this,arguments);return toast(e.message||'Could not load what is due')}
+  if(!q||!q.lines||!q.lines.length)return toast('Nothing to pay right now');const u=me();const total=Math.round(q.amount*100)/100;const fee=q.lines.reduce((s,l)=>s+(+l.fee||0),0);const pct=q.feePct??ppPct();
+  const credit=Math.min(u.credit||0,total);const coversAll=credit>=total-0.005;
+  const lines=q.lines.map(l=>`<span>${h(l.kidName||'Child')} · ${h(userName(l.driverId))}${l.once?' · once-off '+h(l.date||''):l.held?' · <b>seat held</b>':''}</span><b>${money(+l.price)}</b>`).join('');
+  modal(`<h3>Pay ${h(typeof paysMonthLabel==='function'?paysMonthLabel(m):m)}</h3><div class="pp-sum">${lines}<span>Enivel fee ${h(String(pct))}%</span><b>${money(fee)}</b><span class="tot">Total</span><b class="tot">${money(total)}</b></div>
+    ${q.lines.some(l=>l.held)?'<p class="tiny muted">Held seats are kept for 48 hours. Paying confirms them.</p>':''}
+    ${coversAll?`<p class="small muted">Your Enivel credit (${money(u.credit||0)}) covers this in full.</p>`:credit>0?`<p class="tiny muted">You have ${money(u.credit||0)} Enivel credit. Credit is used when it covers the whole amount.</p>`:''}
+    <button class="btn wide" id="pp-go">${coversAll?'Pay with credit':'Pay '+money(total)+' securely'}</button>
+    <div class="pp-safe">${ICON.lock||'🔒'}<span>${coversAll?'':'You pay on PayFast\'s secure page: card, Instant EFT or Capitec Pay. Enivel never sees your card. '}Your booking is confirmed once the payment is confirmed.</span></div>`,mm=>{
+    $('#pp-go',mm).onclick=async()=>{const b=$('#pp-go',mm);b.disabled=true;b.textContent='Starting…';
+      try{const {data,error}=await sb.rpc('pay_intent_parent',{p_month:m});if(error)throw new Error(error.message);
+        if(Math.abs(+data.amount-total)>0.009)throw new Error('The amount changed. Please open Pay again.');
+        if(data.method==='credit'&&data.status==='paid'){closeModal();await cloudPull(true);render();toast('Paid with credit. Booking confirmed.');try{confetti()}catch(e){}return}
+        if(!otpEndpoint())throw new Error('Card payments are being switched on. Please try again later.');
+        b.textContent='Opening PayFast…';ls.set('enivel_pp_pending',{id:data.id,at:Date.now()});await paysGoPayFast({id:data.id})}
+      catch(e){b.disabled=false;b.textContent='Pay '+money(total)+' securely';toast(e.message||'Could not start the payment')}}})}}
+</script>

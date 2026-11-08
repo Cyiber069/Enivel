@@ -1,0 +1,19 @@
+<script>
+/* ===== 07 Nov: the owner's home address must not appear anywhere (it is a private address).
+   The policies show "given on written request" instead, the address is removed from the saved
+   legal details (that record is readable by every signed-in app), and the admin form no longer asks for it. ===== */
+const LG3_ADDR=()=>{const s=Store.get('settings','legal')||{};const em=s.email&&String(s.email).trim()?h(s.email):'our support email';return `an address given on written request to ${em}`};
+{const _lg3LX=LX;LX=function(){const L=_lg3LX.apply(this,arguments);L.ADDR=LG3_ADDR();return L}}
+function lg3Clean(s){const A=LG3_ADDR();return String(s)
+  .split(`with its registered address at ${A}`).join(`whose address is ${A.replace(/^an address /,'')}`)
+  .split(`, of ${A} (`).join(` (`)
+  .split(`<br>${A}<br>`).join('<br>')
+  .split(`or at ${A}.`).join('.')
+  .split(`chooses ${A} as its address for legal notices`).join(`gives its address for legal notices and service of documents on written request to the support email`)}
+for(const v of ['legal','doc','privacy','terms','a-more']){if(!VIEWS[v])continue;const _v=VIEWS[v];VIEWS[v]=function(){return lg3Clean(_v.apply(this,arguments))}}
+if(typeof legalDoc==='function'&&typeof LEGAL_DOCS!=='undefined')for(const d of LEGAL_DOCS){if(!d||typeof d.body!=='function'||d._lg3)continue;const b=d.body;d.body=L=>lg3Clean(b(L));d._lg3=1}
+/* admin: the address is not required and not kept */
+if(typeof legalMissing==='function')legalMissing=function(){const s=Store.get('settings','legal')||{};return ['entity','email','infoOfficer'].some(k=>!s[k])};
+{const _lg3Render=render;render=function(){const r=_lg3Render.apply(this,arguments);try{const f=document.getElementById('lg-address');if(f){const wrap=f.closest('.field')||f.parentElement;if(wrap&&!wrap.dataset.lg3){wrap.dataset.lg3='1';wrap.style.display='none';f.value=''}}}catch(e){}return r}}
+(function lg3Scrub(){let n=0;const t=setInterval(async()=>{n++;try{if(typeof S!=='undefined'&&S.ready&&S.admin){const s=Store.get('settings','legal');if(s&&s.address){clearInterval(t);const c={...s};delete c.address;await Store.put('settings','legal',c)}else if(s){clearInterval(t)}}}catch(e){}if(n>100)clearInterval(t)},3000)})();
+</script>

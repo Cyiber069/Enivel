@@ -1,0 +1,40 @@
+<style>
+.mf3-warn{margin:8px 0 0;padding:10px 12px;border-radius:12px;background:#fdecea;color:#8a1c12;font-size:.86rem;line-height:1.35}
+:root[data-theme="dark"] .mf3-warn{background:#3a1714;color:#ffb4ab}
+.mf3-warn b{font-weight:700}
+</style>
+<script>
+/* ===== 08 Nov owner: "a place 20 min away says 2133 km and I can't zoom out".
+   Cause: one pin was saved in the wrong town (a same-named street/school in another province), and the zoom-out
+   limit (city level) stopped the map from showing both pins, so the mistake was invisible.
+   - The map now always zooms out just far enough to show every pin and the whole route (never past South Africa);
+     normal pinch/scroll still stops at city level when the pins are close.
+   - If home, stop and school are more than 60 km apart, a red note under the map says which places are far apart
+     and how to fix it.
+   - Address and school suggestions far from home show "· 1 900 km away" in red, and schools near home are listed first. ===== */
+const MF3={far:60000,floor:5};
+if(typeof MUX==='object')MUX.minZoom=MF3.floor;
+function mf3Bounds(map){let b=null;const add=x=>{if(!x)return;b=b?b.extend(x):L.latLngBounds(x,x)};
+  map.eachLayer(l=>{try{if(l instanceof L.Marker)add(l.getLatLng());else if(l instanceof L.Polyline){const bb=l.getBounds();if(bb.isValid()){add(bb.getSouthWest());add(bb.getNorthEast())}}}catch(e){}});return b}
+function mf3Fit(M,force,noFit){const map=M&&M.map;if(!map||!map._loaded)return;const b=mf3Bounds(map);let need=9;
+  if(b&&b.isValid()){need=Math.max(MF3.floor,Math.min(9,map.getBoundsZoom(b.pad(0.08),false)))}
+  if(map.getMinZoom()!==need)map.setMinZoom(need);
+  if(!noFit&&b&&b.isValid()&&(force||!map.getBounds().contains(b)))map.fitBounds(b,{padding:[24,24],maxZoom:16,animate:false})}
+if(typeof muxLimits==='function'){const _mf3Lim=muxLimits;muxLimits=function(M){const r=_mf3Lim.apply(this,arguments);try{mf3Fit(M,false,M.mode!=='home')}catch(e){}return r}}
+function mf3Town(p){const GK={home:'pickupGeo',stop:'stopGeo',school:'dropoffGeo'};let s='';try{s=String((journey()[GK[p&&p.kind]]||{}).label||'')}catch(e){}if(!s)s=String(p&&p.label||'');const parts=s.split(',').map(x=>x.trim()).filter(Boolean);return parts.length>2?parts.slice(-3,-1).join(', '):s}
+function mf3Check(M){try{if(!M||M.mode!=='home'||!M.box?.isConnected)return;const pts=typeof journeyPoints==='function'?journeyPoints():[];const NM={home:'Home',stop:'Stop',school:'School'};
+  let worst=null;for(let i=0;i<pts.length;i++)for(let k=i+1;k<pts.length;k++){const d=distM(pts[i],pts[k]);if(d!=null&&(!worst||d>worst.d))worst={d,a:pts[i],b:pts[k]}}
+  let w=M.box.parentElement&&M.box.parentElement.querySelector(':scope > .mf3-warn');
+  if(!worst||worst.d<MF3.far){w&&w.remove();return}
+  const km=Math.round(worst.d/1000).toLocaleString('en-ZA');const txt=`<b>${NM[worst.a.kind]||'One place'} and ${(NM[worst.b.kind]||'the other').toLowerCase()} are ${km} km apart</b>, so one of them is probably pinned in the wrong town (${h(mf3Town(worst.a)||'?')} · ${h(mf3Town(worst.b)||'?')}). Use the Change buttons and pick the result in your own area.`;
+  if(!w){w=document.createElement('div');w.className='mf3-warn';M.box.insertAdjacentElement('afterend',w)}if(w.innerHTML!==txt)w.innerHTML=txt}catch(e){}}
+{const _mf3Rmap=MOUNT.rmap;MOUNT.rmap=async function(el){const key=[el.dataset.mode,el.dataset.route||'',el.dataset.kid||''].join(':');const res=await _mf3Rmap.call(this,el);
+  try{const M=typeof MAPS==='object'?MAPS[key]:null;if(M&&M.map&&M.box?.isConnected){mf3Check(M);mf3Fit(M,false,M.mode!=='home');
+    if(!M.map._mf3){M.map._mf3=true;let t;M.map.on('layeradd',e=>{if(M.mode!=='home')return;if(!(e.layer instanceof L.Polyline||e.layer instanceof L.Marker))return;clearTimeout(t);t=setTimeout(()=>{mf3Fit(M,e.layer instanceof L.Polyline&&(e.layer.options.weight||0)>=5&&M.mode==='home');mf3Check(M)},60)})}}}catch(e){console.warn('mf3',e)}return res}}
+/* suggestions: show how far each one is from home, schools near home first */
+function mf3Ref(){try{const j=me()?.journey||{};if(j.pickupGeo?.lat)return j.pickupGeo;if(typeof S!=='undefined'&&S.gps?.lat)return S.gps}catch(e){}return null}
+function mf3Mark(list,sort){const ref=mf3Ref();if(!ref||!Array.isArray(list))return list;const out=list.map(x=>{if(!x||x.lat==null)return x;const d=distM(ref,x);if(d==null)return x;const y={...x,_mf3d:d};if(d>MF3.far){y.loc=(x.loc?x.loc+' ':'')+'· '+Math.round(d/1000).toLocaleString('en-ZA')+' km away';y._far=true}return y});
+  if(sort)out.sort((a,b)=>((a&&a._far)?1:0)-((b&&b._far)?1:0));return out}
+if(typeof suggestSchools==='function'){const _mf3S=suggestSchools;suggestSchools=async function(){return mf3Mark(await _mf3S.apply(this,arguments),true)}}
+if(typeof suggestPlaces==='function'){const _mf3P=suggestPlaces;suggestPlaces=async function(){return mf3Mark(await _mf3P.apply(this,arguments),false)}}
+</script>

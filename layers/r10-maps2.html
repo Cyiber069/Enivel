@@ -1,0 +1,207 @@
+<style>
+/* ===== r10-maps2: Uber-style maps (CARTO light/dark), road turns, trip progress, Photon addresses, seat filter ===== */
+.rmap{min-height:260px;border-radius:18px;border:1px solid var(--line);background:#f2f2f0;isolation:isolate}
+:root[data-theme="dark"] .rmap{background:#0b0b0b}
+.rmap .leaflet-tile-pane,:root[data-theme="dark"] .rmap .leaflet-tile-pane{filter:none!important}
+.leaflet-container{background:#f2f2f0}
+:root[data-theme="dark"] .leaflet-container{background:#0b0b0b}
+.leaflet-control-attribution{font-size:9px!important;background:color-mix(in srgb,var(--bg) 72%,transparent)!important;color:var(--fg3)!important;border-radius:8px 0 0 0;padding:1px 6px!important}
+.leaflet-control-attribution a{text-decoration:none}
+.leaflet-bar{border-radius:999px!important;box-shadow:0 4px 14px rgba(0,0,0,.14)!important;margin:10px!important;border:0!important;overflow:hidden}
+.leaflet-bar a{width:36px!important;height:36px!important;line-height:36px!important;border:0!important;background:var(--bg)!important;color:var(--fg)!important;font-weight:600!important;font-size:18px}
+@media(pointer:coarse){.leaflet-control-zoom{display:none}}
+.mapctl{gap:8px;top:auto;bottom:12px;left:10px;right:auto;flex-direction:row}
+.m2pin.flip .lb{left:auto;right:-14px}
+.m2pin.low .lb{bottom:auto;top:11px}
+.mapctl button{width:40px;height:40px;border-radius:50%;border:0;background:var(--bg);color:var(--fg);box-shadow:0 4px 14px rgba(0,0,0,.16)}
+.mapctl button.on{background:var(--ink);color:var(--ink-fg)}
+.mapchip{border:0;box-shadow:0 4px 14px rgba(0,0,0,.14);font-weight:700;color:var(--fg)}
+/* pins: a dot on the exact spot, a labelled pill above it */
+.m2pin{position:relative;width:0;height:0}
+.m2pin .pt{position:absolute;left:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:var(--acc);border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.4);box-sizing:border-box}
+.m2pin .lb{position:absolute;left:-14px;bottom:11px;display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px 0 5px;border-radius:999px;background:var(--bg);color:var(--fg);font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,.2);border:1px solid var(--line)}
+.m2pin .d{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;color:#fff;flex:none;background:var(--acc)}
+.m2pin .d svg{width:11px;height:11px}
+.m2pin.school .pt,.m2pin.school .d{background:var(--acc3)}.m2pin.stop .pt,.m2pin.stop .d{background:var(--acc2)}
+.m2pin .t{max-width:130px;overflow:hidden;text-overflow:ellipsis}
+/* the car */
+.m2car{width:40px;height:40px;display:grid;place-items:center;color:var(--ink);filter:drop-shadow(0 3px 6px rgba(0,0,0,.35))}
+:root[data-theme="dark"] .m2car{filter:drop-shadow(0 0 4px rgba(255,255,255,.35))}
+.m2car i{display:block;width:30px;height:30px;transition:transform .5s ease}
+.m2car i svg{width:30px;height:30px;display:block}
+/* next-turn card */
+.m2nav{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:14px;box-shadow:var(--shadow)}
+.m2nav .m2turn{display:flex;gap:12px;align-items:center}
+.m2nav .m2ic{width:52px;height:52px;border-radius:14px;background:var(--ink);color:var(--ink-fg);display:grid;place-items:center;flex:none}
+.m2nav .m2ic svg{width:30px;height:30px}
+.m2nav .m2do{font-size:1.05rem;font-weight:700;line-height:1.2}
+.m2nav .m2in{font-size:1.35rem;font-weight:800;letter-spacing:-.02em;margin-top:2px}
+.m2nav .m2sub{font-size:.8rem;color:var(--fg3)}
+.m2nav .m2eta{margin-top:10px;font-size:.92rem;font-weight:600}
+.m2nav .m2off{color:var(--warn)}
+.m2nav .m2meta{display:flex;justify-content:space-between;font-size:.75rem;color:var(--fg3);margin-top:5px}
+.m2nav.off .m2ic{background:var(--bg3);color:var(--fg2)}
+.m2nav.off b{font-size:.95rem}
+.tripmode .m2nav{background:#161616;color:#f5f5f3;border-color:#262626;box-shadow:none;margin:12px 0 0}
+.tripmode .m2nav .m2ic{background:#f5f5f3;color:#0a0a0a}
+.tripmode .m2nav .m2sub,.tripmode .m2nav .m2meta{color:#9a9a95}
+.tripmode .m2nav.big .m2do{font-size:1.25rem}.tripmode .m2nav.big .m2in{font-size:1.8rem}
+.tripmode .m2bar{background:#2a2a2a}
+/* progress bar */
+.m2bar{position:relative;height:10px;border-radius:5px;background:var(--bg3);overflow:hidden;margin-top:10px}
+.m2bar i{display:block;height:100%;border-radius:5px;background:var(--grad);transition:width .6s ease}
+.m2prog .m2pct{font-size:1.9rem;font-weight:800;letter-spacing:-.03em;line-height:1}
+.m2prog .m2eta{text-align:right;font-weight:700;font-size:.95rem}
+.m2prog .m2eta small{display:block;font-weight:500;color:var(--fg3);font-size:.75rem}
+/* seats filter */
+.m2need{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+.m2need .lab{font-size:.85rem;font-weight:600;color:var(--fg2)}
+.m2nc{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:5px 12px;font-weight:700;font-size:.85rem;cursor:pointer;min-width:36px}
+.m2need{gap:6px}
+.addrok svg{width:14px;height:14px}
+.m2nc.on{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.m2seats{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.m2chip{display:inline-flex;align-items:center;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--bg2);color:var(--fg2);border:1px solid var(--line)}
+.m2chip.fit{background:color-mix(in srgb,var(--live) 14%,transparent);color:var(--live);border-color:transparent}
+/* address suggestions: two lines */
+.sug .m2a b{display:block;font-size:.9rem}.sug .m2a small{display:block;color:var(--fg3);font-size:.75rem;margin-top:1px}
+.sug .m2a .pc{font-weight:700;color:var(--fg2)}
+</style>
+<script>
+/* ===== r10-maps2 ===== */
+const M2={tiles:[],plans:new Map(),nav:{},sug:new Map(),rerouteMs:30000,offM:120,
+  arrow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V5"/><path d="M6 11l6-6 6 6"/></svg>',
+  turnR:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20v-9a4 4 0 0 1 4-4h8"/><path d="M15 3l4 4-4 4"/></svg>',
+  uturn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20V9a4 4 0 0 0-8 0v11"/><path d="M4 16l4 4 4-4"/></svg>',
+  round:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="5"/><path d="M12 8V2"/><path d="M8 5l4-3 4 3"/></svg>',
+  car:'<svg viewBox="0 0 32 32"><path d="M16 3c-3 0-6 1.2-6 4v16c0 2.4 2.6 4 6 4s6-1.6 6-4V7c0-2.8-3-4-6-4z" fill="currentColor"/><path d="M11 10c1.4-1.2 8.6-1.2 10 0l-1 4.5H12z" fill="#7fd1ff"/><path d="M11.4 22c1.8.9 7.4.9 9.2 0l.8 2.5c-2.6 1.2-8.2 1.2-10.8 0z" fill="#ff6b6b"/><circle cx="12.5" cy="6.5" r="1.2" fill="#ffe28a"/><circle cx="19.5" cy="6.5" r="1.2" fill="#ffe28a"/></svg>'};
+function m2Theme(){return (typeof isDark==='function'?isDark():S.theme==='dark')?'dark':'light'}
+function m2TileUrl(theme){return `https://{s}.basemaps.cartocdn.com/${(theme||m2Theme())==='dark'?'dark_all':'light_all'}/{z}/{x}/{y}{r}.png`}
+/* --- 1. every OpenStreetMap tile layer in the app becomes a CARTO layer for the current theme --- */
+if(typeof L!=='undefined'&&L.tileLayer&&!L.tileLayer._m2){
+  const _tl=L.tileLayer;
+  const wrapped=function(url,opts){if(typeof url==='string'&&/tile\.openstreetmap\.org/.test(url)){const o={...(opts||{}),subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap © CARTO'};const lay=_tl.call(L,m2TileUrl(),o);lay._m2carto=true;M2.tiles.push(lay);return lay}return _tl.apply(L,arguments)};
+  Object.assign(wrapped,_tl);wrapped._m2=true;L.tileLayer=wrapped;
+  const _lm=L.map;const wm=function(){const m=_lm.apply(L,arguments);try{if(m.attributionControl)m.attributionControl.setPrefix('')}catch(e){}return m};Object.assign(wm,_lm);L.map=wm;
+}
+function mapTiles(map){if(typeof L==='undefined'||!map)return null;const lay=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{});lay.addTo(map);return lay}
+function m2Retheme(){const url=m2TileUrl();M2.tiles=M2.tiles.filter(l=>l&&l._map);M2.tiles.forEach(l=>{if(l._url!==url)l.setUrl(url)});try{if(typeof MAPS==='object')for(const k in MAPS)m2Restyle(MAPS[k])}catch(e){}}
+const _m2SetTheme=setTheme;setTheme=function(){const r=_m2SetTheme.apply(this,arguments);try{m2Retheme()}catch(e){}return r};
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{try{m2Retheme()}catch(e){}})}catch(e){}
+/* --- 2. OSRM road route with turn-by-turn steps --- */
+function m2Cum(coords){const cum=[0];for(let i=1;i<coords.length;i++)cum.push(cum[i-1]+(distM({lat:coords[i-1][0],lng:coords[i-1][1]},{lat:coords[i][0],lng:coords[i][1]})||0));return cum}
+function m2Parse(rt){const coords=(rt.geometry?.coordinates||[]).map(([lng,lat])=>[lat,lng]);const steps=[],legs=[];let along=0;
+  (rt.legs||[]).forEach((leg,li)=>{const at=along;(leg.steps||[]).forEach(s=>{const m=s.maneuver||{};steps.push({type:m.type||'',modifier:m.modifier||'',name:s.name||'',distance:+s.distance||0,duration:+s.duration||0,at:along,leg:li,exit:m.exit,loc:m.location?[m.location[1],m.location[0]]:null});along+=(+s.distance||0)});legs.push({at,distance:+leg.distance||0,duration:+leg.duration||0})});
+  const cum=m2Cum(coords);const total=cum[cum.length-1]||0;const distance=+rt.distance||total;return {coords,km:distance/1000,min:Math.round((+rt.duration||0)/60),distance,duration:+rt.duration||0,steps,legs,cum,total,scale:distance?total/distance:1}}
+roadRoute=async function(pts){try{if(!pts||pts.length<2)return null;const c=pts.map(p=>(+p.lng).toFixed(6)+','+(+p.lat).toFixed(6)).join(';');const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${c}?overview=full&geometries=geojson&steps=true&annotations=false`);if(!r.ok)return null;const j=await r.json();const rt=j.routes?.[0];if(!rt)return null;return m2Parse(rt)}catch(e){return null}};
+function m2Snap(plan,p){const c=plan?.coords,cum=plan?.cum;if(!c||c.length<2||!p||p.lat==null)return null;const cosL=Math.cos(p.lat*Math.PI/180);const X=q=>[(q[1]-p.lng)*cosL*111320,(q[0]-p.lat)*110540];let best=null;
+  for(let i=0;i<c.length-1;i++){const a=X(c[i]),b=X(c[i+1]);const dx=b[0]-a[0],dy=b[1]-a[1];const L2=dx*dx+dy*dy;let t=L2?-(a[0]*dx+a[1]*dy)/L2:0;t=Math.max(0,Math.min(1,t));const d=Math.hypot(a[0]+t*dx,a[1]+t*dy);if(!best||d<best.off)best={off:d,idx:i,t,along:cum[i]+t*(cum[i+1]-cum[i]),pt:[c[i][0]+t*(c[i+1][0]-c[i][0]),c[i][1]+t*(c[i+1][1]-c[i][1])]}}
+  return best}
+function m2NextTurn(plan,along){const st=plan.steps,f=plan.scale;if(!st.length)return {type:'arrive',name:'',dist:Math.max(0,plan.total-along)};let k=0;for(let i=0;i<st.length;i++){if(st[i].at*f<=along+1)k=i;else break}
+  let nx=null;for(let i=k+1;i<st.length;i++){if(st[i].type!=='depart'){nx=st[i];break}}const cur=st[k];
+  if(!nx)return {type:'arrive',name:cur.name,dist:Math.max(0,plan.total-along),leg:cur.leg};
+  return {type:nx.type,modifier:nx.modifier,name:nx.name,dist:Math.max(0,nx.at*f-along),exit:nx.exit,leg:nx.leg,curName:cur.name}}
+function m2Fmt(m){if(m==null||isNaN(m))return '';return m<950?Math.max(10,Math.round(m/10)*10)+' m':(m/1000).toFixed(1)+' km'}
+function m2TurnText(t){const mod=t.modifier||'';const dir=/left/.test(mod)?'left':/right/.test(mod)?'right':'';const slight=/slight/.test(mod),sharp=/sharp/.test(mod);
+  switch(t.type){case 'arrive':return 'Arrive';case 'depart':return 'Head out';case 'roundabout':case 'rotary':case 'roundabout turn':case 'exit roundabout':case 'exit rotary':return 'Roundabout'+(t.exit?', take exit '+t.exit:'');case 'merge':return 'Merge '+(dir||'ahead');case 'on ramp':return 'Take the on-ramp';case 'off ramp':return 'Take the exit';case 'fork':return 'Keep '+(dir||'ahead');case 'continue':case 'new name':case 'notification':return mod==='uturn'?'Make a U-turn':'Continue straight';
+    default:if(mod==='uturn')return 'Make a U-turn';if(!dir||mod==='straight')return 'Continue straight';return (slight?'Slight ':sharp?'Sharp ':'Turn ')+dir}}
+function m2Arrow(t){const mod=t.modifier||'';if(t.type==='arrive')return ICON.pin;if(/roundabout|rotary/.test(t.type||''))return M2.round;if(mod==='uturn')return M2.uturn;const left=/left/.test(mod);
+  if(/^(left|right)$/.test(mod)||/sharp/.test(mod))return left?M2.turnR.replace('<svg ','<svg style="transform:scaleX(-1)" '):M2.turnR;
+  if(/slight/.test(mod))return M2.arrow.replace('<svg ',`<svg style="transform:rotate(${left?-40:40}deg)" `);return M2.arrow}
+/* plans (pickup → school) cached by coordinates; fetched in the background, the view re-renders when ready */
+function m2PlanKey(pts){return pts.map(p=>(+p.lat).toFixed(5)+','+(+p.lng).toFixed(5)).join(';')}
+function m2Rerender(){try{const a=document.activeElement;const typing=a&&a.closest&&a.closest('#app')&&/INPUT|TEXTAREA|SELECT/.test(a.tagName);if(typing||(typeof FORM_ROUTES!=='undefined'&&FORM_ROUTES.includes(S.route)))return (typeof cloudRender==='function'?cloudRender:render)();render()}catch(e){}}
+function m2Plan(pts){if(!pts||pts.length<2||pts.some(p=>!p||p.lat==null))return null;const key=m2PlanKey(pts);const e=M2.plans.get(key);if(e?.plan)return e.plan;if(e&&(e.busy||(e.failAt&&Date.now()-e.failAt<60000)))return null;const ent={busy:true,failAt:0};M2.plans.set(key,ent);
+  roadRoute(pts).then(pl=>{ent.busy=false;if(pl){ent.plan=pl;m2Rerender()}else ent.failAt=Date.now()}).catch(()=>{ent.busy=false;ent.failAt=Date.now()});return null}
+/* --- 3. progress along the road, not as the crow flies --- */
+const _m2TripProgress=tripProgress;
+tripProgress=function(b,k){const base=_m2TripProgress(b,k);if(!base)return base;try{const r=routeOf(b.routeId);const live=r.live;const st=kidStatus(k);const pu=st.today.find(e=>e.type==='pickup');const start=pu?.geo?.lat?pu.geo:(k.geo||null);const parent=Store.get('users',k.parentId);const end=b.toGeo||k.schoolGeo||parent?.journey?.dropoffGeo||r.schoolGeo;
+  const plan=m2Plan([start,end]);if(!plan||!plan.total)return {...base,road:false};const sn=m2Snap(plan,{lat:+live.lat,lng:+live.lng});if(!sn||sn.off>400)return {...base,road:false,offM:sn?.off};
+  const remain=Math.max(0,plan.total-sn.along);const pct=Math.max(0,Math.min(1,sn.along/plan.total));const speed=plan.distance&&plan.duration?plan.distance/plan.duration:25/3.6;
+  return {...base,pct,remainKm:remain/1000,etaMin:Math.max(1,Math.round(remain/speed/60)),road:true,offM:sn.off,totalKm:plan.total/1000,plan}}catch(e){console.warn('m2 progress',e);return base}};
+function m2ProgCard(pr,label,live){const pct=pr?Math.round(pr.pct*100):0;
+  return `<div class="card m2prog"><div class="row between" style="align-items:flex-start"><div><div class="eyebrow">Trip progress</div><b class="m2pct">${pr?pct+'%':'—'}</b></div><div class="m2eta">${pr?`${pr.remainKm.toFixed(1)} km · ~${pr.etaMin} min<small>to ${h(label)}</small>`:`<small>Waiting for driver location</small>`}</div></div>
+  <div class="m2bar"><i style="width:${pct}%"></i></div>
+  <div class="tiny muted" style="margin-top:6px">${pr?(pr.road?'Distance and time along the road route':'Straight-line estimate · road route not available right now')+(live?.ts?' · updated '+fmtT(live.ts):''):(live?.active?'Driver has location sharing off.':'Driver has not started the trip.')}</div></div>`}
+const _m2PTrack=VIEWS['p-track'];VIEWS['p-track']=function(){let html=_m2PTrack.apply(this,arguments);try{const k=Store.get('kids',S.trackKid);const b=k&&bookingOf(k);if(!b||!kidStatus(k).onboard)return html;const r=routeOf(b.routeId);if(!r)return html;const pr=tripProgress(b,k);
+  const re=/<div class="card"><div class="row between"><b>(?:\d+% of the way|Waiting for driver location)<\/b>[\s\S]*?<div class="tiny muted" style="margin-top:6px">[\s\S]*?<\/div><\/div>/;const card=m2ProgCard(pr,k.school||r.schools||'school',r.live);
+  html=re.test(html)?html.replace(re,card):html.replace('<div class="stack"><div data-mount="rmap"',card+'<div class="stack"><div data-mount="rmap"')}catch(e){console.warn('m2 track',e)}return html};
+/* --- driver navigation: route from the live position through the remaining stops --- */
+function m2NavTargets(routeId){const r=routeOf(routeId);if(!r)return [];const ns=nextStop(routeId);if(!ns)return [];const live=r.live||{};const pts=[];const bs=activeBookings(b=>b.routeId===routeId);const schoolOf=()=>bs.map(b=>Store.get('kids',b.kidId)).find(k=>k?.schoolGeo)?.schoolGeo||r.schoolGeo||null;
+  if(ns.kind==='pickup'){if(ns.k.geo)pts.push({lat:+ns.k.geo.lat,lng:+ns.k.geo.lng,label:ns.k.name+"'s pickup",kind:'pickup',bid:ns.b.id});
+    const rest=[];for(const b of bs){if(b.id===ns.b.id)continue;const k=Store.get('kids',b.kidId);if(!k||!k.geo||isAbsent(k))continue;const st=kidStatus(k);if(st.onboard||st.today.some(e=>e.type==='dropoff'))continue;rest.push({lat:+k.geo.lat,lng:+k.geo.lng,label:k.name+"'s pickup",kind:'pickup',bid:b.id})}
+    let cur=pts[0]||(live.lat!=null?{lat:+live.lat,lng:+live.lng}:null);while(rest.length&&pts.length<7){let bi=0;if(cur){let bd=Infinity;rest.forEach((p,i)=>{const d=distM(cur,p);if(d<bd){bd=d;bi=i}})}const n=rest.splice(bi,1)[0];pts.push(n);cur=n}
+    const sg=schoolOf();if(sg)pts.push({lat:+sg.lat,lng:+sg.lng,label:ns.k.school||r.schools||'School',kind:'school'})}
+  else{const end=ns.k.schoolGeo||r.schoolGeo;if(end)pts.push({lat:+end.lat,lng:+end.lng,label:ns.k.school||r.schools||'School',kind:'school'})}
+  return pts.filter(p=>!isNaN(p.lat)&&!isNaN(p.lng)).slice(0,8)}
+function m2NavFetch(N,pos,targets){N.busy=true;const sig=N.sig;roadRoute([pos,...targets]).then(pl=>{N.busy=false;if(N.sig!==sig)return;N.planAt=Date.now();if(pl){N.plan=pl;N.from=pos;N.failAt=0;N.snap=m2Snap(pl,pos);m2Rerender()}else N.failAt=Date.now()}).catch(()=>{N.busy=false;N.failAt=Date.now()})}
+function m2Nav(routeId){const r=routeOf(routeId);const live=r?.live;if(!live?.active||!live.gps||live.lat==null)return null;const pos={lat:+live.lat,lng:+live.lng};const targets=m2NavTargets(routeId);if(!targets.length)return null;const sig=targets.map(t=>t.lat.toFixed(5)+','+t.lng.toFixed(5)).join(';');
+  let N=M2.nav[routeId];if(!N||N.sig!==sig){const covered=N?.plan&&N.snap?N.coveredBefore+Math.min(N.snap.along,N.plan.total):0;N=M2.nav[routeId]={sig,plan:null,coveredBefore:covered,off:0,busy:false,planAt:0,failAt:0,lastTs:0,rerouted:N?.rerouted||0}}
+  N.targets=targets;N.pos=pos;
+  if(N.plan){const sn=m2Snap(N.plan,pos);N.snap=sn;const ts=live.ts||0;if(ts!==N.lastTs){N.lastTs=ts;if(sn&&sn.off>M2.offM)N.off++;else N.off=0;
+      if(N.off>=2&&Date.now()-N.planAt>=M2.rerouteMs){N.coveredBefore+=sn?Math.min(sn.along,N.plan.total):0;N.plan=null;N.snap=null;N.off=0;N.rerouted++}}}
+  if(!N.plan&&!N.busy&&(!N.failAt||Date.now()-N.failAt>30000))m2NavFetch(N,pos,targets);
+  return N}
+function m2NavInfo(N){const plan=N.plan;const sn=N.snap||m2Snap(plan,N.pos);if(!sn)return null;const along=sn.along;const remain=Math.max(0,plan.total-along);const turn=m2NextTurn(plan,along);
+  let li=0;for(let i=0;i<plan.legs.length;i++){if(plan.legs[i].at*plan.scale<=along+1)li=i}const leg=plan.legs[li]||{at:0,distance:plan.distance};const stopEnd=(leg.at+leg.distance)*plan.scale;const toStop=Math.max(0,stopEnd-along);const speed=plan.distance&&plan.duration?plan.distance/plan.duration:25/3.6;
+  const stop=N.targets[li]||N.targets[N.targets.length-1];const covered=N.coveredBefore+along;const tripTotal=N.coveredBefore+plan.total;
+  return {along,remain,turn,toStop,etaMin:Math.max(1,Math.round(toStop/speed/60)),stop,pct:tripTotal?Math.max(0,Math.min(100,Math.round(100*covered/tripTotal))):0,off:sn.off,remainEtaMin:Math.max(1,Math.round(remain/speed/60))}}
+function m2TurnLine(turn,stop){const t=m2TurnText(turn);if(turn.type==='arrive')return t+' · '+h(stop?.label||'next stop');if(/^(Continue|Head out)/.test(t))return turn.name?t.replace('straight','')+' on '+h(turn.name):t;return turn.name?t+' onto '+h(turn.name):t}
+function m2NavCard(routeId,big){try{const r=routeOf(routeId);const live=r?.live||{};if(!live.active)return '';const cls='m2nav'+(big?' big':'');
+  if(!live.gps||live.lat==null)return `<div class="${cls} off"><div class="m2turn"><div class="m2ic">${ICON.pin}</div><div class="grow"><b>Turn on location for turn-by-turn</b><div class="m2sub">Next turn, distance and time to each stop show once GPS is on.</div></div></div></div>`;
+  const N=m2Nav(routeId);if(!N)return '';
+  if(!N.plan){const t=N.targets[0];const d=distM(live,t);return `<div class="${cls} off"><div class="m2turn"><div class="m2ic">${ICON.car}</div><div class="grow"><b>${N.busy?'Finding the road route…':'Road routing is not available right now'}</b><div class="m2sub">${h(t.label)} · ${m2Fmt(d)} in a straight line${N.busy?'':' · will retry'}</div></div></div></div>`}
+  const I=m2NavInfo(N);if(!I)return '';
+  return `<div class="${cls}" data-pct="${I.pct}"><div class="m2turn"><div class="m2ic">${m2Arrow(I.turn)}</div><div class="grow"><div class="m2do">${m2TurnLine(I.turn,I.stop)}</div><div class="m2in">${I.turn.type==='arrive'?'in '+m2Fmt(I.turn.dist):'in '+m2Fmt(I.turn.dist)}</div></div></div>
+  <div class="m2eta">${(I.toStop/1000).toFixed(1)} km · ~${I.etaMin} min to ${h(I.stop?.label||'next stop')}${I.off>M2.offM?' · <span class="m2off">off route, finding a new way</span>':''}</div>
+  <div class="m2bar"><i style="width:${I.pct}%"></i></div><div class="m2meta"><span>${I.pct}% of the trip done</span><span>${(I.remain/1000).toFixed(1)} km · ~${I.remainEtaMin} min left${N.rerouted?' · re-routed':''}</span></div></div>`}catch(e){console.warn('m2 nav',e);return ''}}
+const _m2DTrip=VIEWS['d-trip'];VIEWS['d-trip']=function(){let html=_m2DTrip.apply(this,arguments);try{const r=routeOf(S.tripRoute);if(!r||!r.live?.active)return html;const card=m2NavCard(r.id,false);if(!card)return html;const mk='<div class="grid g2"><div class="stack">';const i=html.indexOf(mk);if(i>=0)html=html.slice(0,i)+card+html.slice(i)}catch(e){console.warn('m2 dtrip',e)}return html};
+const _m2Draw=drawTripMode;drawTripMode=function(){const res=_m2Draw.apply(this,arguments);try{const d=document.querySelector('.tripmode');const rid=S.tripModeRoute;if(d&&rid){d.querySelector('.m2nav')?.remove();const card=m2NavCard(rid,true);const next=d.querySelector('.next');if(card&&next)next.insertAdjacentHTML('beforebegin',card)}}catch(e){console.warn('m2 tripmode',e)}return res};
+/* --- 4. map polish: pills, rotated car with smooth movement, themed route line --- */
+function m2Css(n,fb){try{return getComputedStyle(document.documentElement).getPropertyValue(n).trim()||fb}catch(e){return fb}}
+function m2Bearing(a,b){const toR=x=>x*Math.PI/180,toD=x=>x*180/Math.PI;const y=Math.sin(toR(b.lng-a.lng))*Math.cos(toR(b.lat));const x=Math.cos(toR(a.lat))*Math.sin(toR(b.lat))-Math.sin(toR(a.lat))*Math.cos(toR(b.lat))*Math.cos(toR(b.lng-a.lng));return (toD(Math.atan2(y,x))+360)%360}
+function m2Rotate(M){try{const el=M.car?.getElement?.();const i=el&&el.querySelector('.m2car i');if(i)i.style.transform=`rotate(${Math.round(M.m2bearing||0)}deg)`}catch(e){}}
+function m2Tween(M,from,to){if(M.m2anim)cancelAnimationFrame(M.m2anim);const t0=performance.now(),dur=900;const step=now=>{const k=Math.min(1,(now-t0)/dur);const e=k<.5?2*k*k:-1+(4-2*k)*k;M.car.setLatLng([from.lat+(to.lat-from.lat)*e,from.lng+(to.lng-from.lng)*e]);if(k<1)M.m2anim=requestAnimationFrame(step);else M.m2anim=null};M.car.setLatLng([from.lat,from.lng]);M.m2anim=requestAnimationFrame(step)}
+function m2Restyle(M){try{if(!M?.route)return;const acc=m2Css('--acc','#6d5dfc'),bg=m2Css('--bg','#fff');M.route.eachLayer(l=>{if(!l.setStyle)return;if((l.options.weight||0)>=9)l.setStyle({color:bg,opacity:.95});else l.setStyle({color:acc,opacity:.95})})}catch(e){}}
+function m2Pins(M){if(!M?.pins)return;if(!M.m2flipOn){M.m2flipOn=true;M.map.on('moveend zoomend',()=>m2Flip(M))}if(M.m2pinSig===M.sig){m2Flip(M);return}M.m2pinSig=M.sig;const pts=M.pts||[];let i=0;M.pins.eachLayer(mk=>{const p=pts[i++];if(!p||!mk.setIcon)return;try{mk.unbindTooltip&&mk.unbindTooltip()}catch(e){}const ic=p.kind==='home'?ICON.home:p.kind==='school'?ICON.school:ICON.pin;mk.setIcon(L.divIcon({className:'',html:`<div class="m2pin ${h(p.kind||'')}"><i class="pt"></i><span class="lb"><span class="d">${ic}</span><span class="t">${h(p.label||'')}</span></span></div>`,iconSize:[0,0],iconAnchor:[0,0]}))});setTimeout(()=>m2Flip(M),60)}
+const M2_FIT={paddingTopLeft:[28,90],paddingBottomRight:[28,66]};
+function m2Flip(M){try{if(!M?.pins||!M.box?.isConnected)return;const w=M.box.clientWidth||1;M.pins.eachLayer(mk=>{const el=mk.getElement&&mk.getElement();const d=el&&el.querySelector('.m2pin');if(!d)return;const pt=M.map.latLngToContainerPoint(mk.getLatLng());d.classList.toggle('flip',pt.x>w*.58);d.classList.toggle('low',pt.y<78)})}catch(e){}}
+fitMap=function(M){if(!M.box.isConnected||M.box.clientWidth<140||M.box.clientHeight<90){M.needFit=true;return}M.map.invalidateSize();M.needFit=false;const all=(M.pts||[]).map(p=>[p.lat,p.lng]).concat(M.car?[[M.car.getLatLng().lat,M.car.getLatLng().lng]]:[]);if(all.length>1)M.map.fitBounds(all,M2_FIT);else if(all.length)M.map.setView(all[0],15);else M.map.setView([-26.2041,28.0473],11)};
+function m2DrawNav(M,routeId){const N=M2.nav[routeId];if(!N?.plan){M.m2planRef=null;return}if(M.m2planRef===N.plan&&M.m2planSig===M.sig)return;M.m2planRef=N.plan;M.m2planSig=M.sig;M.route.clearLayers();L.polyline(N.plan.coords,{color:m2Css('--bg','#fff'),weight:9,opacity:.95}).addTo(M.route);L.polyline(N.plan.coords,{color:m2Css('--acc','#6d5dfc'),weight:5,opacity:.95}).addTo(M.route);const chip=M.box.querySelector('.mapchip');if(chip)chip.textContent=`${N.plan.km.toFixed(1)} km · about ${N.plan.min} min`;if(!M.m2fitted){M.m2fitted=true;try{M.map.fitBounds(N.plan.coords,M2_FIT)}catch(e){}}}
+function m2Polish(M,car,mode,routeId){m2Pins(M);m2Restyle(M);
+  if(M.car){if(!M.car._m2){M.car.setIcon(L.divIcon({className:'',html:`<div class="m2car"><i>${M2.car}</i></div>`,iconSize:[40,40],iconAnchor:[20,20]}));M.car._m2=true;M.m2pos=car}
+    else if(car&&M.m2pos&&(M.m2pos.lat!==car.lat||M.m2pos.lng!==car.lng)){const from=M.m2pos;if(distM(from,car)>3)M.m2bearing=m2Bearing(from,car);m2Tween(M,from,car)}
+    M.m2pos=car;m2Rotate(M)}else{M.m2pos=null}
+  if(mode==='driver'&&routeId)m2DrawNav(M,routeId);
+  M2.tiles.forEach(l=>{if(l._map===M.map&&l._url!==m2TileUrl())l.setUrl(m2TileUrl())})}
+const _m2Rmap=MOUNT.rmap;MOUNT.rmap=async function(el){const mode=el.dataset.mode,rid=el.dataset.route||'';const key=[mode,rid,el.dataset.kid||''].join(':');const r=routeOf(rid);const live=r?.live;const car=live?.gps&&live.active&&live.lat!=null?{lat:+live.lat,lng:+live.lng}:null;
+  const res=await _m2Rmap.call(this,el);try{const M=typeof MAPS==='object'?MAPS[key]:null;if(M&&M.box?.isConnected)m2Polish(M,car,mode,rid)}catch(e){console.warn('m2 map',e)}return res};
+/* --- 5. address autocomplete: Photon (South Africa box) first, Nominatim as fallback; two lines with the postal code --- */
+const M2_PHOTON='https://photon.komoot.io/api/?lang=en&limit=6&bbox=16.3,-34.9,32.9,-22.1&q=';
+function m2PhAddr(p){const a={house_number:p.housenumber,road:p.street,suburb:p.district||p.locality,city:p.city||p.town||p.village||p.county,state:p.state,postcode:p.postcode,country:p.country};if(p.name&&['amenity','shop','office','leisure','tourism','building'].includes(p.osm_key))a[p.osm_key==='amenity'?'amenity':'building']=p.name;for(const k in a)if(!a[k])delete a[k];return a}
+function m2Line1(p){if(p.name)return p.name;const s=[p.housenumber,p.street].filter(Boolean).join(' ');return s||p.district||p.locality||p.city||''}
+function m2Line2(p){return [p.district||p.locality,p.city||p.town||p.village||p.county,p.state,p.postcode].filter((x,i,a)=>x&&a.indexOf(x)===i).join(', ')}
+async function photonSuggest(q,extra){const key=q.trim().toLowerCase()+'|'+(extra||'');if(M2.sug.has(key))return M2.sug.get(key);
+  const pr=fetch(M2_PHOTON+encodeURIComponent(q)+(extra||''),{headers:{'Accept':'application/json'}}).then(r=>r.ok?r.json():null).then(j=>{if(!j)return null;return (j.features||[]).filter(f=>f.properties&&f.geometry?.coordinates&&(!f.properties.countrycode||f.properties.countrycode==='ZA')).map(f=>{const p=f.properties;const [lng,lat]=f.geometry.coordinates;const l1=m2Line1(p),l2=m2Line2(p);return {lat:+lat,lng:+lng,name:l1,loc:l2,postcode:p.postcode||'',type:p.osm_value||'',category:p.osm_key||'',osm_type:p.osm_type||'',osm_id:p.osm_id,address:m2PhAddr(p),full:[l1,l2].filter(Boolean).join(', '),display:[l1,l2].filter(Boolean).join(', '),src:'photon'}}).filter(x=>x.name)}).catch(()=>null);
+  M2.sug.set(key,pr);const res=await pr;if(res===null)M2.sug.delete(key);return res}
+const _m2SuggestPlaces=suggestPlaces;
+suggestPlaces=async function(q){const ph=await photonSuggest(q);if(ph&&ph.length)return ph;const n=await _m2SuggestPlaces(q);if(n&&n.length)return n.map(x=>({...x,loc:[placeLoc(x.address),x.address?.postcode].filter(Boolean).join(', '),postcode:x.address?.postcode||'',src:'nominatim'}));if(n===null&&ph===null)return null;return n||[]};
+const _m2Nomi=nomi;
+nomi=async function(q){const ph=await photonSuggest(q);if(ph&&ph.length)return ph.map(x=>({...x,lat:String(x.lat),lon:String(x.lng),display_name:x.full,addresstype:x.category}));return _m2Nomi(q)};
+attachSuggest=function(input){if(input.dataset.sug)return;if((typeof SCHOOL_IDS!=='undefined'&&SCHOOL_IDS.includes(input.id))||input.dataset.school)return attachSchoolSuggest(input,'field');
+  input.dataset.sug='1';input.autocomplete='off';const wrap=document.createElement('div');wrap.className='sugwrap';input.parentNode.insertBefore(wrap,input);wrap.appendChild(input);const box=document.createElement('div');box.className='sug';box.hidden=true;box.setAttribute('role','listbox');wrap.appendChild(box);let t,seq=0,items=[],idx=-1;
+  const close=()=>{box.hidden=true;idx=-1};
+  const pick=it=>{input.value=it.full;input.dataset.geo=JSON.stringify({lat:it.lat,lng:it.lng,label:it.full,address:it.address,postcode:it.postcode||it.address?.postcode||'',src:it.src||''});input.dataset.postcode=it.postcode||it.address?.postcode||'';close();let ok=wrap.querySelector('.addrok');if(!ok){ok=document.createElement('span');ok.className='addrok';wrap.appendChild(ok)}ok.innerHTML=ICON.check+' Pinned on the map';input.dispatchEvent(new Event('change'))};
+  const draw=()=>{if(items===null)return box.innerHTML='<div class="st">Address search is not reachable right now. You can still type the address.</div>',box.hidden=false;if(!items.length)return box.innerHTML='<div class="st">No match yet. Keep typing the street name or suburb.</div>',box.hidden=false;
+    box.innerHTML=items.map((it,i)=>{const l2=it.loc||'';const pc=it.postcode||it.address?.postcode||'';const l2h=pc&&l2.endsWith(pc)?h(l2.slice(0,-pc.length))+'<span class="pc">'+h(pc)+'</span>':h(l2);return `<div class="m2a ${i===idx?'on':''}" data-i="${i}" role="option"><b>${h(it.name)}${it.type&&!/yes|residential|house|street|road/.test(it.type)?' <small style="display:inline;color:var(--fg3)">'+h(String(it.type).replace(/_/g,' '))+'</small>':''}</b>${l2?`<small>${l2h}</small>`:''}</div>`}).join('');box.hidden=false;box.querySelectorAll('[data-i]').forEach(el=>el.onmousedown=e=>{e.preventDefault();pick(items[+el.dataset.i])})};
+  input.addEventListener('input',()=>{delete input.dataset.geo;delete input.dataset.postcode;wrap.querySelector('.addrok')?.remove();const q=input.value.trim();clearTimeout(t);if(q.length<3)return close();box.innerHTML='<div class="st">Searching…</div>';box.hidden=false;const my=++seq;t=setTimeout(async()=>{const res=await suggestPlaces(q);if(my!==seq)return;items=res;idx=-1;draw()},250)});
+  input.addEventListener('keydown',e=>{if(box.hidden||!items?.length)return;if(e.key==='ArrowDown'){idx=Math.min(items.length-1,idx+1);draw();e.preventDefault()}else if(e.key==='ArrowUp'){idx=Math.max(0,idx-1);draw();e.preventDefault()}else if(e.key==='Enter'&&idx>=0){pick(items[idx]);e.preventDefault()}else if(e.key==='Escape')close()});
+  input.addEventListener('blur',()=>setTimeout(close,150))};
+/* --- 6. Find: seats needed --- */
+function m2Need(){const f=S.filters||{};if(f.need)return Math.max(1,+f.need);const u=me();if(!u)return 1;try{return Math.max(1,kidsOf(u.id).filter(k=>!bookingOf(k)).length)}catch(e){return 1}}
+const _m2RouteCard=routeCard;routeCard=function(r,kids){let html=_m2RouteCard(r,kids);try{if(S.route!=='p-find'||!html)return html;const free=Math.max(0,(+r.seats||0)-routeSeatsUsed(r.id));const need=m2Need();if(need>1&&free<need)return '';
+  const tag=`<div class="m2seats"><span class="m2chip">${free?free+' seat'+(free===1?'':'s')+' free':'Full'}</span>${need>1&&free>=need?`<span class="m2chip fit">fits ${need} kids</span>`:''}</div>`;const mk='<div style="margin-top:12px"><b>';const i=html.indexOf(mk);html=i>=0?html.slice(0,i)+tag+html.slice(i):html}catch(e){}return html};
+const _m2PFind=VIEWS['p-find'];VIEWS['p-find']=function(){let html=_m2PFind.apply(this,arguments);try{const need=m2Need();const chips=`<div class="m2need"><span class="lab">Seats needed</span>${[1,2,3,4].map(n=>`<button class="m2nc ${(n<4&&need===n)||(n===4&&need>=4)?'on':''}" onclick="S.filters.need=${n};render()">${n===4?'4+':n}</button>`).join('')}</div>`;
+  const mk='<label class="row small" style="margin-top:12px;gap:8px"><input id="f-seats"';const i=html.indexOf(mk);if(i>=0)html=html.slice(0,i)+chips+html.slice(i);
+  if(need>1&&/<div class="grid g2">\s*<\/div>/.test(html))html=html.replace(/<div class="grid g2">\s*<\/div>/,empty(`No routes with ${need} free seats right now. Pick fewer seats, or <a href="#" onclick="event.preventDefault();go('p-requests')">post a request</a> so drivers can offer.`))}catch(e){console.warn('m2 find',e)}return html};
+</script>

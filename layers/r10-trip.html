@@ -1,0 +1,297 @@
+<style>
+/* ===== Round 10 · trip: live status pill, get-ready alerts, running late, phone pop-ups ===== */
+.tp-pills{position:sticky;top:calc(env(safe-area-inset-top,0px) + 66px);z-index:8;display:flex;flex-direction:column;align-items:center;gap:6px;margin:-8px 0 14px;pointer-events:none}
+.tp-pill{--tpc:var(--info);pointer-events:auto;display:flex;align-items:center;gap:10px;width:max-content;max-width:min(100%,440px);min-height:50px;padding:6px 14px 6px 6px;border-radius:999px;border:1px solid color-mix(in srgb,var(--tpc) 38%,var(--line));background:color-mix(in srgb,var(--bg) 84%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 10px 30px rgba(0,0,0,.10),inset 0 0 0 1px color-mix(in srgb,var(--tpc) 8%,transparent);cursor:pointer;font:inherit;color:var(--fg);text-align:left;animation:tpIn .4s cubic-bezier(.2,.8,.2,1) both;transition:transform .15s}
+.tp-pill:active{transform:scale(.98)}
+.tp-pill .tp-ic{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;font-size:1.1rem;background:color-mix(in srgb,var(--tpc) 16%,var(--bg));position:relative}
+.tp-pill .tp-ic>span{display:block;line-height:1}
+.tp-pill .tp-tx{display:flex;flex-direction:column;min-width:0;flex:1;line-height:1.25}
+.tp-pill .tp-tx b{font-size:.9rem;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tp-pill .tp-tx small{font-size:.74rem;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tp-pill .tp-go{width:16px;height:16px;color:var(--fg3);flex-shrink:0}
+.tp-pill .tp-bar{display:block;height:3px;border-radius:3px;margin-top:4px;background:color-mix(in srgb,var(--tpc) 18%,transparent);overflow:hidden;width:100%;min-width:120px}
+.tp-pill .tp-bar i{display:block;height:100%;border-radius:3px;background:var(--grad);transition:width .6s}
+.tp-onway{--tpc:var(--info)}.tp-near{--tpc:var(--acc)}.tp-outside,.tp-onboard{--tpc:var(--live)}.tp-done{--tpc:var(--fg3)}.tp-late{--tpc:var(--warn)}
+.tp-onway .tp-ic>span{animation:tpBob 1.4s ease-in-out infinite}
+.tp-near .tp-ic::after,.tp-outside .tp-ic::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--tpc);animation:tpRing 1.6s ease-out infinite}
+.tp-outside .tp-ic::after{animation-duration:1s}
+.tp-done .tp-ic>span{animation:tpPop .5s cubic-bezier(.2,1.6,.4,1) both}
+.tp-late .tp-ic>span{animation:tpTick 2s ease-in-out infinite}
+@keyframes tpIn{from{opacity:0;transform:translateY(-8px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes tpBob{0%,100%{transform:translateX(-2px) rotate(-2deg)}50%{transform:translateX(2px) rotate(2deg)}}
+@keyframes tpRing{from{opacity:.75;transform:scale(.92)}to{opacity:0;transform:scale(1.4)}}
+@keyframes tpPop{from{transform:scale(.4)}to{transform:scale(1)}}
+@keyframes tpTick{0%,90%,100%{transform:rotate(0)}93%{transform:rotate(-12deg)}97%{transform:rotate(12deg)}}
+@keyframes tpBell{0%,80%,100%{transform:rotate(0)}84%{transform:rotate(14deg)}88%{transform:rotate(-12deg)}92%{transform:rotate(8deg)}96%{transform:rotate(-4deg)}}
+/* parent: running-late banner + pop-ups banner */
+.tp-lic{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;flex-shrink:0;background:color-mix(in srgb,var(--warn) 18%,var(--bg));color:var(--warn)}
+.tp-lic svg{width:21px;height:21px}
+.tp-lateban{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:18px;background:color-mix(in srgb,var(--warn) 9%,var(--bg));border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);animation:tpIn .4s both}
+.tp-lateban.bd{background:color-mix(in srgb,var(--bad) 8%,var(--bg));border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+.tp-lateban.bd .tp-lic{background:color-mix(in srgb,var(--bad) 16%,var(--bg));color:var(--bad)}
+.tp-lateban .grow{min-width:0;flex:1}
+.tp-lateban b{display:block;font-size:.98rem;letter-spacing:-.01em}
+.tp-lateban .tp-q{margin-top:4px;color:var(--fg2);font-style:italic;overflow-wrap:anywhere}
+.tp-lateban .tp-bdl{margin-top:6px;font-weight:700;color:var(--bad)}
+.tp-lateban .btn{min-height:40px}
+.tp-pushban{display:flex;gap:12px;align-items:center;padding:14px;border-radius:18px;background:var(--bg2);animation:tpIn .4s both}
+.tp-pushban .grow{min-width:0;flex:1}
+.tp-pushban b{display:block;font-size:.95rem}
+.tp-bell{width:42px;height:42px;border-radius:14px;background:var(--grad);color:#fff;display:grid;place-items:center;flex-shrink:0;box-shadow:0 6px 18px color-mix(in srgb,var(--acc) 30%,transparent)}
+.tp-bell svg{width:20px;height:20px;animation:tpBell 3s ease-in-out infinite;transform-origin:50% 12%}
+.tp-bell.sm{width:38px;height:38px;border-radius:12px}
+.tp-pbacts{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.tp-pbacts .btn{min-height:44px}
+.tp-x{width:44px;height:44px;border:0;background:transparent;color:var(--fg3)}
+.tp-x svg{width:18px;height:18px}
+@media(max-width:380px){.tp-pushban{flex-wrap:wrap}.tp-pushban .grow{flex-basis:calc(100% - 54px)}.tp-pbacts{width:100%;justify-content:flex-end}}
+/* parent: alert distance per child */
+.tp-kmrow{display:flex;align-items:center;justify-content:space-between;gap:8px 10px;flex-wrap:wrap;margin-top:12px;padding:10px 12px;border-radius:14px;background:var(--bg2)}
+.tp-kmrow>span{font-size:.82rem;font-weight:600;color:var(--fg2)}
+.tp-km{background:var(--bg)}
+.tp-km button{min-height:40px;padding:8px 14px;font-size:.84rem}
+/* driver: running late */
+.tp-latebtn,.tp-latecur{width:100%;display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 12px;border-radius:16px;font:inherit;color:var(--fg);text-align:left;margin-top:12px}
+.tp-latebtn{border:1px dashed color-mix(in srgb,var(--warn) 60%,var(--line));background:color-mix(in srgb,var(--warn) 6%,transparent);cursor:pointer;transition:transform .12s,background .2s}
+.tp-latebtn:hover{background:color-mix(in srgb,var(--warn) 11%,transparent)}.tp-latebtn:active{transform:scale(.99)}
+.tp-latebtn .grow,.tp-latecur .grow{min-width:0;flex:1;display:flex;flex-direction:column;line-height:1.25}
+.tp-latebtn small,.tp-latecur small{font-size:.76rem;color:var(--fg3);overflow:hidden;text-overflow:ellipsis}
+.tp-latebtn .tp-go{width:16px;height:16px;color:var(--fg3);flex-shrink:0}
+.tp-latecur{border:1px solid color-mix(in srgb,var(--warn) 50%,transparent);background:color-mix(in srgb,var(--warn) 10%,var(--bg))}
+.tp-latecur .tp-lic{background:var(--warn);color:#fff}
+.tp-latecur .tp-lic svg{animation:tpTick 2s ease-in-out infinite}
+.tp-latecur .btn{flex-shrink:0;min-height:44px}
+.tp-latebtn.dark{background:#161616;border-color:#3a3220;color:#eee}.tp-latebtn.dark small{color:#999}
+.tp-latecur.dark{background:#1c1708;border-color:#5a4708;color:#eee}.tp-latecur.dark small{color:#b9a774}
+.tp-latecur.dark .btn{background:#f5f5f3;color:#0a0a0a;border-color:#f5f5f3}
+.tripmode .tp-tmrow{margin-top:4px}.tripmode .tp-tmrow .tp-latebtn,.tripmode .tp-tmrow .tp-latecur{margin-top:8px}
+.tp-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.tp-chip{min-height:44px;padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:var(--bg2);color:var(--fg);font:inherit;font-weight:600;cursor:pointer;transition:background .15s,transform .1s}
+.tp-chip:active{transform:scale(.97)}
+.tp-chip.on{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.tp-lm .field input{font-size:16px}
+.tp-bdnote{margin-top:10px;font-size:.8rem;font-weight:600;color:var(--bad)}
+.tp-lic.big{width:46px;height:46px;border-radius:15px;background:var(--warn);color:#fff}
+.tp-pcard .row>div{min-width:0}
+@media(prefers-reduced-motion:reduce){.tp-pill,.tp-pill *,.tp-pill .tp-ic::after,.tp-bell svg,.tp-latecur .tp-lic svg,.tp-lateban,.tp-pushban{animation:none!important}}
+</style>
+<script>
+/* ===================== Round 10 · trip =====================
+   1. "Get ready" alert when the driver is about 500 m / 1 km / 2 km away (parent picks per child: kids.alertKm),
+      for home pickups and afternoon home drop-offs. Once per child per leg per day (route.live.appr).
+   2. Phone pop-ups for parents and kids (users.pushSubs) + the Enivel Worker (/push/notify, cron) and
+      system pop-ups for new alerts that arrive while the app is open.
+   3. Live status pill under the header for parents (and kid screens).
+   4. Driver "Running late": route.late={day,mins,reason,note,at}, banner for parents, "Back on time". */
+const TP_PUSH=['approach','pickup','dropoff','arrived','hoot','late','ontime','kid-sos','sos','emergency','ride-check','handover'];
+const TP_TITLE={approach:'Driver nearby',pickup:'Picked up',dropoff:'Dropped off',arrived:'Driver outside',hoot:'Driver outside',late:'Running late',ontime:'Back on time','kid-sos':'🚨 Emergency',sos:'🚨 Emergency',emergency:'🚨 Emergency','ride-check':'Ride check',handover:'Handover check'};
+const TP_KMS=[0.5,1,2];
+const TP_REASON={traffic:{label:'Traffic',ic:'🚦'},breakdown:{label:'Breakdown',ic:'🔧'},weather:{label:'Weather',ic:'🌧️'},other:{label:'Other',ic:'💬'}};
+const TP_CLOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg>';
+const TP_CHEV='<svg class="tp-go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>';
+const tpSent=new Set();   // approach alerts this phone already sent (overlapping GPS ticks)
+const tpSpd={};           // last GPS point + speed per route
+const tpShown=new Set();  // alerts already shown as a system pop-up on this phone
+let tpVisibleSince=document.hidden?Infinity:Date.now();
+let tpNidHook=null;
+
+/* ---------- small helpers ---------- */
+function tpFirst(id){return String(userName(id)||'Your driver').split(' ')[0]||'Your driver'}
+function tpAlertKm(k){const v=Number(k&&k.alertKm);return TP_KMS.includes(v)?v:1}
+function tpDistTxt(m){if(m>=950)return (Math.round(m/500)/2)+' km';return Math.max(100,Math.round(m/100)*100)+' m'}
+function tpEta(m,v){const s=(v&&v>=3&&v<=33)?v:30/3.6;return Math.max(1,Math.round(m/s/60))}
+function tpKidAcct(k){return k&&typeof k.accountId==='string'&&k.accountId&&!(k.perms&&k.perms.alerts===false)?k.accountId:null}
+function tpKidLink(){return safeRoute('k-home')||safeRoute('kid-home')||undefined}
+function tpIsKid(){try{if(typeof viewRole==='function'&&viewRole()==='kid')return true;return typeof isKidView==='function'&&!!isKidView()}catch(e){return false}}
+/* writes one notification and returns its id (extra fields help dedupe and the status pill) */
+async function tpNotify(userId,text,type,link,extra){if(!userId)return null;const id=uid();const doc={userId,text,type,ts:Date.now(),read:false,...(extra||{})};const l=safeRoute(link);if(l)doc.link=l;await Store.put('notifications',id,doc);return id}
+
+/* ---------- which leg is a child on right now ---------- */
+/* destination of the ride a child is on: school in the morning, home on the ride back */
+function tpDest(b,k){const r=routeOf(b.routeId)||{};if(b.once)return {geo:b.toGeo||null,label:b.to||'drop-off',once:true};const st=kidStatus(k);const pu=st.today.find(e=>e.type==='pickup');const P=st.today.filter(e=>e.type==='pickup').length;
+  const fromHome=!!(pu&&(pu.geo&&pu.geo.lat!=null&&k.geo?distM(pu.geo,k.geo)<400:(pu.where&&pu.where===k.pickup)));
+  const home=!fromHome&&(P>=2||localHour()>=11);return home?{geo:k.geo||null,label:'home',home:true}:{geo:k.schoolGeo||r.schoolGeo||null,label:'school'}}
+/* the approach alert that applies now: {leg,kind:'pickup'|'drop',target} or null */
+function tpLegs(b,k){const st=kidStatus(k);const today=st.today;
+  if(b.once){const mine=today.filter(e=>e.bookingId===b.id);
+    if(!st.onboard){if(mine.some(e=>e.type==='pickup'))return null;const t=b.fromGeo||k.geo;return t?{leg:'o'+b.id+'pu',kind:'pickup',target:t}:null}
+    if(!mine.some(e=>e.type==='pickup')||!isHomeDrop(b,k))return null;const t=b.toGeo||k.geo;return t?{leg:'o'+b.id+'do',kind:'drop',target:t}:null}
+  if(!st.onboard){if(today.some(e=>e.type==='pickup')||!k.geo)return null;
+    const t=todaysTimes(b);const pm=hmToday(t&&t.schoolPickup);if(pm&&localHour()>=11&&Date.now()>=pm-60*60000)return null; /* only rides home this afternoon: picked up at school */
+    return {leg:'pu',kind:'pickup',target:k.geo}}
+  const d=tpDest(b,k);return d.home&&d.geo?{leg:'do',kind:'drop',target:d.geo}:null}
+/* is this child still waiting for, or on, a ride today? */
+function tpNeedsRide(b,k){if(!k||isAbsent(k))return false;const st=kidStatus(k);if(st.onboard)return true;const P=st.today.filter(e=>e.type==='pickup').length;if(P===0)return true;if(b.once)return false;const t=todaysTimes(b);const pm=hmToday(t&&t.schoolPickup);return !!pm&&P<2&&Date.now()>=pm-2*3600000}
+
+/* ---------- 1. approach ("get ready") alerts, run on the driver's phone from watchGPS ---------- */
+async function tpApproach(r,live){
+  if(!r||!live||!live.gps||!live.active)return null;if(live.acc&&live.acc>250)return null;
+  const day=localKey();const prev=tpSpd[r.id];let v=prev?prev.v:null;
+  if(prev&&live.ts>prev.ts){const dt=(live.ts-prev.ts)/1000;if(dt>=4&&dt<=120){const vv=distM(prev,live)/dt;if(vv>=3&&vv<=33)v=prev.v!=null?(prev.v+vv)/2:vv}}
+  tpSpd[r.id]={lat:live.lat,lng:live.lng,ts:live.ts||Date.now(),v};
+  const cur=(routeOf(r.id)||r).live||{};const appr={};for(const [key,x] of Object.entries(cur.appr||{}))if(x&&x.d===day)appr[key]=x;
+  let changed=false;
+  for(const b of Store.all('bookings').filter(x=>x.routeId===r.id&&(x.status==='active'||(x.once&&x.status==='trip')))){
+    const k=Store.get('kids',b.kidId);if(!k||isAbsent(k))continue;if(b.once&&b.date&&b.date!==day)continue;
+    const L=tpLegs(b,k);if(!L)continue;const key=k.id+':'+L.leg;if(appr[key])continue;
+    const d=distM(live,L.target);if(d==null||d>tpAlertKm(k)*1000)continue;
+    const mem=r.id+':'+key+':'+day;if(tpSent.has(mem))continue;
+    if(Store.all('notifications').some(n=>n.type==='approach'&&n.kidId===k.id&&n.leg===L.leg&&n.day===day))continue;
+    tpSent.add(mem);
+    const eta=tpEta(d,v);const dist=tpDistTxt(d);const drv=tpFirst(r.driverId);const m=Math.round(d);
+    appr[key]={d:day,at:Date.now(),m,eta,kind:L.kind};changed=true;
+    const extra={kidId:k.id,leg:L.leg,day,routeId:r.id,m,eta};
+    await tpNotify(b.parentId,L.kind==='pickup'?`🚐 ${drv} is about ${dist} away (≈${eta} min). Get ${k.name} ready.`:`🚐 ${k.name} is about ${dist} from home (≈${eta} min).`,'approach','p-home',extra);
+    const ka=tpKidAcct(k);if(ka)await tpNotify(ka,L.kind==='pickup'?`🚐 ${drv} is about ${dist} away (≈${eta} min). Get ready!`:`🏠 Almost home! About ${dist} to go (≈${eta} min).`,'approach',tpKidLink(),extra)}
+  if(changed){const now=(routeOf(r.id)||r).live||cur;await Store.patch('routes',r.id,{live:{...now,appr}})}
+  return appr}
+/* runs first; the old 500 m note is skipped when it would ping twice */
+const _tpProx=proximityAlerts;proximityAlerts=async function(r,live){
+  let appr=null;try{appr=await tpApproach(r,live)}catch(e){console.warn('approach',e)}
+  let rr=r;try{const day=localKey();const near={...((r&&r.live&&r.live.near)||{})};let mod=false;const a0=appr||((routeOf(r.id)||{}).live||{}).appr||{};
+    for(const b of activeBookings(x=>x.routeId===r.id)){const k=Store.get('kids',b.kidId);if(!k||near[k.id]===day)continue;const a=a0[k.id+':pu'];
+      if(tpAlertKm(k)===0.5||(a&&a.d===day&&a.m<=NEAR_M)){near[k.id]=day;mod=true}}
+    if(mod)rr={...r,live:{...(r.live||{}),near}}}catch(e){}
+  return _tpProx(rr,live)};
+/* a restarted trip keeps today's "already alerted" marks; since = when this trip started */
+function tpKeepLive(l){const day=localKey();const keep={};const a={};for(const [k,x] of Object.entries((l&&l.appr)||{}))if(x&&x.d===day)a[k]=x;if(Object.keys(a).length)keep.appr=a;const n={};for(const [k,v] of Object.entries((l&&l.near)||{}))if(v===day)n[k]=v;if(Object.keys(n).length)keep.near=n;return keep}
+const _tpStart=startTrip;startTrip=async function(routeId){const keep=tpKeepLive((routeOf(routeId)||{}).live);const res=await _tpStart.apply(this,arguments);const cur=routeOf(routeId);if(cur&&cur.live&&cur.live.active)await Store.patch('routes',routeId,{live:{...cur.live,...keep,since:Date.now()}});return res};
+const _tpStop=stopTrip;stopTrip=async function(routeId){const keep=tpKeepLive((routeOf(routeId)||{}).live);const res=await _tpStop.apply(this,arguments);const cur=routeOf(routeId);if(cur&&cur.live&&!cur.live.active&&Object.keys(keep).length)await Store.patch('routes',routeId,{live:{...cur.live,...keep}});return res};
+
+/* ---------- 2. phone pop-ups ---------- */
+/* every new pop-up-worthy notification (from any screen or layer) asks the Worker to push it now */
+const _tpPut=Store.put;Store.put=async function(c,id,doc){const fresh=c==='notifications'&&!(S.data[c]&&S.data[c][id]);if(fresh&&tpNidHook)try{tpNidHook(id)}catch(e){}const res=await _tpPut.apply(this,arguments);if(fresh&&doc&&TP_PUSH.includes(doc.type))tpPing(id);return res};
+function tpPing(id){try{if(!S.cloud)return;const ep=otpEndpoint();if(!ep||!/^https:\/\//.test(ep))return;fetch(ep+'/push/notify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id}),keepalive:true}).catch(()=>{})}catch(e){}}
+/* notify() now returns the id of the notification it created */
+const _tpNotifyW=notify;notify=function(){let got=null;const prev=tpNidHook;tpNidHook=id=>{if(!got)got=id};let p;try{p=_tpNotifyW.apply(this,arguments)}finally{tpNidHook=prev}return Promise.resolve(p).then(()=>got)};
+function tpPushOn(){const u=me();if(!u||!('Notification' in window)||Notification.permission!=='granted')return false;const ep=ls.get('enivel_push_ep');return (u.pushSubs||[]).some(s=>!ep||s.endpoint===ep)}
+async function tpEnablePush(){if(!S.cloud)return toast('Phone pop-ups work on the live Enivel site');
+  if(isIOS&&!isStandalone)return modal(`<h3>One step on iPhone</h3><p class="muted small" style="margin:8px 0 14px">iPhones only show pop-ups from apps on the Home Screen. Tap <b>Share</b>, then <b>Add to Home Screen</b>, open Enivel from there and turn pop-ups on again.</p><button class="btn wide" onclick="closeModal()">OK</button>`);
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))return toast('This browser cannot show pop-ups when Enivel is closed');
+  const perm=await Notification.requestPermission();if(perm!=='granted'){render();return toast('Pop-ups are blocked. Allow notifications for Enivel in your phone settings.')}
+  const reg=await ensureSW();if(!reg)return toast('Could not switch on pop-ups on this phone');
+  try{let sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64uToBytes(VAPID_PUBLIC)});const j=sub.toJSON();const u=me();
+    const subs=(u.pushSubs||[]).filter(s=>s.endpoint!==j.endpoint);subs.push({endpoint:j.endpoint,keys:j.keys,device:((navigator.userAgent.match(/\(([^)]+)\)/)||[])[1]||'phone').slice(0,60),at:Date.now()});
+    ls.set('enivel_push_ep',j.endpoint);await Store.patch('users',u.id,{pushSubs:subs.slice(-6)});if(typeof savePushPlan==='function'){S._planSig='';savePushPlan().catch(()=>{})}buzz([20,40,20]);toast('Pop-ups are on for this phone');render()}
+  catch(e){toast('Could not switch on pop-ups: '+(e.message||e))}}
+async function tpDisablePush(){try{await disablePush()}catch(e){}ls.set('enivel_push_ep',null);render()}
+/* settings card (parents, drivers, admin; kid screens can call it too) */
+function tpPushCard(){const u=me();if(!u)return '';const on=S.cloud&&tpPushOn();const role=typeof viewRole==='function'?viewRole():u.role;
+  const what=role==='driver'?'Pickup reminders and trip alerts':role==='admin'?'Emergency alerts':tpIsKid()?'Driver nearby and delays':'Driver nearby, pickups, drop-offs and delays';
+  const blocked='Notification' in window&&Notification.permission==='denied';
+  let body;if(!S.cloud)body='<p class="tiny muted" style="margin-top:10px">Works on the live Enivel site.</p>';
+  else if(on)body='<div class="row" style="margin-top:12px"><button class="btn sm ghost" data-tp-act="push-off">Turn off on this phone</button></div>';
+  else body=`<div class="row" style="margin-top:12px"><button class="btn sm" data-tp-act="push-on">${ICON.bell} Turn on</button></div>${blocked?'<p class="tiny muted" style="margin-top:8px">Notifications are blocked for Enivel in this browser. Allow them in your phone settings.</p>':''}`;
+  const warn=S.cloud&&!otpEndpoint()?`<p class="tiny muted" style="margin-top:8px">${S.admin?'Needs the Enivel Worker: add its address under SMS gateway.':'Pop-ups while Enivel is closed are not switched on for Enivel yet. You still get alerts in the app.'}</p>`:'';
+  return `<div class="card tp-pcard" style="margin-top:14px"><div class="row between" style="flex-wrap:nowrap;align-items:flex-start"><div class="row" style="gap:12px;flex-wrap:nowrap;align-items:flex-start"><span class="tp-bell sm">${ICON.bell}</span><div><h3>Phone pop-ups</h3><p class="tiny muted" style="margin-top:2px">${what}, even when Enivel is closed.</p></div></div><span class="pill ${on?'live':''}">${on?'On':'Off'}</span></div>${body}${warn}</div>`}
+function tpPushBanner(){const u=me();if(!S.cloud||!u||tpPushOn())return '';const can='Notification' in window||(isIOS&&!isStandalone);if(!can||('Notification' in window&&Notification.permission==='denied'))return '';if(ls.get('enivel_tp_pushban_'+u.id)||!kidsOf(u.id).length)return '';
+  return `<div class="tp-pushban"><span class="tp-bell">${ICON.bell}</span><div class="grow"><b>Get pop-ups on this phone</b><div class="small muted">Know when the driver is close, even with Enivel closed.</div></div><div class="tp-pbacts"><button class="btn sm" data-tp-act="push-on">Turn on</button><button class="tp-x" data-tp-act="push-dismiss" aria-label="Not now" title="Not now">${ICON.x}</button></div></div>`}
+/* while the app is open: new alerts that arrive by sync also show as a phone pop-up (same tag as the push, so never twice) */
+document.addEventListener('visibilitychange',()=>{tpVisibleSince=document.hidden?Infinity:Date.now()});
+const _tpPull=cloudPull;cloudPull=async function(){const before=new Set(Object.keys(S.data.notifications||{}));const res=await _tpPull.apply(this,arguments);try{await tpPopNew(before)}catch(e){}return res};
+async function tpPopNew(before){if(!S.cloud||document.hidden||!('Notification' in window)||Notification.permission!=='granted')return;const now=Date.now();if(now-tpVisibleSince<6000)return;
+  for(const n of myNotifs()){if(before.has(n.id)||tpShown.has(n.id)||n.read||!TP_PUSH.includes(n.type))continue;if(Math.abs(now-(n.ts||0))>5*60000)continue;tpShown.add(n.id);
+    const title=TP_TITLE[n.type]||'Enivel';const body=String(n.text||'');const tag='n-'+n.id;
+    try{const reg=swReg||await ensureSW();if(reg)await reg.showNotification(title,{body,tag,data:{url:safeRoute(n.link)||'',go:true},vibrate:[200,100,200]});else new Notification(title,{body,tag})}catch(e){try{new Notification(title,{body,tag})}catch(_){}}
+    buzz([30,60,30])}}
+/* a pushed pop-up arrived while the app is on screen: sync now; tapping a pop-up opens its screen */
+function tpGoLink(hash){const m=String(hash||'').match(/^#go-([a-z0-9-]{1,30})$/);if(!m)return;try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}const r=safeRoute(m[1]);if(r&&me())go(r)}
+if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{const d=e.data||{};if(d.enivel==='reminder'&&String((d.d&&d.d.tag)||'').startsWith('n-')&&S.cloud&&S.session)cloudPull(false);if(d.enivel==='open'&&/^#go-/.test(d.hash||''))tpGoLink(d.hash)});
+(function tpWaitLink(){if(!/^#go-/.test(location.hash))return;const t=setInterval(()=>{if(S.ready&&me()){clearInterval(t);tpGoLink(location.hash)}},400);setTimeout(()=>clearInterval(t),20000)})();
+
+/* ---------- 3. live status pill ---------- */
+/* state of one child's ride today, from stored data only. The driver's position is used only while the child is on board. */
+function tpRide(k,kidView){if(!k||isAbsent(k))return null;const b=bookingOf(k);if(!b)return null;const r=routeOf(b.routeId);if(!r)return null;
+  const live=r.live||{};const day=localKey();const now=Date.now();const st=kidStatus(k);const last=st.today.find(e=>e.type==='pickup'||e.type==='dropoff');
+  const late=r.late&&r.late.day===day&&now-r.late.at<6*3600000&&(st.onboard||!last||last.ts<r.late.at)?r.late:null;
+  const lateTx=late?`running ~${tpLateTxt(late)} late`:'';const who=kidView?'':k.name;const sub=(...a)=>a.filter(Boolean).join(' · ');
+  if(st.onboard){const d=tpDest(b,k);const dest=d.home?'home':d.once?'drop-off':'school';
+    if(live.active&&live.gps&&d.geo&&live.lat!=null){const m=distM(live,d.geo);const eta=tpEta(m);let pct=null;const pu=st.today.find(e=>e.type==='pickup');const start=pu&&pu.geo&&pu.geo.lat!=null?pu.geo:null;if(start){const tot=distM(start,d.geo);if(tot>50)pct=Math.max(0,Math.min(1,1-m/tot))}
+      return {cls:'onboard',icon:'🎒',title:`On board · ~${eta} min`,sub:sub(who,`${(m/1000).toFixed(1)} km to ${dest}`,lateTx),pct}}
+    return {cls:'onboard',icon:'🎒',title:'On board',sub:sub(who,`on the way to ${dest}`,lateTx)}}
+  if(last&&last.type==='dropoff'&&now-last.ts<45*60000){const home=k.geo&&last.geo&&last.geo.lat!=null?distM(last.geo,k.geo)<400:last.where===k.pickup;const at=b.once?'Dropped off ✓':home?'Home ✓':'At school ✓';
+    return {cls:'done',icon:home?'🏠':b.once?'✅':'🏫',title:at,sub:sub(who,fmtT(last.ts))}}
+  const since=live.since||0;const tripOn=!!live.active&&(since?(since>(last?last.ts:0)&&now-since<4*3600000):(!last&&now-(live.ts||0)<30*60000));
+  if(tripOn){const out=st.today.find(e=>e.type==='arrived'&&e.ts>(last?last.ts:0)&&e.ts>=since-60000&&now-e.ts<20*60000);
+    if(out)return {cls:'outside',icon:'📣',title:'Driver outside',sub:sub(who,kidView?'Go out now':'go out now')};
+    const L=tpLegs(b,k);if(L&&L.kind==='pickup'){const a=((live.appr||{})[k.id+':'+L.leg])||null;const n=a&&a.d===day?a:myNotifs().find(x=>x.type==='approach'&&x.kidId===k.id&&x.leg===L.leg&&x.day===day);
+      if(n&&n.m!=null){const at=n.at||n.ts||now;const left=Math.max(1,(n.eta||1)-Math.floor((now-at)/60000));return {cls:'near',icon:'📍',title:`About ${tpDistTxt(n.m)} away · ~${left} min`,sub:sub(who,kidView?'Get ready!':'get ready',lateTx)}}}
+    return {cls:late?'late':'onway',icon:'🚐',title:'Driver on the way',sub:sub(who,lateTx||`${tpFirst(r.driverId)} is driving`)}}
+  if(late&&tpNeedsRide(b,k))return {cls:'late',icon:'⏱️',title:`Running ~${tpLateTxt(late)} late`,sub:sub(who,(TP_REASON[late.reason]||TP_REASON.other).label)};
+  return null}
+function tpPillsHtml(kids,kidView){const items=kids.map(k=>({k,s:tpRide(k,kidView)})).filter(x=>x.s).slice(0,3);if(!items.length)return '';
+  return `<div class="tp-pills" role="status" aria-live="polite">${items.map(({k,s})=>`<button class="tp-pill tp-${s.cls}" data-tp-track="${h(k.id)}" aria-label="${h((kidView?'':k.name+': ')+s.title)}"><span class="tp-ic"><span>${s.icon}</span></span><span class="tp-tx"><b>${h(s.title)}</b>${s.sub?`<small>${h(s.sub)}</small>`:''}${s.pct!=null?`<span class="tp-bar"><i style="width:${Math.round(s.pct*100)}%"></i></span>`:''}</span>${TP_CHEV}</button>`).join('')}</div>`}
+
+/* ---------- 4. running late ---------- */
+function tpLateOf(r){const l=r&&r.late;return l&&l.day===localKey()&&Date.now()-(l.at||0)<6*3600000?l:null}
+function tpLateTxt(l){return (Number(l.mins)>=20?'20+':Number(l.mins)||5)+' min'}
+function tpMyRoutes(){const u=me();return u?Store.all('routes').filter(r=>r.driverId===u.id&&r.active!==false&&activeBookings(b=>b.routeId===r.id).length):[]}
+function tpDriverLateHtml(dark,onlyRoute){const rs=tpMyRoutes().filter(r=>!onlyRoute||r.id===onlyRoute);if(!rs.length)return '';const d=dark?' dark':'';
+  const cur=rs.map(r=>({r,l:tpLateOf(r)})).filter(x=>x.l);
+  return cur.map(({r,l})=>`<div class="tp-latecur${d}"><span class="tp-lic">${TP_CLOCK}</span><div class="grow"><b>Running ~${tpLateTxt(l)} late</b><small>${h((TP_REASON[l.reason]||TP_REASON.other).label)}${rs.length>1&&!onlyRoute?' · '+h(r.name):''} · told ${fmtT(l.at)}</small></div><button class="btn sm" data-tp-act="ontime" data-tp-route="${h(r.id)}">Back on time</button></div>`).join('')
+    +(cur.length<rs.length?`<button class="tp-latebtn${d}" data-tp-act="late-open"${onlyRoute?` data-tp-route="${h(onlyRoute)}"`:''}><span class="tp-lic">${TP_CLOCK}</span><span class="grow"><b>Running late?</b><small>Tell parents in one tap</small></span>${TP_CHEV}</button>`:'')}
+function tpLateModal(routeId){const all=tpMyRoutes();const rs=all.filter(r=>!tpLateOf(r));if(!rs.length)return toast(all.length?'Parents already know you are late':'No passengers on your routes yet');
+  let rid=(routeId&&rs.find(r=>r.id===routeId)||rs.find(r=>r.live&&r.live.active)||rs[0]).id;let mins=10,reason='traffic';
+  modal(`<div class="tp-lm"><div class="row" style="gap:12px;flex-wrap:nowrap"><span class="tp-lic big">${TP_CLOCK}</span><div><h3>Running late</h3><p class="muted small">Parents get a pop-up right away.</p></div></div>
+  ${rs.length>1?`<div class="eyebrow" style="margin-top:16px">Route</div><div class="tp-chips" data-g="route">${rs.map(r=>`<button class="tp-chip${r.id===rid?' on':''}" data-v="${h(r.id)}">${h(r.name)}</button>`).join('')}</div>`:''}
+  <div class="eyebrow" style="margin-top:16px">How late?</div><div class="tp-chips" data-g="mins">${[5,10,15,20].map(x=>`<button class="tp-chip${x===mins?' on':''}" data-v="${x}">${x===20?'20+':x} min</button>`).join('')}</div>
+  <div class="eyebrow" style="margin-top:16px">Why?</div><div class="tp-chips" data-g="reason">${Object.entries(TP_REASON).map(([key,x])=>`<button class="tp-chip${key===reason?' on':''}" data-v="${key}">${x.ic} ${x.label}</button>`).join('')}</div>
+  <div class="tp-bdnote" hidden>Parents will also see “Arrange other transport if needed”.</div>
+  <div class="field" style="margin-top:14px"><input id="tp-late-note" maxlength="80" placeholder="Short note (optional)" autocomplete="off"></div>
+  <button class="btn wide" id="tp-late-go" style="margin-top:14px">Tell parents</button></div>`,m=>{
+    m.querySelectorAll('.tp-chips').forEach(g=>g.addEventListener('click',e=>{const bt=e.target.closest('.tp-chip');if(!bt)return;g.querySelectorAll('.tp-chip').forEach(x=>x.classList.toggle('on',x===bt));const v=bt.dataset.v;if(g.dataset.g==='route')rid=v;else if(g.dataset.g==='mins')mins=+v;else{reason=v;m.querySelector('.tp-bdnote').hidden=v!=='breakdown'}buzz()}));
+    $('#tp-late-go',m).onclick=async()=>{const bt=$('#tp-late-go',m);bt.disabled=true;bt.textContent='Sending…';const n=await tpSetLate(rid,mins,reason,val(m,'tp-late-note').trim().slice(0,80));closeModal();toast(n?`${n} parent${n>1?'s':''} told`:'Saved. No child is waiting right now.')}})}
+async function tpSetLate(routeId,mins,reason,note){const r=routeOf(routeId);if(!r)return 0;mins=[5,10,15,20].includes(+mins)?+mins:10;reason=TP_REASON[reason]?reason:'other';
+  const l={day:localKey(),mins,reason,note:String(note||'').slice(0,80),at:Date.now()};await Store.patch('routes',routeId,{late:l});return tpTellLate(routeOf(routeId)||r,l)}
+async function tpTellLate(r,l){const drv=tpFirst(r.driverId);const mt=tpLateTxt(l);const why=(TP_REASON[l.reason]||TP_REASON.other).label;const bd=l.reason==='breakdown';const q=l.note?` “${l.note}”`:'';
+  const byParent={};const kidAcc=new Set();
+  for(const b of activeBookings(x=>x.routeId===r.id)){const k=Store.get('kids',b.kidId);if(!k||!tpNeedsRide(b,k))continue;(byParent[b.parentId]=byParent[b.parentId]||[]).push(k.name);const ka=tpKidAcct(k);if(ka)kidAcc.add(ka)}
+  let n=0;for(const [pid,names] of Object.entries(byParent)){const who=names.join(' & ');
+    await tpNotify(pid,bd?`⏱ ${drv}'s vehicle broke down. About ${mt} late for ${who}. Arrange other transport if needed.${q}`:`⏱ ${drv} is running about ${mt} late for ${who} · ${why}.${q}`,'late','p-home',{routeId:r.id});n++}
+  for(const ka of kidAcc)await tpNotify(ka,bd?`⏱ ${drv}'s vehicle broke down. About ${mt} late. Your parent knows.`:`⏱ ${drv} is running about ${mt} late · ${why}.`,'late',tpKidLink(),{routeId:r.id});
+  return n}
+async function tpBackOnTime(routeId){const r=routeOf(routeId);const l=r&&r.late;if(!l)return;await Store.patch('routes',routeId,{late:null});const myId=me()&&me().id;const drv=tpFirst(r.driverId);
+  const told=[...new Set(Store.all('notifications').filter(n=>n.type==='late'&&n.routeId===routeId&&n.ts>=(l.at||0)-1000&&n.userId!==myId).map(n=>n.userId))];
+  for(const id of told){const kid=Store.all('kids').some(k=>k.accountId===id);await tpNotify(id,`✅ ${drv} is back on time.`,'ontime',kid?tpKidLink():'p-home',{routeId})}
+  buzz();toast(told.length?'Parents told you are back on time':'Back on time')}
+/* parent home: banner while the driver is late */
+function tpLateBanners(){const u=me();if(!u)return '';const seen=new Set();let out='';const kids=kidsOf(u.id);
+  for(const k of kids){const b=bookingOf(k);if(!b||b.once)continue;const r=routeOf(b.routeId);const l=tpLateOf(r);if(!l||seen.has(r.id)||isAbsent(k))continue;const st=kidStatus(k);const drop=st.today.find(e=>e.type==='dropoff');if(!st.onboard&&drop&&drop.ts>l.at)continue;seen.add(r.id);
+    const names=kids.filter(x=>{const bx=bookingOf(x);return bx&&bx.routeId===r.id&&!isAbsent(x)}).map(x=>x.name).join(' & ');const bd=l.reason==='breakdown';const R=TP_REASON[l.reason]||TP_REASON.other;
+    const tel=String((Store.get('users',r.driverId)||{}).phone||'').replace(/[^\d+]/g,'');
+    out+=`<div class="tp-lateban${bd?' bd':''}" role="alert"><span class="tp-lic">${TP_CLOCK}</span><div class="grow"><b>${h(tpFirst(r.driverId))} is ${bd?'delayed':'running late'} · ~${tpLateTxt(l)}</b><div class="small muted">${R.ic} ${h(R.label)} · ${h(names)} · since ${fmtT(l.at)}</div>${l.note?`<div class="small tp-q">“${h(l.note)}”</div>`:''}${bd?'<div class="small tp-bdl">Arrange other transport if needed.</div>':''}<div class="row" style="margin-top:10px">${tel?`<a class="btn sm" href="tel:${h(tel)}">${ICON.phone} Call</a>`:''}<button class="btn sm ghost" data-tp-act="chat" data-tp-user="${h(r.driverId)}">${ICON.chat} Chat</button></div></div></div>`}
+  return out}
+
+/* ---------- screens ---------- */
+/* parent: "Alert me when the driver is" per child */
+function tpKmRow(k){const cur=tpAlertKm(k);return `<div class="tp-kmrow"><span>🔔 Alert me when the driver is</span><div class="seg tp-km" role="group" aria-label="Alert distance">${TP_KMS.map(v=>`<button class="${cur===v?'on':''}" data-tp-km="${v}" data-kid="${h(k.id)}" aria-pressed="${cur===v}">${v<1?'500 m':v+' km'}</button>`).join('')}</div></div>`}
+const _tpKids=VIEWS['p-kids'];VIEWS['p-kids']=function(){let html=_tpKids.apply(this,arguments);try{const u=me();if(!u)return html;for(const k of kidsOf(u.id)){if(!bookingOf(k))continue;const i=html.indexOf(`onclick="addKid('${k.id}')"`);if(i<0)continue;const j=html.indexOf('<div class="row" style="margin-top:12px">',i);if(j<0)continue;html=html.slice(0,j)+tpKmRow(k)+html.slice(j)}}catch(e){console.warn('tp kids',e)}return html};
+async function tpSetKm(kidId,km){const k=Store.get('kids',kidId);if(!k||!TP_KMS.includes(km))return;buzz();await Store.patch('kids',kidId,{alertKm:km});toast(`We'll alert you when the driver is about ${km<1?'500 m':km+' km'} away`)}
+/* driver home + trip screen + trip mode: "Running late" */
+const _tpDhome=VIEWS['d-home'];VIEWS['d-home']=function(){let html=_tpDhome.apply(this,arguments);try{const blk=tpDriverLateHtml(false);if(!blk)return html;const i=html.indexOf("Today's trips</h3>");const j=i<0?-1:html.indexOf('<div class="stack" style="margin-top:10px">',i);
+  if(j>=0)html=html.slice(0,j)+`<div class="tp-dlate">${blk}</div>`+html.slice(j);else{const k=html.indexOf('<div class="kpi">');html=k>=0?html.slice(0,k)+`<div class="tp-dlate" style="margin-bottom:14px">${blk}</div>`+html.slice(k):html+blk}}catch(e){console.warn('tp dhome',e)}return html};
+const _tpDtrip=VIEWS['d-trip'];VIEWS['d-trip']=function(){let html=_tpDtrip.apply(this,arguments);try{const r=routeOf(S.tripRoute);if(!r||r.driverId!==(me()||{}).id)return html;const blk=tpDriverLateHtml(false,r.id);if(!blk)return html;const mk='<div class="grid g2"><div class="stack">';const i=html.indexOf(mk);if(i>=0)html=html.slice(0,i)+`<div class="tp-dlate" style="margin:-4px 0 14px">${blk}</div>`+html.slice(i)}catch(e){console.warn('tp dtrip',e)}return html};
+const _tpDraw=drawTripMode;drawTripMode=function(){const res=_tpDraw.apply(this,arguments);try{const d=document.querySelector('.tripmode');const rid=S.tripModeRoute;if(d&&rid){d.querySelector('.tp-tmrow')?.remove();const blk=tpDriverLateHtml(true,rid);const acts=d.querySelector('.acts');if(blk&&acts)acts.insertAdjacentHTML('beforebegin',`<div class="tp-tmrow">${blk}</div>`)}}catch(e){console.warn('tp tripmode',e)}return res};
+/* settings: phone pop-ups */
+for(const rt of ['p-more','d-more','a-more']){const f=VIEWS[rt];if(typeof f!=='function')continue;VIEWS[rt]=function(){const html=f.apply(this,arguments);try{return html+tpPushCard()}catch(e){return html}}}
+/* notifications list: labels for the new alert types */
+const _tpNotifs=VIEWS.notifs;VIEWS.notifs=function(){let html=_tpNotifs.apply(this,arguments);try{const lab={approach:['info','Nearby'],late:['warn','Late'],ontime:['live','On time']};for(const n of myNotifs()){const L=lab[n.type];if(!L)continue;const tail=`<div class="grow"><div style="font-weight:${n.read?500:700}">${h(n.text)}`;html=html.replace(`<span class="pill ">Info</span>${tail}`,()=>`<span class="pill ${L[0]}">${L[1]}</span>${tail}`)}}catch(e){}return html};
+/* status pill under the header + parent home banners */
+function tpDecorate(){const u=me();if(!u||!S.ready)return;const main=document.querySelector('#app main');if(!main)return;main.querySelectorAll('.tp-pills,.tp-home').forEach(x=>x.remove());
+  const role=typeof viewRole==='function'?viewRole():u.role;const kidView=tpIsKid();let kids=[];
+  if(kidView)kids=Store.all('kids').filter(k=>k.accountId===u.id);
+  else if(role==='parent'&&/^(p-|notifs$)/.test(S.route)&&S.route!=='p-track')kids=kidsOf(u.id);
+  if(kids.length){const html=tpPillsHtml(kids,kidView);if(html)main.insertAdjacentHTML('afterbegin',html)}
+  if(!kidView&&role==='parent'&&S.route==='p-home'){const html=tpLateBanners()+tpPushBanner();if(html){const box=`<div class="tp-home stack" style="gap:12px">${html}</div>`;const hdr=main.querySelector('.hdr');if(hdr)hdr.insertAdjacentHTML('afterend',box);else{const p=main.querySelector('.tp-pills');p?p.insertAdjacentHTML('afterend',box):main.insertAdjacentHTML('afterbegin',box)}}}}
+const _tpRender=render;render=function(){const res=_tpRender.apply(this,arguments);try{tpDecorate()}catch(e){console.warn('tp pill',e)}return res};
+/* taps (data- attributes only, no user text in handlers) */
+document.addEventListener('click',e=>{const t=e.target.closest('[data-tp-track],[data-tp-act],[data-tp-km]');if(!t)return;
+  if(t.dataset.tpKm){e.preventDefault();tpSetKm(t.dataset.kid,Number(t.dataset.tpKm));return}
+  if(t.dataset.tpTrack){const k=Store.get('kids',t.dataset.tpTrack);if(!k)return;if(tpIsKid()){if(safeRoute('k-track'))go('k-track',{trackKid:k.id});return}go('p-track',{trackKid:k.id});return}
+  const a=t.dataset.tpAct;e.preventDefault();
+  if(a==='push-on')tpEnablePush();else if(a==='push-off')tpDisablePush();
+  else if(a==='push-dismiss'){const u=me();if(u)ls.set('enivel_tp_pushban_'+u.id,1);render()}
+  else if(a==='late-open')tpLateModal(t.dataset.tpRoute);
+  else if(a==='ontime'){const rid=t.dataset.tpRoute;confirmBox('Back on time?','Parents who were told you are late get a quick update.',()=>tpBackOnTime(rid))}
+  else if(a==='chat'&&t.dataset.tpUser)openChat(t.dataset.tpUser)});
+</script>

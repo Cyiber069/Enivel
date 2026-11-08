@@ -1,0 +1,430 @@
+<style>
+/* ===== r10 admin: Control grid, live room, safety, documents, audit, status ===== */
+@keyframes admPulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--bad) 55%,transparent)}70%{box-shadow:0 0 0 10px color-mix(in srgb,var(--bad) 0%,transparent)}100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--bad) 0%,transparent)}}
+@keyframes admIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes admSpin{to{transform:rotate(360deg)}}
+.adm-ctl{margin-bottom:16px}
+.adm-ctl h3{display:flex;align-items:center;gap:8px}
+.adm-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(min(100%,152px),1fr))}
+@media(max-width:520px){.adm-grid{grid-template-columns:1fr 1fr}.adm-grid>.adm-tile:last-child:nth-child(odd){grid-column:1/-1;min-height:96px}}
+.adm-tile{--tc:var(--acc);--tg:linear-gradient(135deg,#6d5dfc,#22d3ee);position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:14px;min-height:118px;min-width:0;border-radius:18px;border:1px solid var(--line);background:radial-gradient(130% 90% at 100% 0%,color-mix(in srgb,var(--tc) 13%,transparent),transparent 62%),var(--bg);cursor:pointer;font:inherit;color:inherit;overflow:hidden;transition:transform .16s,box-shadow .2s,border-color .2s}
+.adm-tile:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:color-mix(in srgb,var(--tc) 40%,var(--line))}
+.adm-tile:active{transform:scale(.98)}
+main.enter .adm-tile{animation:admIn .42s cubic-bezier(.2,.8,.2,1) both}
+.adm-tile .ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;color:#fff;background:var(--tg);margin-bottom:6px;box-shadow:0 6px 16px color-mix(in srgb,var(--tc) 30%,transparent)}
+.adm-tile .ic svg{width:19px;height:19px}
+.adm-tile .n{font-family:var(--display);font-weight:700;font-size:1.55rem;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.adm-tile .l{font-weight:600;font-size:.86rem}
+.adm-tile .s{font-size:.72rem;color:var(--fg3);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.adm-tile.adm-alert{border-color:color-mix(in srgb,var(--bad) 55%,var(--line))}
+.adm-tile .dot{position:absolute;top:14px;right:14px;width:10px;height:10px;border-radius:50%;background:var(--bad);animation:admPulse 1.6s infinite}
+.adm-tile.adm-tone-red{--tc:#ef4444;--tg:linear-gradient(135deg,#ef4444,#f97316)}
+.adm-tile.adm-tone-amber{--tc:#f59e0b;--tg:linear-gradient(135deg,#f59e0b,#facc15)}
+.adm-tile.adm-tone-ink{--tc:#64748b;--tg:linear-gradient(135deg,#334155,#64748b)}
+.adm-tile.adm-tone-green{--tc:#1db954;--tg:linear-gradient(135deg,#1db954,#22d3ee)}
+.adm-tile.adm-tone-cyan{--tc:#06b6d4;--tg:linear-gradient(135deg,#0ea5e9,#22d3ee)}
+.adm-tile.adm-tone-pink{--tc:#ec4899;--tg:linear-gradient(135deg,#ec4899,#8b5cf6)}
+/* header SOS + nav dot */
+.top .ib.adm-sosb{background:var(--bad);border-color:var(--bad);color:#fff;animation:admPulse 1.6s infinite}
+.top .ib.adm-sosb svg{width:19px;height:19px}
+.top .ib.adm-sosb .cnt{background:#fff;color:var(--bad);box-shadow:0 0 0 2px var(--bad)}
+.adm-hasdot{position:relative}
+.adm-nd{position:absolute;top:7px;left:calc(50% + 7px);width:9px;height:9px;border-radius:50%;background:var(--bad);animation:admPulse 1.6s infinite;font-style:normal}
+.rail .adm-nd{position:static;margin-left:auto}
+/* shared bits */
+.adm-back{flex-shrink:0}
+.adm-ell{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.adm-chip{display:inline-flex;align-items:center;gap:6px;font-size:.74rem;font-weight:600;padding:5px 10px;border-radius:999px;background:var(--bg2);color:var(--fg2);max-width:100%}
+.adm-chip svg{width:13px;height:13px;flex-shrink:0}
+.adm-chip>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-chip.adm-c-ok{background:color-mix(in srgb,var(--live) 14%,transparent);color:var(--live)}
+.adm-chip.adm-c-warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:color-mix(in srgb,var(--warn) 80%,var(--fg))}
+.adm-chip.adm-c-bad{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.adm-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.adm-acts .btn{min-height:44px}
+.adm-empty{text-align:center;padding:36px 18px}
+.adm-empty .ei{width:64px;height:64px;border-radius:22px;margin:0 auto 12px;display:grid;place-items:center;background:var(--bg2);color:var(--fg3)}
+.adm-empty .ei svg{width:30px;height:30px}
+.adm-empty b{display:block;font-size:1.02rem;margin-bottom:4px}
+.adm-mini{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.adm-mini>div{background:var(--bg2);border-radius:16px;padding:12px 10px;min-width:0}
+.adm-mini b{display:block;font-family:var(--display);font-size:1.35rem;letter-spacing:-.02em;line-height:1.1}
+.adm-mini span{font-size:.72rem;color:var(--fg3)}
+.adm-mini .adm-c-bad b{color:var(--bad)}.adm-mini .adm-c-warn b{color:var(--warn)}.adm-mini .adm-c-ok b{color:var(--live)}
+/* live room */
+.adm-livewrap{display:grid;gap:14px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:980px){.adm-livewrap{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}.adm-livewrap>.rmap{position:sticky;top:76px;aspect-ratio:4/3}}
+.adm-car{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6d5dfc,#22d3ee);border:3px solid #fff;box-shadow:0 0 0 6px color-mix(in srgb,#6d5dfc 26%,transparent),0 6px 16px rgba(0,0,0,.3);display:grid;place-items:center;color:#fff;font-weight:700;font-size:.76rem;letter-spacing:.02em}
+.adm-car.adm-stale{background:var(--warn);box-shadow:0 0 0 6px color-mix(in srgb,var(--warn) 30%,transparent),0 6px 16px rgba(0,0,0,.3)}
+.adm-car.adm-late{background:linear-gradient(135deg,#f97316,#ef4444)}
+.adm-trip{position:relative;overflow:hidden}
+.adm-trip.adm-stale{border-color:color-mix(in srgb,var(--warn) 50%,var(--line))}
+.adm-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.adm-stats>div{background:var(--bg2);border-radius:14px;padding:10px 6px;text-align:center;min-width:0}
+.adm-stats b{display:block;font-family:var(--display);font-size:1.25rem;letter-spacing:-.02em;line-height:1.15;font-variant-numeric:tabular-nums}
+.adm-stats span{font-size:.7rem;color:var(--fg3)}
+.adm-stats .adm-on b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.adm-trip .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+/* safety */
+.adm-sf{position:relative;overflow:hidden;--k:var(--info)}
+.adm-sf::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--k)}
+.adm-sf.adm-k-sos{--k:var(--bad)}.adm-sf.adm-k-ride{--k:var(--warn)}.adm-sf.adm-k-report{--k:var(--info)}
+.adm-sf.adm-s-resolved{opacity:.78}
+.adm-kic{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:color-mix(in srgb,var(--k) 15%,transparent);color:var(--k);flex-shrink:0}
+.adm-kic svg{width:20px;height:20px}
+.adm-sf.adm-k-sos.adm-s-open .adm-kic{background:var(--bad);color:#fff;animation:admPulse 1.6s infinite}
+.adm-sf .txt{margin-top:10px;font-size:.92rem;overflow-wrap:anywhere}
+.adm-sf .res{margin-top:10px;font-size:.84rem;background:var(--bg2);border-radius:12px;padding:8px 12px;overflow-wrap:anywhere}
+.adm-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.adm-meta span{font-size:.74rem;background:var(--bg2);border-radius:999px;padding:4px 10px;color:var(--fg2);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-meta span b{color:var(--fg);font-weight:600}
+.adm-quick{display:flex;flex-wrap:wrap;gap:6px}
+.adm-quick button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 12px;font-size:.8rem;cursor:pointer;min-height:38px}
+.adm-quick button:hover{border-color:var(--ink)}
+/* documents */
+.adm-bks{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:8px;margin-bottom:14px}
+.adm-bk{border:1px solid var(--line);background:var(--bg);border-radius:16px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;min-height:66px;font:inherit;color:inherit;transition:transform .12s,border-color .2s}
+.adm-bk:active{transform:scale(.97)}
+.adm-bk b{font-family:var(--display);font-size:1.4rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.adm-bk span{font-size:.72rem;color:var(--fg3);white-space:nowrap}
+.adm-bk.adm-c-bad b{color:var(--bad)}.adm-bk.adm-c-warn b{color:var(--warn)}.adm-bk.adm-c-info b{color:var(--info)}
+.adm-bk.adm-on{border-color:var(--ink);background:var(--bg2);box-shadow:inset 0 0 0 1px var(--ink)}
+.adm-docs{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.adm-doc{display:inline-flex;gap:6px;align-items:center;font-size:.76rem;padding:6px 10px;border-radius:10px;background:var(--bg2);max-width:100%}
+.adm-doc b{font-weight:700}
+.adm-doc.adm-c-bad{background:color-mix(in srgb,var(--bad) 12%,transparent);color:var(--bad)}
+.adm-doc.adm-c-warn{background:color-mix(in srgb,var(--warn) 15%,transparent);color:color-mix(in srgb,var(--warn) 78%,var(--fg))}
+.adm-doc.adm-c-info{background:color-mix(in srgb,var(--info) 12%,transparent);color:var(--info)}
+/* audit */
+.adm-tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.adm-tools input,.adm-tools select{flex:1;min-width:0;padding:11px 14px;border-radius:14px;border:1px solid var(--line);background:var(--bg);font-size:16px;min-height:44px}
+.adm-tools select{flex:0 1 190px}
+.adm-arow{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line);min-width:0}
+.adm-arow:last-child{border-bottom:0}
+.adm-adot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex-shrink:0;background:var(--info)}
+.adm-adot.adm-c-live{background:var(--live)}.adm-adot.adm-c-bad{background:var(--bad)}.adm-adot.adm-c-warn{background:var(--warn)}
+.adm-arow .grow{flex:1;min-width:0;overflow-wrap:anywhere}
+/* status */
+.adm-sum{display:flex;gap:16px;align-items:center}
+.adm-sum .ring{width:76px;height:76px;flex-shrink:0}
+.adm-st{display:flex;gap:12px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--line)}
+.adm-st:last-child{border-bottom:0}
+.adm-sti{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;font-style:normal;font-weight:800;color:#fff;font-size:.9rem}
+.adm-sti svg{width:16px;height:16px}
+.adm-st.adm-c-ok .adm-sti{background:var(--live)}.adm-st.adm-c-warn .adm-sti{background:var(--warn)}.adm-st.adm-c-bad .adm-sti{background:var(--bad)}
+.adm-st.adm-c-wait .adm-sti{background:var(--bg3);color:var(--fg3)}
+.adm-st.adm-c-wait .adm-sti svg{animation:admSpin 1s linear infinite}
+.adm-st .hd{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 10px}
+.adm-st .v{font-size:.82rem;font-weight:600;color:var(--fg2);overflow-wrap:anywhere}
+.adm-st.adm-c-bad .v{color:var(--bad)}.adm-st.adm-c-ok .v{color:var(--live)}
+.adm-st .fix{font-size:.78rem;color:var(--fg3);margin-top:2px;overflow-wrap:anywhere}
+.adm-st .grow{flex:1;min-width:0}
+/* funnel */
+.adm-fun{display:grid;gap:10px;margin-top:10px}
+.adm-fr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;font-size:.82rem;align-items:baseline}
+.adm-fr .pc{font-size:.72rem;color:var(--fg3);margin-left:4px;font-weight:500}
+.adm-fr .bar{grid-column:1/-1;height:10px;background:var(--bg3);border-radius:6px;overflow:hidden}
+.adm-fr .bar i{display:block;height:100%;background:var(--grad);border-radius:6px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
+.adm-fr.adm-fr-d .bar i{background:linear-gradient(120deg,#f59e0b,#ec4899)}
+@media(prefers-reduced-motion:reduce){.adm-tile,.adm-tile .dot,.top .ib.adm-sosb,.adm-nd,.adm-sf.adm-k-sos.adm-s-open .adm-kic,.adm-st.adm-c-wait .adm-sti svg{animation:none!important}}
+</style>
+<script>
+/* ===================== Round 10 · admin =====================
+   Control grid on a-home (ADMIN_TILES, extensible), a-live, a-safety, a-docs, a-audit, a-status,
+   growth funnel, audit wrappers for existing admin actions, open-SOS badge in the header. */
+for(const c of COLS)if(!S.data[c])S.data[c]={};
+
+const ADM_IC={
+  radar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6.5-6.5"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg>',
+  siren:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 18v-5a5 5 0 0 1 10 0v5"/><rect x="5" y="18" width="14" height="3" rx="1"/><path d="M12 2v2M4 6l1.5 1.5M20 6l-1.5 1.5M12 11v3"/></svg>',
+  doc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
+  log:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/></svg>',
+  pulse:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg>',
+  route:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h8a3 3 0 0 0 0-6H8a3 3 0 0 1 0-6h8"/></svg>',
+  dl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>',
+  refresh:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/></svg>',
+  funnel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h18l-7 8v6l-4 2v-8z"/></svg>',
+  pause:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4v16l13-8z"/></svg>',
+  map:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>'
+};
+function admIcon(i){return ADM_IC[i]||ICON[i]||(typeof i==='string'&&i.trim().startsWith('<svg')?i:ICON.list)}
+function admId(id){return String(id??'').replace(/[^A-Za-z0-9_-]/g,'')}
+function admAgo(ts){if(!ts)return 'never';const s=Math.max(0,Math.round((Date.now()-ts)/1000));if(s<45)return 'just now';const m=Math.round(s/60);if(m<60)return m+' min ago';const hr=Math.floor(m/60);if(hr<24)return hr+' h ago';return Math.floor(hr/24)+' d ago'}
+function admDur(ms){const m=Math.max(0,Math.round(ms/60000));if(m<1)return 'under 1 min';if(m<60)return m+' min';const hr=Math.floor(m/60);if(hr<24)return hr+' h'+(m%60?' '+(m%60)+' min':'');return Math.floor(hr/24)+' d'}
+function admFmtDate(d){if(!d||d==='none')return '';const t=new Date(d+'T00:00:00');return isNaN(t)?String(d):t.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})}
+function admTel(p){const n=(typeof normPhone==='function'&&normPhone(p||''))||String(p||'').replace(/[^\d+]/g,'');return n.length>=9?'tel:'+n:''}
+function admWho(id){if(!id)return '';if(id==='admin')return 'Admin';return Store.get('users',id)?.name||Store.get('kids',id)?.name||'Unknown'}
+function admBack(){return `<button class="btn sm ghost adm-back" onclick="go('a-home')">Back</button>`}
+function admChat(id){S.adminApp=false;S.chatWith=admId(id);go('a-chat')}
+function admEmpty(icon,title,text){return `<div class="card adm-empty"><div class="ei">${admIcon(icon)}</div><b>${h(title)}</b><p class="small muted">${h(text)}</p></div>`}
+/* extra RPC names the System status page should find on the server (worker-only ones); other layers may push */
+const ADMIN_RPC_EXPECT=['due_push','drop_push_sub','passkey_lookup'];
+const ADM_SQL_FIX='Run supabase/setup.sql again (Supabase → SQL Editor → Run).';
+
+/* ---------- 1. Live control room ---------- */
+const ADM_STALE_MS=180000;
+function admLiveTrips(){const now=Date.now();return Store.all('routes').filter(r=>r.live?.active&&now-(r.live.ts||0)<6*3600e3)}
+function admLeftRunning(){const now=Date.now();return Store.all('routes').filter(r=>r.live?.active&&now-(r.live.ts||0)>=6*3600e3)}
+function admTodayEvents(){const t=localKey();return Store.all('events').filter(e=>(e.type==='pickup'||e.type==='dropoff')&&e.ts&&localKey(new Date(e.ts))===t)}
+function admOnboard(k,ev){const l=ev.filter(e=>e.kidId===k.id).sort((a,b)=>b.ts-a.ts)[0];return l?.type==='pickup'}
+function admTripInfo(r,ev){ev=ev||admTodayEvents();const d=Store.get('users',r.driverId)||{};const v=r.vehicleId?Store.get('vehicles',r.vehicleId):null;
+  const kids=activeBookings(b=>b.routeId===r.id).map(b=>Store.get('kids',b.kidId)).filter(Boolean);const re=ev.filter(e=>e.routeId===r.id);
+  const live=r.live||{};const hasGps=!!(live.gps&&live.lat!=null&&live.lng!=null&&Number.isFinite(+live.lat)&&Number.isFinite(+live.lng));const age=live.ts?Date.now()-live.ts:null;
+  const late=r.late&&r.late.day===localKey()?r.late:null;
+  return {r,d,plate:r.plate||v?.plate||'',kids,total:kids.length,onboard:kids.filter(k=>admOnboard(k,ev)).length,
+    picked:new Set(re.filter(e=>e.type==='pickup').map(e=>e.kidId)).size,dropped:new Set(re.filter(e=>e.type==='dropoff').map(e=>e.kidId)).size,
+    live,hasGps,age,stale:!hasGps||age==null||age>ADM_STALE_MS,late}}
+function admPing(t){const ts=t.live.ts||0;return t.hasGps?`<span class="adm-chip ${t.stale?'adm-c-warn':'adm-c-ok'}" data-adm-k="ping" data-adm-ts="${ts}">${ADM_IC.radar}<span>GPS ${admAgo(ts)}</span></span>`:`<span class="adm-chip adm-c-warn">${ADM_IC.radar}<span>Waiting for GPS</span></span>`}
+function admTripCard(t){const r=t.r,d=t.d;const tel=admTel(d.phone);
+  return `<div class="card adm-trip ${t.stale?'adm-stale':''}" id="lv-${admId(r.id)}"><div class="row between" style="flex-wrap:nowrap;gap:10px"><div class="row" style="flex-wrap:nowrap;min-width:0;gap:10px"><span class="avatar">${initials(d.name)}</span><div style="min-width:0"><b class="adm-ell">${h(d.name||'Driver')}</b><span class="tiny muted adm-ell">${h(r.name||'Route')}${t.plate?' · '+h(t.plate):''}</span></div></div><span class="pill ${t.stale?'warn':'live'}"><i class="blink" style="${t.stale?'background:var(--warn)':''}"></i>${t.stale?'Check':'Live'}</span></div>
+  <div class="adm-stats"><div class="adm-on"><b>${t.onboard}/${t.total}</b><span>on board</span></div><div><b>${t.picked}</b><span>picked up</span></div><div><b>${t.dropped}</b><span>dropped off</span></div></div>
+  <div class="chips">${admPing(t)}${t.late?`<span class="adm-chip adm-c-bad">${ADM_IC.clock}<span class="adm-ell">Late ${Number(t.late.mins)||'?'} min${t.late.reason?' · '+h(t.late.reason):''}</span></span>`:''}${t.hasGps&&t.live.acc?`<span class="adm-chip">±${Math.round(t.live.acc)} m</span>`:''}</div>
+  <div class="adm-acts">${tel?`<a class="btn sm" href="${h(tel)}">${ICON.phone} Call</a>`:''}<button class="btn sm ghost" onclick="admChat('${admId(d.id||r.driverId)}')">${ICON.chat} Message</button>${t.hasGps?`<button class="btn sm ghost" onclick="admFocus('${admId(r.id)}')">${ADM_IC.map} Map</button>`:''}</div></div>`}
+VIEWS['a-live']=adminGate(()=>{const ev=admTodayEvents();const trips=admLiveTrips().map(r=>admTripInfo(r,ev)).sort((a,b)=>(!!b.late-!!a.late)||(b.stale-a.stale)||String(a.d.name||'').localeCompare(String(b.d.name||'')));const left=admLeftRunning();
+  const kids=trips.reduce((s,t)=>s+t.onboard,0);
+  return pageHead('Live control room',trips.length?`${trips.length} running · ${kids} child${kids===1?'':'ren'} on board`:'Trips show here the moment they start',admBack())+
+  (trips.length?`<div class="adm-livewrap"><div data-mount="admLiveMap" class="rmap"></div><div class="stack">${trips.map(admTripCard).join('')}</div></div>`:admEmpty('radar','No trips running right now','When a driver taps Start trip, you see them here live.'))+
+  (left.length?`<p class="tiny muted" style="margin-top:14px">${left.length} trip${left.length===1?' was':'s were'} never stopped (${left.map(r=>h(userName(r.driverId))).join(', ')}). Not shown as live.</p>`:'')});
+let ADM_MAP=null;
+MOUNT.admLiveMap=el=>{if(!HAS_L){el.className='rmap';el.innerHTML='<div class="nomap"><div><b>Map not available here</b><br>The list is still live.</div></div>';return}
+  if(!ADM_MAP){const box=document.createElement('div');box.className='rmap adm-map';box.innerHTML=`<div class="lmap"></div><span class="mapchip"></span><div class="mapctl"><button title="Show all" aria-label="Show all" data-a="fit">${ICON.pin}</button></div>`;
+    const map=L.map(box.querySelector('.lmap'),{zoomControl:false,attributionControl:true});map.setView([-26.2041,28.0473],10);L.control.zoom({position:'bottomright'}).addTo(map);
+    let te=0;L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map).on('tileerror',()=>{if(++te===3)ADM_MAP.tilesBad=true;admMapChip()});
+    ADM_MAP={box,map,layer:L.layerGroup().addTo(map),mk:{},sig:'',tilesBad:false};box.querySelector('[data-a="fit"]').onclick=()=>admFit();}
+  const M=ADM_MAP;el.replaceWith(M.box);setTimeout(()=>{if(M.box.isConnected){M.map.invalidateSize();if(M.needFit)admFit()}},40);
+  const ev=admTodayEvents();const trips=admLiveTrips().map(r=>admTripInfo(r,ev)).filter(t=>t.hasGps);const seen=new Set();
+  for(const t of trips){const id=t.r.id;seen.add(id);const ll=[+t.live.lat,+t.live.lng];const html=`<div class="adm-car${t.stale?' adm-stale':''}${t.late?' adm-late':''}"><span>${h(initials(t.d.name))}</span></div>`;let m=M.mk[id];
+    if(!m){m=L.marker(ll,{icon:L.divIcon({className:'',html,iconSize:[40,40],iconAnchor:[20,20]}),zIndexOffset:1000,title:String(t.d.name||'Driver')}).addTo(M.layer);m.on('click',()=>document.getElementById('lv-'+admId(id))?.scrollIntoView({behavior:'smooth',block:'center'}));M.mk[id]=m}
+    else{m.setLatLng(ll);if(m._admHtml!==html)m.setIcon(L.divIcon({className:'',html,iconSize:[40,40],iconAnchor:[20,20]}))}
+    m._admHtml=html;m.unbindTooltip();m.bindTooltip(h((t.d.name||'Driver')+(t.plate?' · '+t.plate:'')),{direction:'top',offset:[0,-22]})}
+  for(const id of Object.keys(M.mk))if(!seen.has(id)){M.mk[id].remove();delete M.mk[id]}
+  M.count=trips.length;admMapChip();const sig=[...seen].sort().join('|');if(sig!==M.sig){M.sig=sig;admFit()}};
+function admMapChip(){const M=ADM_MAP;if(!M)return;const c=M.box.querySelector('.mapchip');if(c)c.textContent=M.tilesBad?'Map tiles could not load · pins still live':M.count?`${M.count} vehicle${M.count===1?'':'s'} on GPS`:'No GPS fixes yet'}
+function admFit(){const M=ADM_MAP;if(!M)return;if(!M.box.isConnected||M.box.clientWidth<140){M.needFit=true;return}M.needFit=false;M.map.invalidateSize();const pts=Object.values(M.mk).map(m=>m.getLatLng());if(pts.length>1)M.map.fitBounds(L.latLngBounds(pts),{padding:[50,50],maxZoom:15});else if(pts.length)M.map.setView(pts[0],15);else M.map.setView([-26.2041,28.0473],10)}
+function admFocus(id){const m=ADM_MAP?.mk[id];if(!m)return;ADM_MAP.box.scrollIntoView({behavior:'smooth',block:'center'});ADM_MAP.map.setView(m.getLatLng(),16,{animate:true});m.openTooltip()}
+
+/* ---------- 2. Safety centre ---------- */
+function admSafetyKind(e){if(!e)return null;if(e.type==='kid-sos')return 'sos';if(e.type==='report'&&e.sos)return 'sos';if(e.type==='ride-check'&&e.ok===false)return 'ride';if(e.type==='report')return 'report';return null}
+function admSafetyItems(){return Store.all('events').filter(e=>admSafetyKind(e))}
+function admStatus(e){return e.status==='resolved'?'resolved':e.status==='acknowledged'?'acknowledged':'open'}
+function admOpenSos(){return admSafetyItems().filter(e=>admSafetyKind(e)==='sos'&&admStatus(e)==='open')}
+function admGeo(e){for(const g of [e.geo,e.loc,e.location,e.pos,e.gps,e.coords,e]){if(!g||typeof g!=='object')continue;const la=g.lat??g.latitude,lo=g.lng??g.lon??g.longitude;if(la==null||lo==null||la===''||lo==='')continue;const a=+la,b=+lo;if(Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180&&!(a===0&&b===0))return {lat:a,lng:b,acc:Number.isFinite(+g.acc)?+g.acc:(Number.isFinite(+g.accuracy)?+g.accuracy:null)}}return null}
+function admOsm(g){return `https://www.openstreetmap.org/?mlat=${g.lat.toFixed(6)}&mlon=${g.lng.toFixed(6)}#map=17/${g.lat.toFixed(6)}/${g.lng.toFixed(6)}`}
+function admSafetyLabel(e){const k=admSafetyKind(e);return k==='sos'?(e.type==='kid-sos'?'Child SOS':'SOS'):k==='ride'?'Ride mismatch':'Report'}
+function admSafetyText(e){const t=e.text||e.details||e.note||e.message||e.reason||'';return t?String(t):admSafetyKind(e)==='sos'?'Emergency button pressed. No details added.':admSafetyKind(e)==='ride'?'The ride check did not match.':'No details.'}
+function admSafetyCtx(e){const b=e.bookingId?Store.get('bookings',e.bookingId):null;const rid=e.routeId||b?.routeId;const r=rid?Store.get('routes',rid):null;const kid=Store.get('kids',e.kidId||b?.kidId);const did=e.driverId||b?.driverId||r?.driverId;const pid=e.parentId||b?.parentId||kid?.parentId;return {b,r,kid,did,pid}}
+function admSafetyCard(e){const k=admSafetyKind(e),st=admStatus(e),c=admSafetyCtx(e),g=admGeo(e);const id=admId(e.id);const now=Date.now();
+  const meta=[e.by?['From',admWho(e.by)]:null,c.kid?['Child',c.kid.name]:null,c.did?['Driver',userName(c.did)]:null,c.r?['Route',c.r.name]:null].filter(Boolean);
+  const timer=st==='open'?`<span class="adm-chip ${k==='sos'?'adm-c-bad':'adm-c-warn'}" data-adm-k="wait" data-adm-ts="${Number(e.ts)||0}">${ADM_IC.clock}<span>Waiting ${admDur(now-(e.ts||now))}</span></span>`
+    :st==='acknowledged'?`<span class="adm-chip adm-c-warn">${ICON.eye}<span>Seen by ${h(admWho(e.ackBy)||'Admin')} after ${admDur((e.ackAt||now)-(e.ts||now))}</span></span>`
+    :`<span class="adm-chip adm-c-ok">${ICON.check}<span>Resolved after ${admDur((e.resolvedAt||now)-(e.ts||now))}</span></span>`;
+  const callId=[e.by,c.pid,c.did].find(x=>x&&Store.get('users',x)?.phone);const tel=callId?admTel(Store.get('users',callId).phone):'';const chatId=[e.by,c.pid].find(x=>x&&Store.get('users',x))||'';
+  return `<div class="card adm-sf adm-k-${k} adm-s-${st}" id="sf-${id}"><div class="row" style="flex-wrap:nowrap;gap:12px;align-items:flex-start"><span class="adm-kic">${k==='sos'?ADM_IC.siren:k==='ride'?ADM_IC.alert:ICON.chat}</span><div style="flex:1;min-width:0"><div class="row between" style="gap:6px"><b>${admSafetyLabel(e)}${c.kid?' · '+h(c.kid.name):''}</b><span class="tiny muted" data-adm-k="ago" data-adm-ts="${Number(e.ts)||0}">${admAgo(e.ts)}</span></div><div class="row" style="gap:6px;margin-top:6px">${timer}</div></div></div>
+  <div class="txt">${h(admSafetyText(e))}</div>
+  ${meta.length?`<div class="adm-meta">${meta.map(([l,v])=>`<span>${l} <b>${h(v)}</b></span>`).join('')}</div>`:''}
+  ${st==='resolved'&&e.resolution?`<div class="res"><b>Note:</b> ${h(e.resolution)}</div>`:''}
+  <div class="adm-acts">${st==='open'?`<button class="btn sm" onclick="admAck('${id}')">${ICON.eye} Seen</button>`:''}${st!=='resolved'?`<button class="btn sm live" onclick="admResolve('${id}')">${ICON.check} Resolve</button>`:`<button class="btn sm ghost" onclick="admReopen('${id}')">Reopen</button>`}${g?`<a class="btn sm ghost" href="${h(admOsm(g))}" target="_blank" rel="noopener noreferrer">${ICON.pin} Location${g.acc?' ±'+Math.round(g.acc)+' m':''}</a>`:''}${tel?`<a class="btn sm ghost" href="${h(tel)}">${ICON.phone} Call</a>`:''}${chatId?`<button class="btn sm ghost" onclick="admChat('${admId(chatId)}')">${ICON.chat} Message</button>`:''}</div></div>`}
+VIEWS['a-safety']=adminGate(()=>{const f=['open','resolved','all'].includes(S.filters.admSf)?S.filters.admSf:'open';const all=admSafetyItems();const rank=e=>({open:0,acknowledged:1,resolved:2})[admStatus(e)];
+  const list=all.filter(e=>f==='all'||(f==='open'?admStatus(e)!=='resolved':admStatus(e)==='resolved')).sort((a,b)=>rank(a)-rank(b)||((admSafetyKind(b)==='sos')-(admSafetyKind(a)==='sos'))||(b.ts||0)-(a.ts||0));
+  const sos=admOpenSos().length,need=all.filter(e=>admStatus(e)!=='resolved').length;const acked=all.filter(e=>e.ackAt&&e.ts&&Date.now()-e.ts<30*864e5);const avg=acked.length?acked.reduce((s,e)=>s+Math.max(0,e.ackAt-e.ts),0)/acked.length:null;
+  return pageHead('Safety centre','SOS, rides and reports',admBack())+
+  `<div class="adm-mini"><div class="${sos?'adm-c-bad':'adm-c-ok'}"><b>${sos}</b><span>SOS open</span></div><div class="${need?'adm-c-warn':'adm-c-ok'}"><b>${need}</b><span>need action</span></div><div><b>${avg==null?'—':admDur(avg).replace('under 1 min','&lt;1 min')}</b><span>avg time to seen</span></div></div>
+  <div class="seg" style="margin-bottom:14px"><button class="${f==='open'?'on':''}" onclick="S.filters.admSf='open';render()">Needs action${need?' · '+need:''}</button><button class="${f==='resolved'?'on':''}" onclick="S.filters.admSf='resolved';render()">Resolved</button><button class="${f==='all'?'on':''}" onclick="S.filters.admSf='all';render()">All</button></div>`+
+  (list.length?`<div class="stack">${list.map(admSafetyCard).join('')}</div>`:admEmpty('shield',f==='resolved'?'Nothing resolved yet':'All clear','SOS alerts, ride mismatches and reports land here.'))});
+async function admAck(id){const e=Store.get('events',id);if(!e||admStatus(e)!=='open')return;const u=me();buzz();
+  await Store.patch('events',id,{status:'acknowledged',ackBy:u?.id||'admin',ackAt:Date.now()});
+  await auditLog('safety.ack',id,admSafetyLabel(e)+(e.by?' from '+admWho(e.by):''));
+  if(admSafetyKind(e)==='sos'&&e.by&&Store.get('users',e.by))await notify(e.by,'🛡️ Enivel safety team has seen your alert and is on it.','info');
+  toast('Marked as seen')}
+function admResolve(id){const e=Store.get('events',id);if(!e)return;const quick=admSafetyKind(e)==='sos'?['Child is safe','False alarm','Parent reached','Police informed']:admSafetyKind(e)==='ride'?['Right vehicle confirmed','Parent reached','Driver spoken to']:['Sorted with parent','Driver spoken to','No action needed'];
+  modal(`<h3>Resolve ${h(admSafetyLabel(e).toLowerCase())}</h3><p class="muted small" style="margin:4px 0 12px">${h(admSafetyText(e).slice(0,160))}</p><div class="adm-quick">${quick.map(t=>`<button type="button" data-t="${h(t)}">${h(t)}</button>`).join('')}</div><div class="field" style="margin-top:12px"><label for="adm-rn">What happened?</label><textarea id="adm-rn" rows="3" maxlength="500" placeholder="Short note for the log"></textarea></div><div class="row" style="margin-top:14px"><button class="btn live" id="adm-rgo">${ICON.check} Mark resolved</button><button class="btn ghost" id="adm-rno">Cancel</button></div>`,m=>{
+    const ta=$('#adm-rn',m);m.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{ta.value=ta.value.trim()?ta.value.trim()+'. '+b.dataset.t:b.dataset.t;ta.focus()});$('#adm-rno',m).onclick=closeModal;
+    $('#adm-rgo',m).onclick=async()=>{const note=ta.value.trim();if(note.length<2){ta.focus();return toast('Add a short note first')}const u=me();const now=Date.now();const cur=Store.get('events',id)||e;closeModal();
+      await Store.patch('events',id,{status:'resolved',resolvedAt:now,resolvedBy:u?.id||'admin',resolution:note.slice(0,500),...(cur.ackAt?{}:{ackAt:now,ackBy:u?.id||'admin'})});
+      await auditLog('safety.resolve',id,admSafetyLabel(cur)+': '+note.slice(0,200));buzz();toast('Resolved')}})}
+async function admReopen(id){const e=Store.get('events',id);if(!e)return;await Store.patch('events',id,{status:'acknowledged',resolvedAt:null,resolution:null,resolvedBy:null});await auditLog('safety.reopen',id,admSafetyLabel(e));toast('Reopened')}
+
+/* ---------- 3. Document watch ---------- */
+const ADM_DOC_LABEL={id:'ID document',licence:'Driving licence',prdp:'PrDP',police:'Police clearance',opLicence:'Operating licence',oplicence:'Operating licence',insurance:'Insurance',disc:'Licence disc',rwc:'Roadworthy',roadworthy:'Roadworthy'};
+const ADM_BUCKETS=[['expired','Expired','bad'],['d14','≤ 14 days','bad'],['d30','≤ 30 days','warn'],['d60','≤ 60 days','info'],['missing','Missing','']];
+function admDays(until){if(!until||until==='none'||!/^\d{4}-\d{2}-\d{2}/.test(String(until)))return null;const t=new Date(String(until).slice(0,10)+'T00:00:00');if(isNaN(t))return null;return Math.round((t-new Date(localKey()+'T00:00:00'))/864e5)}
+function admAddMonths(d,n){if(!/^\d{4}-\d{2}-\d{2}/.test(String(d||'')))return null;const t=new Date(String(d).slice(0,10)+'T00:00:00');if(isNaN(t))return null;t.setMonth(t.getMonth()+n);return localKey(t)}
+function admNormDoc(key,v){let until=null,issued=null,label=ADM_DOC_LABEL[key]||String(key);
+  if(typeof v==='string')until=v;else if(v&&typeof v==='object'){until=v.until??v.expires??v.expiry??v.date??null;issued=v.issued??null;if(typeof v.label==='string'&&v.label)label=v.label}
+  if(!until&&issued&&key==='police')until=admAddMonths(issued,12);
+  if(until==='none')return {key,label,until:'none',days:null};
+  return {key,label,until:until||null,days:admDays(until)}}
+function admFromStatus(r){if(!r)return [];if(Array.isArray(r))return r.filter(x=>x&&typeof x==='object'&&(x.key||x.k||x.doc)).map(x=>admNormDoc(x.key||x.k||x.doc,x));
+  if(typeof r==='object'){const items=r.items||r.docs||r.list;if(Array.isArray(items))return admFromStatus(items);
+    return Object.entries(r).filter(([k,v])=>ADM_DOC_LABEL[k]&&(typeof v==='string'||(v&&typeof v==='object'&&('until' in v||'issued' in v||'expires' in v)))).map(([k,v])=>admNormDoc(k,v))}return []}
+function admDriverDocs(u){let docs=[],src='';
+  if(typeof docStatus==='function'){try{docs=admFromStatus(docStatus(u));if(docs.length)src='status'}catch(e){}}
+  if(!docs.length&&u.docValid&&typeof u.docValid==='object'){docs=['id','licence','prdp','police','opLicence','insurance'].map(k=>admNormDoc(k,u.docValid[k]??(k==='opLicence'?u.docValid.oplicence:undefined)));src='docValid'}
+  if(!docs.length){docs=[admNormDoc('prdp',u.prdpExpiry||null),admNormDoc('police',u.policeDate?{issued:u.policeDate}:null)];src='legacy'}
+  for(const v of Store.all('vehicles').filter(v=>v.driverId===u.id)){let vd=[];if(typeof vehDocStatus==='function'){try{vd=admFromStatus(vehDocStatus(v))}catch(e){}}
+    if(!vd.length&&v.docValid&&typeof v.docValid==='object')vd=['disc','rwc'].map(k=>admNormDoc(k,v.docValid[k]));
+    vd.forEach(d=>{d.vehicleId=v.id;d.label=d.label+' · '+(v.plate||v.make||'vehicle')});docs.push(...vd)}
+  return {docs,src}}
+function admDocBucket(d){if(d.until==='none')return null;if(!d.until||d.days==null)return 'missing';if(d.days<0)return 'expired';if(d.days<=14)return 'd14';if(d.days<=30)return 'd30';if(d.days<=60)return 'd60';return null}
+function admDocDrivers(){return Store.all('users').filter(u=>u.role==='driver'&&!u.banned&&(['approved','pending'].includes(u.verification?.status)||u.docValid))}
+function admDocBuckets(){const B={};ADM_BUCKETS.forEach(([k])=>B[k]=[]);let legacy=0;for(const u of admDocDrivers()){const {docs,src}=admDriverDocs(u);if(src==='legacy')legacy++;const by={};for(const d of docs){const k=admDocBucket(d);if(k)(by[k]=by[k]||[]).push(d)}for(const k of Object.keys(by))B[k].push({u,docs:by[k].sort((a,b)=>(a.days??-1e9)-(b.days??-1e9))})}B.legacy=legacy;return B}
+function admDocWhen(d,k){return k==='missing'?'no date':k==='expired'?'expired '+admFmtDate(d.until):(d.days===0?'today':'in '+d.days+' day'+(d.days===1?'':'s'))+' · '+admFmtDate(d.until)}
+function admDocMsg(k,docs){const names=docs.map(d=>d.label).join(', ');const many=docs.length>1;if(k==='missing')return `Enivel needs the expiry date for: ${names}. Add it in Verification.`;if(k==='expired')return `Your ${names} ${many?'have':'has'} expired. Upload the new ${many?'copies':'copy'} in Verification to keep driving.`;const d=docs.find(x=>x.until)||docs[0];return `Your ${names} ${many?'expire':'expires'} soon (${admFmtDate(d.until)}). Upload the new ${many?'copies':'one'} in Verification.`}
+function admLastRemind(id){return Store.all('audit').filter(a=>a.action==='docs.remind'&&a.target===id).reduce((m,a)=>Math.max(m,a.ts||0),0)}
+function admPausedRoutes(id){return Store.all('routes').filter(r=>r.driverId===id&&r.adminPause&&r.active===false)}
+function admDocCard(row,k){const u=row.u;const lr=admLastRemind(u.id);const paused=admPausedRoutes(u.id);const listed=Store.all('routes').filter(r=>r.driverId===u.id&&r.active!==false).length;const tone=ADM_BUCKETS.find(b=>b[0]===k)?.[2]||'';const id=admId(u.id);
+  return `<div class="card"><div class="row between" style="flex-wrap:nowrap;gap:10px"><div class="row" style="flex-wrap:nowrap;min-width:0;gap:10px"><span class="avatar">${initials(u.name)}</span><div style="min-width:0"><b class="adm-ell">${h(u.name)}</b><span class="tiny muted adm-ell">${h(prettyPhone?.(u.phone)||u.phone||'')}${listed?' · '+listed+' route'+(listed===1?'':'s')+' listed':''}</span></div></div>${paused.length?'<span class="pill warn">Paused</span>':''}</div>
+  <div class="adm-docs">${row.docs.map(d=>`<span class="adm-doc ${tone?'adm-c-'+tone:''}"><b>${h(d.label)}</b>${h(admDocWhen(d,k))}</span>`).join('')}</div>
+  ${lr?`<p class="tiny muted" style="margin-top:8px">Reminded ${admAgo(lr)}</p>`:''}
+  <div class="adm-acts"><button class="btn sm" onclick="admDocRemind('${id}','${k}')">${ICON.bell} Remind</button>${paused.length?`<button class="btn sm ghost" onclick="admResumeRoutes('${id}')">${ADM_IC.play} Resume routes</button>`:listed?`<button class="btn sm ghost" onclick="admPauseRoutes('${id}')">${ADM_IC.pause} Pause routes</button>`:''}<button class="btn sm ghost" onclick="admChat('${id}')">${ICON.chat}</button></div></div>`}
+VIEWS['a-docs']=adminGate(()=>{const B=admDocBuckets();let sel=S.filters.admDb;if(!B[sel]||!ADM_BUCKETS.some(b=>b[0]===sel))sel=(ADM_BUCKETS.find(([k])=>B[k].length)||ADM_BUCKETS[0])[0];const lab=ADM_BUCKETS.find(b=>b[0]===sel)[1];const rows=B[sel];const n=admDocDrivers().length;
+  return pageHead('Document watch',n?`${n} driver${n===1?'':'s'} checked`:'Driver documents and expiry dates',admBack())+
+  `<div class="adm-bks">${ADM_BUCKETS.map(([k,l,t])=>`<button class="adm-bk ${t?'adm-c-'+t:''} ${sel===k?'adm-on':''}" onclick="S.filters.admDb='${k}';render()"><b>${B[k].length}</b><span>${l}</span></button>`).join('')}</div>`+
+  (rows.length?`<div class="row between" style="margin-bottom:10px"><b class="small">${h(lab)} · ${rows.length} driver${rows.length===1?'':'s'}</b><button class="btn sm ghost" onclick="admDocRemindAll('${sel}')">${ICON.bell} Remind all ${rows.length}</button></div><div class="stack">${rows.map(r=>admDocCard(r,sel)).join('')}</div>`
+   :admEmpty('doc',n?'Nothing in this group':'No drivers to check yet',n?'Pick another group above.':'Approved and pending drivers show here.'))+
+  (B.legacy?`<p class="tiny muted" style="margin-top:14px">${B.legacy} driver${B.legacy===1?' has':'s have'} only PrDP and police dates on file.</p>`:'')});
+async function admDocRemind(id,k,bulk){const row=(admDocBuckets()[k]||[]).find(x=>x.u.id===id);if(!row)return;const lab=ADM_BUCKETS.find(b=>b[0]===k)?.[1]||k;
+  await notify(id,'📄 '+admDocMsg(k,row.docs),'info','d-verify');await auditLog('docs.remind',id,lab+': '+row.docs.map(d=>d.label).join(', ')+(bulk?' (remind all)':''));if(!bulk){buzz();toast('Reminder sent to '+String(row.u.name||'').split(' ')[0])}}
+function admDocRemindAll(k){const rows=admDocBuckets()[k]||[];if(!rows.length)return;const lab=ADM_BUCKETS.find(b=>b[0]===k)?.[1]||k;
+  confirmBox(`Remind ${rows.length} driver${rows.length===1?'':'s'}?`,`Each gets one message about their ${lab.toLowerCase()} documents.`,async()=>{S.silent=true;try{for(const r of rows)await admDocRemind(r.u.id,k,true)}finally{S.silent=false;render()}buzz();toast(`Sent ${rows.length} reminder${rows.length===1?'':'s'}`)})}
+function admPauseRoutes(id){const u=Store.get('users',id);if(!u)return;const rs=Store.all('routes').filter(r=>r.driverId===id&&r.active!==false);if(!rs.length)return toast('No listed routes to pause');const first=String(u.name||'Driver').split(' ')[0];
+  confirmBox(`Pause ${first}'s routes?`,`${rs.length} route${rs.length===1?'':'s'} stop showing and running. ${first} and their parents get a message.`,async()=>{const parents=new Set();S.silent=true;try{
+    for(const r of rs){await Store.patch('routes',r.id,{active:false,adminPause:{at:Date.now(),by:me()?.id||'admin',reason:'documents'}});activeBookings(b=>b.routeId===r.id).forEach(b=>parents.add(b.parentId))}
+    await notify(id,'⏸️ Enivel paused your routes until your documents are up to date. Update them in Verification.','info','d-verify');
+    for(const p of parents)await notify(p,`⏸️ Transport with ${first} is paused by Enivel for a document check. We will tell you when it is back.`,'info','p-home');
+    await auditLog('routes.pause',id,rs.map(r=>r.name).join(', ')+' · documents')}finally{S.silent=false;render()}toast('Routes paused')})}
+function admResumeRoutes(id){const u=Store.get('users',id);if(!u)return;const rs=admPausedRoutes(id);if(!rs.length)return;const first=String(u.name||'Driver').split(' ')[0];
+  confirmBox(`Resume ${first}'s routes?`,'They show and run again. Everyone affected gets a message.',async()=>{const parents=new Set();S.silent=true;try{
+    for(const r of rs){await Store.patch('routes',r.id,{active:true,adminPause:null});activeBookings(b=>b.routeId===r.id).forEach(b=>parents.add(b.parentId))}
+    await notify(id,'▶️ Enivel resumed your routes. Thank you for updating your documents.','info','d-routes');
+    for(const p of parents)await notify(p,`▶️ Transport with ${first} is back on.`,'info','p-home');
+    await auditLog('routes.resume',id,rs.map(r=>r.name).join(', '))}finally{S.silent=false;render()}toast('Routes resumed')})}
+/* drivers cannot re-list a route Enivel paused (in the app) */
+const _admDRoutes=VIEWS['d-routes'];VIEWS['d-routes']=()=>{let html=_admDRoutes();const u=me();if(!u)return html;for(const r of Store.all('routes').filter(r=>r.driverId===u.id&&r.adminPause&&r.active===false))html=html.split(`onclick="Store.patch('routes','${r.id}',{active:true})">List</button>`).join(`disabled title="Paused by Enivel">Paused by Enivel</button>`);return html};
+
+/* ---------- 4. Audit log ---------- */
+const ADM_ACT={'verify.approve':['Approved','live'],'verify.retry':['Asked for new photos','warn'],'verify.ban':['Banned','bad'],'verify.unban':['Lifted ban','live'],'account.suspend':['Suspended','bad'],'account.restore':['Restored','live'],
+  'giveaway':['Giveaway','info'],'announce':['Announcement','info'],'legal.save':['Legal details saved','info'],'sms.gateway':['SMS gateway changed','warn'],
+  'safety.ack':['Safety: seen','warn'],'safety.resolve':['Safety: resolved','live'],'safety.reopen':['Safety: reopened','warn'],'docs.remind':['Document reminder','info'],'routes.pause':['Routes paused','bad'],'routes.resume':['Routes resumed','live']};
+function admActLabel(a){return ADM_ACT[a]?.[0]||String(a||'')}
+function admTargetName(t){if(!t)return '';const u=Store.get('users',t);if(u)return u.name;const r=Store.get('routes',t);if(r)return r.name;const e=Store.get('events',t);if(e)return admSafetyLabel(e);const k=Store.get('kids',t);if(k)return k.name;return {all:'Everyone',parent:'Parents',driver:'Drivers',legal:'Legal details',config:'App settings'}[t]||String(t)}
+function admAuditList(){const q=(S.filters.admAq||'').trim().toLowerCase();const f=S.filters.admAf||'';return Store.all('audit').filter(a=>(!f||a.action===f)&&(!q||[admActLabel(a.action),a.action,a.actorName,admTargetName(a.target),a.detail].join(' ').toLowerCase().includes(q))).sort((a,b)=>(b.ts||0)-(a.ts||0))}
+function admAuditRows(){const L=admAuditList();if(!L.length)return `<p class="muted small" style="padding:18px 0;text-align:center">${Store.all('audit').length?'No matches.':'No admin actions yet. Approvals, bans, reminders and more show here.'}</p>`;
+  return L.slice(0,300).map(a=>`<div class="adm-arow"><i class="adm-adot ${ADM_ACT[a.action]?.[1]?'adm-c-'+ADM_ACT[a.action][1]:''}"></i><div class="grow"><div class="row between" style="gap:4px 10px"><b class="small">${h(admActLabel(a.action))}${a.target?' · '+h(admTargetName(a.target)):''}</b><span class="tiny muted">${a.ts?fmtDT(a.ts):''}</span></div>${a.detail?`<div class="small muted">${h(a.detail)}</div>`:''}<div class="tiny muted">by ${h(a.actorName||admWho(a.actor)||'Admin')}</div></div></div>`).join('')+(L.length>300?`<p class="tiny muted" style="padding-top:10px">Showing 300 of ${L.length}. The CSV has all.</p>`:'')}
+function admAuditPaint(){const el=document.getElementById('adm-alist');if(el)el.innerHTML=admAuditRows();const c=document.getElementById('adm-acount');if(c)c.textContent=admAuditList().length}
+VIEWS['a-audit']=adminGate(()=>{const all=Store.all('audit');const acts=[...new Set(all.map(a=>a.action).filter(Boolean))].sort((a,b)=>admActLabel(a).localeCompare(admActLabel(b)));const f=S.filters.admAf||'';
+  return pageHead('Audit log','Every admin action, newest first',admBack())+
+  `<div class="adm-tools"><input id="adm-aq" type="search" placeholder="Search name, action, note" value="${h(S.filters.admAq||'')}" oninput="S.filters.admAq=this.value;admAuditPaint()" aria-label="Search the audit log"><select id="adm-af" onchange="S.filters.admAf=this.value;admAuditPaint()" aria-label="Filter by action"><option value="">All actions</option>${acts.map(a=>`<option value="${h(a)}" ${a===f?'selected':''}>${h(admActLabel(a))}</option>`).join('')}</select><button class="btn sm ghost" onclick="admAuditCsv()" ${all.length?'':'disabled'}>${ADM_IC.dl} CSV</button></div>
+  <div class="card"><div class="row between" style="margin-bottom:4px"><h3>Entries</h3><span class="pill" id="adm-acount">${admAuditList().length}</span></div><div id="adm-alist">${admAuditRows()}</div></div>`});
+function admCsvCell(v){let s=String(v??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
+async function admDownload(name,csv){const dl=typeof claude!=='undefined'&&claude?.use?await claude.use('downloads').catch(()=>null):null;if(dl){try{await dl.save({filename:name,data:csv});return toast('Saved '+name)}catch(e){}}
+  try{const url=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=name;a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);return toast('Downloaded '+name)}catch(e){}
+  try{await navigator.clipboard.writeText(csv);toast('Download not available here. Copied to clipboard.')}catch(e){modal(`<h3>${h(name)}</h3><textarea style="width:100%;height:240px;margin-top:10px">${h(csv)}</textarea>`)}}
+function admAuditCsv(){const L=admAuditList();const rows=[['When','Action','Code','Target','Detail','By'],...L.map(a=>[a.ts?localKey(new Date(a.ts))+' '+fmtT(a.ts):'',admActLabel(a.action),a.action,admTargetName(a.target),a.detail||'',a.actorName||admWho(a.actor)])];return admDownload(`enivel-audit-${localKey()}.csv`,rows.map(r=>r.map(admCsvCell).join(',')).join('\r\n'))}
+
+/* audit wrappers around existing admin actions */
+const _admReview=reviewUser;reviewUser=async function(id,action){const u=Store.get('users',id);const note=(document.getElementById('vn-'+id)?.value||'').trim();const res=await _admReview.apply(this,arguments);
+  try{const after=Store.get('users',id)||{};const isD=u?.role==='driver';
+    if(action==='ban'){const b=document.getElementById('cOk');if(b)b.addEventListener('click',()=>setTimeout(()=>auditLog('verify.ban',id,note),0),{once:true})}
+    else if(action==='approved'&&(isD?after.verification?.status==='approved':after.idStatus==='approved'))await auditLog('verify.approve',id,isD?'Driver documents':'Parent ID');
+    else if(action==='retry'&&note&&(isD?after.verification?.status==='rejected':after.idStatus==='retry'))await auditLog('verify.retry',id,note)}catch(e){}
+  return res};
+const _admSponsor=sponsor;sponsor=function(parentId){const r=_admSponsor.apply(this,arguments);
+  try{const b=document.getElementById('cOk');const amt=((b?.closest('.modal')?.querySelector('h3')?.textContent||'').match(/R\s?[\d\s]+(?:[.,]\d{2})?/)||[''])[0].trim();if(b)b.addEventListener('click',()=>setTimeout(()=>auditLog('giveaway',parentId,monthKey()+(amt?' · '+amt:'')),0),{once:true})}catch(e){}return r};
+const _admAnnounce=announceModal;announceModal=function(){const r=_admAnnounce.apply(this,arguments);const m=document.getElementById('an-go')?.closest('.modal');
+  if(m)m.addEventListener('click',e=>{if(!e.target.closest||!e.target.closest('#an-go'))return;const t=(document.getElementById('an-t')?.value||'').trim();if(!t)return;const to=document.getElementById('an-to')?.value||'all';setTimeout(()=>auditLog('announce',to,t.slice(0,300)),0)},true);return r};
+const _admSaveLegal=saveLegal;saveLegal=async function(){const r=await _admSaveLegal.apply(this,arguments);try{await auditLog('legal.save','legal',(Store.get('settings','legal')||{}).entity||'')}catch(e){}return r};
+/* inline admin buttons (suspend/restore, lift ban, SMS gateway save) are caught before they run */
+document.addEventListener('click',e=>{if(!S.admin||!e.target.closest)return;const el=e.target.closest('[onclick]');if(!el)return;const oc=el.getAttribute('onclick')||'';let m;
+  if((m=oc.match(/^Store\.patch\('users','([A-Za-z0-9_-]+)',\{suspended:(true|false)\}\)$/))){const id=m[1],on=m[2]==='true';setTimeout(()=>auditLog(on?'account.suspend':'account.restore',id,userName(id)),0)}
+  else if((m=oc.match(/^Store\.patch\('users','([A-Za-z0-9_-]+)',\{banned:false,suspended:false/))){const id=m[1];setTimeout(()=>auditLog('verify.unban',id,userName(id)),0)}
+  else if(/cfg-otp/.test(oc)&&/'settings','config'/.test(oc)){const v=(document.getElementById('cfg-otp')?.value||'').trim();const old=(Store.get('settings','config')?.otpEndpoint||'').trim();if(v!==old)setTimeout(()=>auditLog('sms.gateway','config',v||'Cleared (test mode)'),0)}},true);
+
+/* ---------- 5. System status ---------- */
+function admRpcNames(){const s=new Set(ADMIN_RPC_EXPECT);document.querySelectorAll('script:not([src])').forEach(sc=>{for(const m of sc.textContent.matchAll(/\.rpc\(\s*['"]([a-z_][a-z0-9_]*)['"]/g))s.add(m[1])});return [...s].sort()}
+function admMissingErr(err){return /does not exist|could not find the function|schema cache|PGRST202|42883/i.test(String(err?.message||'')+' '+String(err?.code||''))}
+function admTimeout(ms){return new Promise((_,rej)=>setTimeout(()=>rej(new Error('timed out')),ms))}
+async function admRunChecks(){if(S.admSysBusy)return;S.admSysBusy=true;const R={at:Date.now()};
+  try{const cloud=!!(S.cloud&&typeof sb!=='undefined'&&sb);
+    if(cloud){const t0=performance.now();let err=null;try{const r=await Promise.race([sb.rpc('fetch_docs',{p_since:new Date().toISOString()}),admTimeout(8000)]);if(r?.error)err=r.error.message}catch(e){err=e.message}const ms=Math.round(performance.now()-t0);R.dbOk=!err;R.dbMs=ms;R.dbErr=err;
+      const missing=[];let err2=null;
+      const probe=async(n,a)=>{try{const r=await Promise.race([sb.rpc(n,a),admTimeout(8000)]);if(r?.error){if(admMissingErr(r.error))missing.push(n);else if(n!=='admin_sys_check')err2=err2||r.error.message;return r}return r}catch(e){err2=err2||e.message;return null}};
+      await probe('public_config');await probe('handover_check',{p_kid:'x',p_code:''});
+      const names=admRpcNames();const sc=await probe('admin_sys_check',{p_names:names});
+      if(sc&&!sc.error&&sc.data){const fns=sc.data.fns||{};names.forEach(n=>{if(fns[n]===false)missing.push(n)});if(sc.data.audit===false)missing.push('audit log rules');R.skew=sc.data.now?Date.now()-Number(sc.data.now):null;R.docs=sc.data.docs}
+      else if(sc?.error&&!admMissingErr(sc.error))err2=err2||sc.error.message;
+      R.missing=[...new Set(missing)];R.sqlErr=err2}
+    try{const ps=await navigator.permissions?.query({name:'notifications'});if(ps?.state)R.notif=ps.state==='prompt'?'default':ps.state}catch(e){}
+    const ep=otpEndpoint();R.ep=ep;
+    if(ep){try{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),6000);const r=await fetch(ep+'/health',{signal:ac.signal,cache:'no-store'});clearTimeout(t);const j=await r.json().catch(()=>null);if(!r.ok||!j||typeof j!=='object')throw new Error('HTTP '+r.status);R.health=j}catch(e){R.health=null;R.workerErr=e.name==='AbortError'?'No answer in 6 s':e.message}}
+  }catch(e){console.warn('status',e)}finally{S.admSys=R;S.admSysBusy=false;if(S.admin&&['a-status','a-home'].includes(S.route)&&!$('.overlay'))render()}}
+function admStatusRows(){const R=S.admSys;const cloud=!!(S.cloud&&typeof sb!=='undefined'&&sb);const wait={st:'wait',v:'Checking…',fix:''};const rows=[];const ep=otpEndpoint();const u=me()||{};
+  rows.push(['db','Database connected',!cloud?(S.mode==='db'?{st:'warn',v:'claude.ai preview storage',fix:'Real accounts live on the hosted site.'}:{st:'bad',v:'This browser only',fix:'Open the hosted site to use the shared database.'})
+    :!R?wait:R.dbOk?{st:R.dbMs>1500?'warn':'ok',v:`Connected · ${R.dbMs} ms`,fix:R.dbMs>1500?'Slow right now. Check the connection.':''}:{st:'bad',v:'Not answering',fix:'Check the internet, then the Supabase project status.'}]);
+  rows.push(['sql','Database script up to date',!cloud?{st:'warn',v:'Hosted site only',fix:'Checked on the hosted site.'}:!R?wait:R.missing?.length?{st:'bad',v:'Out of date',fix:ADM_SQL_FIX,detail:'Missing: '+R.missing.join(', ')}:R.sqlErr?{st:'warn',v:'Could not check',fix:R.sqlErr}:R.dbOk?{st:'ok',v:'Up to date',fix:''}:{st:'warn',v:'Could not check',fix:'Database is not answering.'}]);
+  rows.push(['worker','Worker reachable',!ep?{st:'bad',v:'Not set',fix:'Paste the Worker URL under Settings → Worker URL.',go:'a-more'}:!R||R.ep!==ep?wait:R.health?{st:R.health.ok===false?'warn':'ok',v:'Reachable',fix:'',flags:R.health}:{st:'bad',v:'Not reachable',fix:'Check the URL and that the Worker is deployed. '+(R.workerErr?'('+R.workerErr+')':'')}]);
+  rows.push(['sms','SMS gateway',!ep?{st:cloud?'bad':'warn',v:'Test mode',fix:'Codes show on screen. Set the Worker URL in Settings.',go:'a-more'}:!R||R.ep!==ep?wait:!R.health?{st:'bad',v:'Worker not reachable',fix:'SMS codes cannot be sent until the Worker answers.'}:R.health.sms?{st:'ok',v:'Real SMS codes',fix:''}:{st:'warn',v:'No SMS token',fix:'Add BULKSMS_TOKEN to the Worker secrets.'}]);
+  const lm=typeof legalMissing==='function'?legalMissing():false;rows.push(['legal','Legal details',lm?{st:'bad',v:'Incomplete',fix:'Fill in Settings → Legal details.',go:'a-more'}:{st:'ok',v:'Filled in',fix:''}]);
+  const sup='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;const perm=sup?(R?.notif||Notification.permission):'';
+  rows.push(['push','Push on this device',!sup?{st:'bad',v:'Not supported',fix:'Use Chrome on Android, or add Enivel to the Home Screen on iPhone.'}:perm==='granted'?{st:'ok',v:'Allowed',fix:''}:perm==='denied'?{st:'bad',v:'Blocked',fix:'Allow notifications for this site in the browser settings.'}:{st:'warn',v:'Not turned on yet',fix:'The browser asks the first time a pop-up is turned on.'}]);
+  rows.push(['twofa','Admin two-step',u.twoFactor?{st:'ok',v:u.twoFactor==='pin'?'PIN on':'SMS code on',fix:''}:{st:'warn',v:'Off',fix:'Add a PIN so a stolen password is not enough.',act:'pin'}]);
+  if(cloud){const pa=S.admPullAt;rows.push(['sync','Last sync',pa&&Date.now()-pa<30000?{st:'ok',v:admAgo(pa),fix:typeof lastSync!=='undefined'&&lastSync?'Newest change '+fmtDT(lastSync):'',ago:pa}:{st:'warn',v:pa?admAgo(pa):'Not yet',fix:'Updates every 6 seconds. Reload if this stays old.',ago:pa}])}
+  else rows.push(['sync','Last sync',{st:'warn',v:S.mode==='db'?'claude.ai live preview':'This browser only',fix:'Live sync runs on the hosted site.'}]);
+  if(R&&R.skew!=null&&Math.abs(R.skew)>120000)rows.push(['clock','Device clock',{st:'warn',v:`Off by ${admDur(Math.abs(R.skew))}`,fix:'Set date and time to automatic on this device.'}]);
+  return rows}
+function admStatusRow([k,label,r]){const ic=r.st==='ok'?ICON.check:r.st==='bad'?ICON.x:r.st==='wait'?ADM_IC.refresh:'!';const flags=r.flags?['sms','limits','reminders','faceid','push'].filter(f=>typeof r.flags[f]==='boolean'):[];const fl={sms:'SMS',limits:'Rate limits',reminders:'Reminders',faceid:'Face ID',push:'Push'};
+  return `<div class="adm-st adm-c-${r.st}" data-st="${k}"><i class="adm-sti">${ic}</i><div class="grow"><div class="hd"><b class="small">${h(label)}</b><span class="v"${r.ago?` data-adm-k="ago" data-adm-ts="${r.ago}"`:''}>${h(r.v)}</span></div>${r.fix?`<div class="fix">${h(r.fix)}</div>`:''}${r.detail?`<div class="fix">${h(r.detail)}</div>`:''}${flags.length?`<div class="row" style="gap:6px;margin-top:8px">${flags.map(f=>`<span class="adm-chip ${r.flags[f]?'adm-c-ok':''}">${r.flags[f]?'✓':'✗'} ${fl[f]}</span>`).join('')}</div>`:''}${r.go?`<button class="btn sm ghost" style="margin-top:8px" onclick="go('${r.go}')">Open Settings</button>`:''}${r.act==='pin'&&typeof enableTwoFa==='function'?`<button class="btn sm" style="margin-top:8px" onclick="enableTwoFa('pin')">${ICON.lock} Set a PIN</button>`:''}</div></div>`}
+VIEWS['a-status']=adminGate(()=>{if(!S.admSysBusy&&(!S.admSys||Date.now()-S.admSys.at>60000||S.admSys.ep!==otpEndpoint()))setTimeout(admRunChecks,0);const rows=admStatusRows();const done=rows.filter(r=>r[2].st!=='wait');const ok=done.filter(r=>r[2].st==='ok').length,bad=done.filter(r=>r[2].st==='bad').length,warn=done.filter(r=>r[2].st==='warn').length;
+  const ring=typeof ringSVG==='function'?ringSVG(rows.length?ok/rows.length:0,`${ok}/${rows.length}`):'';
+  return pageHead('System status','Real checks, run on this device',admBack())+
+  `<div class="card" style="margin-bottom:14px"><div class="adm-sum">${ring}<div style="flex:1;min-width:0"><b style="font-size:1.05rem">${S.admSysBusy&&!S.admSys?'Checking…':bad?`${bad} to fix`:warn?'Nearly there':'All good'}</b><p class="small muted">${bad||warn?`${bad?bad+' red':''}${bad&&warn?' · ':''}${warn?warn+' amber':''}`:'Everything checks out.'}</p><p class="tiny muted" style="margin-top:2px">${S.admSys?'Checked <span data-adm-k="ago" data-adm-ts="'+S.admSys.at+'">'+admAgo(S.admSys.at)+'</span>':''}</p></div><button class="btn sm ghost" onclick="S.admSys=null;admRunChecks();render()" ${S.admSysBusy?'disabled':''} aria-label="Run checks again">${ADM_IC.refresh}</button></div></div>
+  <div class="card">${rows.map(admStatusRow).join('')}</div>`});
+/* remember when the last successful pull finished (for Last sync) */
+if(typeof cloudPull==='function'){const _admPull=cloudPull;cloudPull=async function(full){const was=typeof pulling!=='undefined'&&pulling;const r=await _admPull.apply(this,arguments);if(!was&&S.cloud&&S.session)S.admPullAt=Date.now();return r}}
+
+/* ---------- Control grid (extensible) ---------- */
+const ADMIN_TILES=[
+  {route:'a-live',label:'Live trips',icon:'radar',tone:'violet',count:()=>admLiveTrips().length,alert:()=>{const ev=admTodayEvents();return admLiveTrips().some(r=>{const t=admTripInfo(r,ev);return t.late||(t.hasGps&&t.stale)})},sub:()=>{const ev=admTodayEvents();const ts=admLiveTrips().map(r=>admTripInfo(r,ev));if(!ts.length)return 'None running';const late=ts.filter(t=>t.late).length;return late?late+' running late':ts.reduce((s,t)=>s+t.onboard,0)+' on board'}},
+  {route:'a-safety',label:'Safety',icon:'siren',tone:'red',count:()=>admSafetyItems().filter(e=>admStatus(e)!=='resolved').length,alert:()=>admOpenSos().length>0,sub:()=>{const n=admOpenSos().length;if(n)return n+' SOS open';const a=admSafetyItems().filter(e=>admStatus(e)!=='resolved').length;return a?'in progress':'Queue clear'}},
+  {route:'a-docs',label:'Documents',icon:'doc',tone:'amber',count:()=>{const B=admDocBuckets();return new Set([...B.expired,...B.d14].map(x=>x.u.id)).size},alert:()=>admDocBuckets().expired.length>0,sub:()=>{const B=admDocBuckets();return B.expired.length?B.expired.length+' expired':B.d14.length?'due in 14 days':'All current'}},
+  {route:'a-audit',label:'Audit log',icon:'log',tone:'ink',count:()=>{const t=localKey();return Store.all('audit').filter(a=>a.ts&&localKey(new Date(a.ts))===t).length},alert:()=>false,sub:()=>'actions today'},
+  {route:'a-status',label:'System',icon:'pulse',tone:'green',count:()=>{const r=admStatusRows();const bad=r.filter(x=>x[2].st==='bad').length;return bad||r.filter(x=>x[2].st==='ok').length+'/'+r.length},alert:()=>admStatusRows().some(x=>x[2].st==='bad'),sub:()=>{const r=admStatusRows();const bad=r.filter(x=>x[2].st==='bad').length,warn=r.filter(x=>x[2].st==='warn').length;return bad?'to fix':r.some(x=>x[2].st==='wait')?'checking…':warn?warn+' amber':'checks pass'}}
+];
+function admTilesHtml(){return `<div class="adm-ctl"><div class="row between" style="margin-bottom:10px"><h3>${ADM_IC.radar.replace('<svg','<svg width="18" height="18"')} Control</h3><span class="tiny muted">live</span></div><div class="adm-grid">${ADMIN_TILES.map((t,i)=>{let c='',a=false,s='';try{c=typeof t.count==='function'?t.count():''}catch(e){c='—'}try{a=!!(typeof t.alert==='function'&&t.alert())}catch(e){}try{s=typeof t.sub==='function'?t.sub():''}catch(e){}const r=safeRoute(t.route);const tone=String(t.tone||'violet').replace(/[^a-z]/g,'');
+  return `<button class="adm-tile adm-tone-${tone}${a?' adm-alert':''}" style="animation-delay:${i*45}ms" ${r?`onclick="S.adminApp=false;go('${r}')"`:'disabled'} aria-label="${h(t.label)}"><span class="ic">${admIcon(t.icon)}</span>${a?'<i class="dot"></i>':''}<span class="n">${h(c)}</span><span class="l">${h(t.label)}</span>${s?`<span class="s">${h(s)}</span>`:''}</button>`}).join('')}</div></div>`}
+
+/* growth funnel from real data */
+function admFunnel(){const us=Store.all('users').filter(u=>!u.demo);const P=us.filter(u=>u.role==='parent'),D=us.filter(u=>u.role==='driver');const m=monthKey();const bs=Store.all('bookings');
+  const paid=new Set(Store.all('transactions').filter(t=>t.month===m&&(t.type==='subscription'||t.type==='trip')).map(t=>t.from));const spons=new Set(bs.filter(b=>(b.sponsoredMonths||[]).includes(m)).map(b=>b.parentId));
+  const ev=Store.all('events').filter(e=>(e.type==='pickup'||e.type==='dropoff')&&e.ts&&monthKey(new Date(e.ts))===m);const rode=new Set(ev.map(e=>e.parentId).filter(Boolean));const drove=new Set(ev.map(e=>e.driverId).filter(Boolean));const booked=new Set(bs.map(b=>b.parentId));
+  const act=new Set(activeBookings().map(b=>b.parentId));
+  return {parents:[['Signed up',P.length],['ID verified',P.filter(u=>u.idStatus==='approved').length],['Booked',P.filter(u=>booked.has(u.id)).length],['Active this month',P.filter(u=>act.has(u.id)&&(paid.has(u.id)||spons.has(u.id)||rode.has(u.id))).length]],
+    drivers:[['Signed up',D.length],['Verified',D.filter(isVerified).length],['Route listed',D.filter(u=>Store.all('routes').some(r=>r.driverId===u.id&&r.active!==false)).length],['Drove this month',D.filter(u=>drove.has(u.id)).length]]}}
+function admFunnelHtml(){const F=admFunnel();const block=(title,rows,cls)=>{const top=Math.max(rows[0][1],1);return `<div><div class="eyebrow">${title}</div><div class="adm-fun">${rows.map(([l,n],i)=>`<div class="adm-fr ${cls}"><span>${l}</span><b>${n}${i?`<span class="pc">${Math.round(n/top*100)}%</span>`:''}</b><div class="bar"><i style="width:${Math.max(n?3:0,Math.round(n/top*100))}%"></i></div></div>`).join('')}</div></div>`};
+  return `<div class="card adm-funnel" style="margin-top:14px"><div class="row between"><h3>Growth funnel</h3><span class="tiny muted">${new Date().toLocaleDateString('en-ZA',{month:'long',year:'numeric'})}</span></div><div class="grid g2" style="margin-top:10px">${block('Parents',F.parents,'adm-fr-p')}${block('Drivers',F.drivers,'adm-fr-d')}</div></div>`}
+
+/* a-home: Control grid on top, funnel before the charts */
+const _admHome=VIEWS['a-home'];VIEWS['a-home']=()=>{let html=_admHome();if(!S.admin)return html;
+  if(!S.admSysBusy&&(!S.admSys||Date.now()-S.admSys.at>600000||S.admSys.ep!==otpEndpoint()))setTimeout(admRunChecks,0);
+  const i=html.indexOf('<div class="kpi">');const tiles=admTilesHtml();html=i>=0?html.slice(0,i)+tiles+html.slice(i):tiles+html;
+  let fun='';try{fun=admFunnelHtml()}catch(e){}const k='<div class="grid g2" style="margin-top:14px"><div class="card"><h3>Revenue by month</h3>';const j=html.indexOf(k);return j>=0?html.slice(0,j)+fun+html.slice(j):html+fun};
+/* Settings → Pages lists the new screens */
+const _admMore=VIEWS['a-more'];VIEWS['a-more']=()=>{const html=_admMore();const k='<h3>Pages</h3><div class="list" style="margin-top:6px">';if(!html.includes(k))return html;
+  return html.replace(k,k+[['a-live','Live control room'],['a-safety','Safety centre'],['a-docs','Document watch'],['a-audit','Audit log'],['a-status','System status']].map(([r,l])=>`<div class="item" style="cursor:pointer" onclick="go('${r}')"><div class="grow">${l}</div>›</div>`).join(''))};
+/* old Reports page points to the Safety centre */
+const _admReports=VIEWS['a-reports'];VIEWS['a-reports']=()=>{const html=_admReports();return S.admin?`<div class="notice" style="margin-bottom:14px;border-left-color:var(--info)">Track, mark seen and resolve in the <button class="btn sm ghost" style="margin-left:4px" onclick="go('a-safety')">Safety centre</button></div>`+html:html};
+
+/* header: open-SOS badge, nav dot, sub-screens keep Overview highlighted, toast on new SOS */
+function admSosToast(open){if(!S.admSosSeen){S.admSosSeen=new Set(open.map(e=>e.id));return}const fresh=open.filter(e=>!S.admSosSeen.has(e.id));fresh.forEach(e=>S.admSosSeen.add(e.id));if(fresh.some(e=>Date.now()-(e.ts||0)<30*60000)&&S.route!=='a-safety'){toast('🚨 New SOS. Open the Safety centre.');buzz([200,100,200])}}
+function admDecorate(){if(!S.admin||!me())return;const open=admOpenSos();const n=open.length;const top=document.querySelector('#app .top');
+  if(top&&n&&!top.querySelector('.adm-sosb')){const b=document.createElement('button');b.className='ib adm-sosb';b.title=n+' open SOS';b.setAttribute('aria-label',n+' open SOS');b.innerHTML=ADM_IC.siren+`<span class="cnt">${n}</span>`;b.onclick=()=>{S.adminApp=false;go('a-safety')};const bell=top.querySelector('.ib[title="Notifications"]');bell?top.insertBefore(b,bell):top.appendChild(b)}
+  if(viewRole()==='admin'){const mine=['a-live','a-safety','a-docs','a-audit','a-status'].includes(S.route);document.querySelectorAll('#app .tabs button,#app .rail button').forEach(btn=>{if(!(btn.getAttribute('onclick')||'').includes("'a-home'"))return;if(mine)btn.classList.add('on');if(n){btn.classList.add('adm-hasdot');if(!btn.querySelector('.adm-nd'))btn.insertAdjacentHTML('beforeend','<i class="adm-nd" aria-hidden="true"></i>')}})}
+  admSosToast(open)}
+const _admRender=render;render=function(){_admRender.apply(this,arguments);try{admDecorate()}catch(e){console.warn('admin decorate',e)}};
+/* live timers tick without a full redraw */
+setInterval(()=>{if(document.hidden||!S.admin)return;const now=Date.now();document.querySelectorAll('[data-adm-k]').forEach(el=>{const ts=+el.dataset.admTs;if(!ts)return;const k=el.dataset.admK;
+  if(k==='ago')el.textContent=admAgo(ts);else if(k==='wait'){const s=el.querySelector('span');if(s)s.textContent='Waiting '+admDur(now-ts)}else if(k==='ping'){const s=el.querySelector('span');if(s)s.textContent='GPS '+admAgo(ts);const st=now-ts>ADM_STALE_MS;el.classList.toggle('adm-c-warn',st);el.classList.toggle('adm-c-ok',!st);el.closest('.adm-trip')?.classList.toggle('adm-stale',st)}})},5000);
+</script>

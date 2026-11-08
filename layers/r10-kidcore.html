@@ -1,0 +1,360 @@
+<style>
+/* ===================== round 10 · kidcore: kid logins ===================== */
+.kc-link{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:46px;padding:10px 16px;border-radius:999px;border:1.5px dashed color-mix(in srgb,var(--acc) 55%,var(--line));background:color-mix(in srgb,var(--acc) 7%,var(--bg));color:var(--fg);font:inherit;font-weight:600;font-size:.92rem;cursor:pointer;transition:transform .15s,border-color .15s}
+.kc-link:hover{border-color:var(--acc)}.kc-link:active{transform:scale(.98)}
+.kc-link svg{width:20px;height:20px;color:var(--acc)}
+.kc-hd{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.kc-badge{width:64px;height:64px;border-radius:22px;display:grid;place-items:center;background:linear-gradient(135deg,#6d5dfc,#0ea5e9);color:#fff;box-shadow:0 12px 30px color-mix(in srgb,#6d5dfc 32%,transparent);animation:kcPop .5s cubic-bezier(.2,.8,.2,1) both}
+.kc-badge svg{width:32px;height:32px}
+@keyframes kcPop{from{transform:scale(.6) rotate(-8deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes kcRise{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+.kc-back{background:none;border:0;color:var(--fg3);font:inherit;font-size:.85rem;cursor:pointer;min-height:44px;align-self:center}
+.kc-who{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,128px),1fr));gap:10px}
+.kc-who button{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 10px;border-radius:20px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);font:inherit;cursor:pointer;min-height:44px;transition:transform .15s,border-color .15s,box-shadow .15s;animation:kcRise .35s ease both}
+.kc-who button:hover{border-color:var(--acc);box-shadow:var(--shadow)}.kc-who button:active{transform:scale(.97)}
+.kc-who .avatar{width:54px;height:54px;font-size:1.15rem}
+.kc-who b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kc-age{font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
+.kc-ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.kc-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--live);margin-right:6px;vertical-align:middle}
+/* parent: the "Kid's app" box on each child card */
+.kc-app{margin-top:14px;padding:12px 14px;border-radius:16px;background:var(--bg2);display:flex;flex-direction:column;gap:10px}
+.kc-app .kc-top{display:flex;align-items:center;gap:10px;min-width:0}
+.kc-app .kc-top .grow{flex:1;min-width:0}
+.kc-ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#6d5dfc,#0ea5e9);color:#fff;flex-shrink:0}
+.kc-ic svg{width:18px;height:18px}
+.kc-app .row .btn{flex:1 1 auto}
+.kc-chips{display:flex;flex-wrap:wrap;gap:6px}
+/* permissions sheet */
+.kc-perm{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);animation:kcRise .3s ease both}
+.kc-perm:last-child{border:0}
+.kc-perm .pi{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--bg2);flex-shrink:0;color:var(--acc)}
+.kc-perm .pi svg{width:18px;height:18px}
+.kc-perm .grow{flex:1;min-width:0}
+.kc-perm b{display:block;font-size:.92rem;line-height:1.3}
+.kc-perm small{display:block;color:var(--fg3);font-size:.78rem;line-height:1.35}
+.kc-perm.kc-sosrow .pi{background:var(--bad);color:#fff}
+.kc-chips svg,.kc-look svg{width:14px;height:14px;flex-shrink:0}
+.kc-look button{display:inline-flex;align-items:center;gap:6px}
+.kc-app .btn.ghost{background:var(--bg);border-color:var(--line)}
+.kc-line b.wrap{white-space:normal;overflow:visible}
+.kc-perm .switch,.kc-more .switch{display:inline-block}
+/* kid home */
+.kc-prev{display:flex;align-items:center;gap:8px;border-left-color:var(--acc)}
+.kc-prev svg{width:16px;height:16px;flex-shrink:0;color:var(--acc)}
+.kc-hero{position:relative;overflow:hidden;border-radius:26px;padding:20px;color:#fff;background:linear-gradient(135deg,#5b4bf0 0%,#0e8fd6 100%);box-shadow:0 16px 40px color-mix(in srgb,#5b4bf0 28%,transparent);animation:kcRise .4s ease both}
+.kc-hero::before{content:"";position:absolute;right:-50px;top:-60px;width:190px;height:190px;border-radius:50%;background:rgba(255,255,255,.13)}
+.kc-hero::after{content:"";position:absolute;right:40px;bottom:-70px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.08)}
+.kc-hero>*{position:relative;z-index:1}
+.kc-hero .pill{background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.4)}
+.kc-hero .pill .blink{background:#b9ffcf}
+.kc-hero .t{font-family:var(--display);font-weight:700;font-size:2.6rem;letter-spacing:-.03em;line-height:1;margin-top:4px;font-variant-numeric:tabular-nums}
+.kc-hero .lbl{font-size:.78rem;opacity:.85}
+.kc-hero.off{background:linear-gradient(135deg,#8a8a86,#5f5f5b)}
+.kc-hero.on{background:linear-gradient(135deg,#119e48,#0e8fd6)}
+.kc-ride{display:flex;flex-direction:column;gap:12px}
+.kc-line{display:flex;align-items:center;gap:12px;min-width:0}
+.kc-line .grow{flex:1;min-width:0}
+.kc-line b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kc-sq{width:40px;height:40px;border-radius:13px;background:var(--bg2);display:grid;place-items:center;flex-shrink:0}
+.kc-sq svg{width:20px;height:20px}
+.kc-plate{display:inline-flex;align-items:center;padding:4px 10px;border-radius:8px;background:#fff;color:#111;font-weight:800;letter-spacing:.06em;font-size:.86rem;border:2px solid #111;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap;flex-shrink:0;box-shadow:inset 0 -3px 0 #fde047}
+.kc-tip{display:flex;align-items:center;gap:6px;color:var(--fg3);font-size:.78rem}
+.kc-tip svg{width:14px;height:14px;color:var(--live);flex-shrink:0}
+.kc-wave{display:inline-block;transform-origin:70% 70%;animation:kcWave 1.6s ease .4s 2}
+@keyframes kcWave{0%,60%,100%{transform:rotate(0)}10%,30%{transform:rotate(14deg)}20%,40%{transform:rotate(-8deg)}}
+/* kid trips */
+.kc-day{font-size:.78rem;font-weight:700;color:var(--fg3);margin:4px 0 2px}
+.kc-ev{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.kc-ev:last-child{border:0}
+.kc-ev .grow{flex:1;min-width:0}
+.kc-ev .kc-sq{width:34px;height:34px;border-radius:11px}
+.kc-ev .kc-sq svg{width:16px;height:16px}
+.kc-ev.pickup .kc-sq{background:color-mix(in srgb,var(--live) 16%,transparent);color:var(--live)}
+.kc-ev.dropoff .kc-sq{background:color-mix(in srgb,var(--info) 16%,transparent);color:var(--info)}
+.kc-ev.arrived .kc-sq{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+/* kid chat + settings */
+.kc-row{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;background:none;border:0;border-bottom:1px solid var(--line);padding:10px 0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.kc-row:last-child{border:0}
+.kc-row .grow{flex:1;min-width:0}
+.kc-row .chev{color:var(--fg3)}
+.kc-rules{display:flex;flex-direction:column;gap:8px;margin:16px 0}
+.kc-rule{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--bg2);animation:kcRise .35s ease both;animation-delay:var(--d,0ms)}
+.kc-rule span{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--bg);color:var(--acc);flex-shrink:0}
+.kc-rule span svg{width:17px;height:17px}
+.kc-qr{display:flex;gap:6px;overflow-x:auto;padding:8px 10px 0;background:var(--bg)}
+.kc-qr button{flex-shrink:0;border:1px solid var(--line);background:var(--bg2);color:var(--fg);border-radius:999px;padding:8px 12px;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer;min-height:38px}
+.kc-msg{padding:8px 0;border-bottom:1px solid var(--line);font-size:.88rem}
+.kc-msg:last-child{border:0}
+.top .sw{min-width:0;flex-shrink:1}
+@media(prefers-reduced-motion:reduce){.kc-badge,.kc-who button,.kc-perm,.kc-hero,.kc-rule,.kc-wave{animation:none}}
+</style>
+<script>
+/* ===================== round 10 · kidcore: kid logins (role 'kid') =====================
+   users doc {role:'kid', name, email, parentId, kidId, createdAt}; kids doc gets accountId + accountEmail.
+   Parents control what the child may do with kids.perms (see KID_PERMS). */
+const KID_PERMS={track:true,ready:true,chat:false,absent:false,theme:true,faceid:true,alerts:true};
+const KC_ICON={kid:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0"/><path d="M9 9.5h.01M15 9.5h.01" stroke-width="2.6"/><path d="M10 3.4c.6 1.3 2.4 1.6 3.4.6"/></svg>',
+  mobile:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M11 18h2"/></svg>',
+  sliders:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
+  calOff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M10 14l4 4M14 14l-4 4"/></svg>',
+  hand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6a1.5 1.5 0 0 1 3 0v7c0 4.4-2.6 8-6.5 8-3 0-4.6-1.6-6-4l-1.6-2.8a1.5 1.5 0 0 1 2.5-1.6L8 15"/></svg>',
+  out:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l4-4-4-4M14 12H4"/></svg>',
+  chev:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>'};
+
+/* ---------- helpers other layers may use ---------- */
+function kidPerms(k){const p={...KID_PERMS};const src=k&&typeof k.perms==='object'&&k.perms?k.perms:{};for(const key of Object.keys(KID_PERMS))if(typeof src[key]==='boolean')p[key]=src[key];return p}
+function isKidView(){return viewRole()==='kid'}
+function isRealKid(){const u=me();return !!u&&u.role==='kid'&&!S.admin}
+/* the child profile shown in the kid app: the kid's own, or (admin "Kid" switch) the admin's first child */
+function myKidProfile(){const u=me();if(!u)return null;if(S.admin){if(S.adminApp!=='kid')return null;return kidsOf(u.id).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0))[0]||null}if(u.role!=='kid')return null;return Store.get('kids',u.kidId)||null}
+/* active rides of that child (regular 'active' first, then once-off 'trip') */
+function kidBookings(k){k=k||myKidProfile();if(!k)return [];return Store.all('bookings').filter(b=>b.kidId===k.id&&(b.status==='active'||b.status==='trip')).sort((a,b)=>(a.status==='active'?0:1)-(b.status==='active'?0:1)||(a.startedAt||0)-(b.startedAt||0))}
+/* the kid login (users doc) of a child profile, or null */
+function kidAccountOf(kidId){const k=Store.get('kids',kidId);const a=k&&k.accountId?Store.get('users',k.accountId):null;if(a&&!a.unlinked)return a;return Store.all('users').find(u=>u.role==='kid'&&u.kidId===kidId&&!u.unlinked&&!u.suspended)||null}
+function kcFirst(n){return String(n||'').trim().split(/\s+/)[0]||''}
+function kcHomeOf(){const r=viewRole();return r==='admin'?'a-home':r==='driver'?'d-home':r==='parent'?'p-home':r==='kid'?'k-home':'landing'}
+const KC_OPEN=['notifs','legal','doc','privacy','terms','safety'];
+function kidRouteFor(r){if(typeof r!=='string')return 'k-home';const chat=kidPerms(myKidProfile()).chat;
+  if(r.startsWith('k-'))return r==='k-chat'&&!chat?'k-home':VIEWS[r]?r:'k-home';
+  if(KC_OPEN.includes(r))return r;
+  if(['p-chat','d-chat','a-chat'].includes(r))return chat?'k-chat':'k-home';
+  if(r==='p-more'||r==='d-more')return 'k-more';
+  return 'k-home'}
+/* "I'm not riding" for a day (server checks the parent's "absent" switch) */
+async function kidMarkAbsent(day){day=day||todayKey();const k=myKidProfile();if(!k)return false;
+  if(!kidPerms(k).absent){toast('Ask your parent to switch this on');return false}
+  if(S.cloud&&isRealKid()){const {error}=await sb.rpc('kid_absent',{p_day:day});if(error){toast(error.message);return false}await cloudPull(false);render();return true}
+  const a=new Set(k.absences||[]);if(a.has(day))return true;a.add(day);await Store.patch('kids',k.id,{absences:[...a]});
+  const lbl=day===todayKey()?'today':'on '+new Date(day+'T12:00').toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'});
+  if(k.parentId!==me()?.id)await notify(k.parentId,`${k.name} says they are not riding ${lbl}.`,'info','p-home');
+  for(const d of [...new Set(kidBookings(k).map(b=>b.driverId))])await notify(d,`${k.name} is not riding ${lbl}.`,'info','d-trip');return true}
+
+/* ---------- nav: Ride · Trips · Chat (only when allowed) · Settings ---------- */
+let kcNavOverride=null;
+Object.defineProperty(NAV,'kid',{configurable:true,enumerable:true,
+  get(){const p=kidPerms(myKidProfile());const base=typeof kcNavOverride==='function'?kcNavOverride():Array.isArray(kcNavOverride)?kcNavOverride:[['k-home','Ride','home'],['k-trips','Trips','car'],['k-chat','Chat','chat'],['k-more','Settings','list']];return base.filter(x=>x[0]!=='k-chat'||p.chat)},
+  set(v){kcNavOverride=v}});
+
+/* ---------- second Supabase client: checks other accounts without touching this phone's sign-in ---------- */
+let kcSetupClient=null;
+function kcClient(){return supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'enivel-kidsetup'}})}
+async function kcDrop(){const c=kcSetupClient;kcSetupClient=null;if(c)try{await c.auth.signOut({scope:'local'})}catch(e){}}
+function kcCheckLogin(email,pw,pw2){if(!validEmail(email))return 'Enter a real email address, like name@gmail.com';if(pw.length<8)return 'Password needs at least 8 characters';if(pw!==pw2)return 'The passwords do not match';return ''}
+/* sign up the kid on client c (or sign in, if the email is an old switched-off kid login) and claim the code */
+async function kcSignUpAndClaim(c,email,pw,tok){
+  let {data,error}=await c.auth.signUp({email,password:pw,options:{emailRedirectTo:location.origin+location.pathname}});
+  if(error&&/registered|exists/i.test(error.message)){const r=await c.auth.signInWithPassword({email,password:pw});if(r.error)return {error:'That email is already used. Try another email.'};data=r.data;error=null}
+  if(error)return {error:error.message};
+  if(!data?.session)return {pending:true};
+  const {data:cl,error:e2}=await c.rpc('kid_link_claim',{p_token:tok});
+  if(e2)return {error:e2.message,userId:data.user.id,claimFailed:true};
+  return {userId:data.user.id,kid:cl}}
+/* local / preview modes: no server, create the kid login directly */
+async function kcLocalCreate(kidId,email,pw){const k=Store.get('kids',kidId);if(!k)return {error:'That child profile was removed'};
+  const ex=Store.all('users').find(u=>(u.email||'').toLowerCase()===email);
+  if(ex&&!(ex.role==='kid'&&ex.parentId===k.parentId&&(ex.unlinked||ex.suspended||ex.kidId===kidId)))return {error:'That email already has an Enivel account'};
+  const cur=k.accountId&&Store.get('users',k.accountId);if(cur&&!cur.unlinked&&!cur.suspended&&cur.id!==ex?.id)return {error:`${k.name} already has a login`};
+  const id=ex?ex.id:uid();const doc={...(ex||{}),id,name:k.name,email,role:'kid',parentId:k.parentId,kidId,password:await sha(pw),createdAt:ex?.createdAt||Date.now(),verification:{status:'none'},suspended:false,unlinked:false};
+  S.silent=true;try{await Store.put('users',id,doc);await Store.patch('kids',kidId,{accountId:id,accountEmail:email})}finally{S.silent=false}
+  await notify(k.parentId,`${k.name}'s own login is ready (${email}).`,'info','p-kids');return {id}}
+async function kcUnlink(kidId){const k=Store.get('kids',kidId);if(!k)return;
+  if(S.cloud){const {error}=await sb.rpc('kid_unlink',{p_kid:kidId});if(error)throw new Error(error.message);await cloudPull(true);return}
+  S.silent=true;try{for(const u of Store.all('users').filter(u=>u.role==='kid'&&u.kidId===kidId&&!u.unlinked))await Store.patch('users',u.id,{suspended:true,unlinked:true,unlinkedAt:Date.now(),passkeys:[]});await Store.patch('kids',kidId,{accountId:null,accountEmail:null})}finally{S.silent=false}render()}
+
+/* ---------- landing: "I'm a kid — set up my login" ---------- */
+const _kcLanding=VIEWS.landing;VIEWS.landing=()=>_kcLanding().replace('<div class="links">',`<button type="button" class="kc-link" id="kc-start" onclick="kidSetupStart()">${KC_ICON.kid}I'm a kid — set up my login</button><div class="links">`);
+function kidSetupStart(){kcDrop();S.ks={step:1};go('kid-setup')}
+function kidSetupExit(){kcDrop();S.ks=null;go('landing',{authMode:'login'})}
+function kcPwField(id,label,ac){return `<div class="field"><label for="${id}">${label}</label><div class="pw"><input id="${id}" type="password" required autocomplete="${ac}"><button type="button" class="eye" onclick="togglePw(this)" aria-label="Show password">${ICON.eye}</button></div></div>`}
+VIEWS['kid-setup']=()=>{const ks=S.ks||(S.ks={step:1});const u=me();
+  if(u)return pageHead('Kid login')+`<div class="card">${empty('Parents: open the Kids page and tap “Give … their own login”.','kids')}<button class="btn wide" onclick="go(kcHomeOf())">OK</button></div>`;
+  const steps=`<div class="steps" aria-label="Step ${ks.step} of 3">${[1,2,3].map(n=>`<i class="${n<=ks.step?'on':''}"></i>`).join('')}</div>`;
+  let body='';
+  if(ks.step===1)body=`<div class="kc-hd"><span class="kc-badge">${KC_ICON.kid}</span><h2>Kid login</h2><p class="muted small">First, a grown-up says yes.</p></div>${steps}
+    <form class="stack" id="kc-f1" onsubmit="event.preventDefault();kidSetupParent()"><div class="field"><label for="ks-pe">Parent's email</label><input id="ks-pe" type="email" required autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="parent@example.com"></div>${kcPwField('ks-pp',"Parent's password",'off')}
+    <button class="btn wide" id="ks-next1">Next</button></form>`;
+  else if(ks.step===2){const list=ks.kids||[];body=`<div class="kc-hd"><span class="kc-badge">${KC_ICON.hand}</span><h2>Which one are you?</h2><p class="muted small">${h(kcFirst(ks.parentName))}'s children</p></div>${steps}
+    ${list.length?`<div class="kc-who">${list.map((k,i)=>`<button type="button" data-kc-pick="${h(k.id)}" style="animation-delay:${i*60}ms"><span class="avatar">${initials(k.name)}</span><b>${h(kcFirst(k.name))}</b>${k.age?`<span class="kc-age">${h(k.age)} yrs</span>`:''}</button>`).join('')}</div>`
+      :`<div class="card soft" style="text-align:center"><p class="small">${ks.all?`All of ${h(kcFirst(ks.parentName))}'s children already have a login.`:'No children yet. Your parent adds you on the Kids page first.'}</p></div><button class="btn ghost wide" onclick="kidSetupStart()">Start again</button>`}`}
+  else{const k=(ks.kids||[]).find(x=>x.id===ks.kidId)||{};body=`<div class="kc-hd"><span class="avatar" style="width:64px;height:64px;font-size:1.3rem">${initials(k.name)}</span><h2>Hi ${h(kcFirst(k.name))}!</h2><p class="muted small">Make your own login.</p></div>${steps}
+    <form class="stack" onsubmit="event.preventDefault();kidSetupCreate()"><div class="field"><label for="ks-ke">Your email</label><input id="ks-ke" type="email" required autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="you@example.com"></div>${kcPwField('ks-kp','Password (8 or more)','new-password')}${kcPwField('ks-kp2','Password again','new-password')}
+    <button class="btn wide" id="ks-go">Create my login</button><p class="tiny muted" style="text-align:center">Next time, just log in with this email and password.</p></form>`}
+  return `<div class="auth"><div class="box kc-setup">${body}<button type="button" class="kc-back" onclick="${ks.step===3?'S.ks.step=2;render()':'kidSetupExit()'}">‹ ${ks.step===3?'Back':'Back to log in'}</button></div></div>`};
+async function kidSetupParent(){const email=(val(document,'ks-pe')||'').trim().toLowerCase(),pw=val(document,'ks-pp')||'';
+  if(!validEmail(email))return toast("Enter your parent's email");if(!pw)return toast("Enter your parent's password");
+  const btn=$('#ks-next1');if(btn)btn.disabled=true;
+  try{let parent=null,kids=[];
+    if(S.cloud){await kcDrop();const kc=kcClient();const {data,error}=await kc.auth.signInWithPassword({email,password:pw});
+      if(error)return toast(/invalid/i.test(error.message)?'Parent email or password is wrong':error.message);
+      kcSetupClient=kc;const pid=data.user.id;const {data:rows,error:e2}=await kc.rpc('fetch_docs',{p_since:null});if(e2)throw new Error(e2.message);
+      const pr=(rows||[]).find(r=>r.coll==='users'&&r.id===pid&&!r.deleted);parent=pr?{...pr.data,id:pid}:null;
+      kids=(rows||[]).filter(r=>r.coll==='kids'&&!r.deleted&&r.data&&r.data.parentId===pid).map(r=>({...r.data,id:r.id}))}
+    else{const u=Store.all('users').find(x=>(x.email||'').toLowerCase()===email);const hash=await sha(pw);
+      if(!u||!(u.password===hash||(email===ADMIN_EMAIL&&ADMIN_HASH&&hash===ADMIN_HASH)))return toast('Parent email or password is wrong');parent=u;kids=kidsOf(u.id)}
+    if(!parent||!['parent','admin'].includes(parent.role)){await kcDrop();return toast('Use your parent’s Enivel account')}
+    if(parent.banned||parent.suspended){await kcDrop();return toast('That parent account is not active')}
+    const next=()=>{S.ks={step:2,parentId:parent.id,parentName:parent.name||'',all:kids.length,kids:kids.filter(k=>!k.accountId).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)).map(k=>({id:k.id,name:k.name,age:k.age}))};buzz();render()};
+    if(parent.twoFactor==='pin'&&parent.pinHash)return pinModal(parent,next);
+    if(parent.twoFactor==='sms'&&parent.phone)return otpModal(parent.phone,'Your parent’s code',next);
+    next()}
+  catch(e){toast('Could not check that: '+e.message)}finally{const b=$('#ks-next1');if(b)b.disabled=false}}
+function kidSetupPick(id){if(!S.ks||!(S.ks.kids||[]).some(k=>k.id===id))return;S.ks.kidId=id;S.ks.step=3;buzz();render();setTimeout(()=>$('#ks-ke')?.focus(),80)}
+async function kidSetupCreate(){const ks=S.ks;if(!ks?.kidId)return;const k=(ks.kids||[]).find(x=>x.id===ks.kidId)||{};
+  const email=(val(document,'ks-ke')||'').trim().toLowerCase(),pw=val(document,'ks-kp')||'',pw2=val(document,'ks-kp2')||'';
+  const err=kcCheckLogin(email,pw,pw2);if(err)return toast(err);
+  const btn=$('#ks-go');if(btn)btn.disabled=true;
+  try{
+    if(S.cloud){const kc=kcSetupClient;if(!kc){S.ks={step:1};render();return toast('Please start again')}
+      const {data:tok,error}=await kc.rpc('kid_link_create',{p_kid:ks.kidId,p_email:email});if(error)return toast(error.message);
+      await kcDrop();
+      const r=await kcSignUpAndClaim(sb,email,pw,tok);
+      if(r.claimFailed){try{await sb.auth.signOut()}catch(e){}S.session=null;ls.set('enivel_session',null);S.ks={step:1};render();return toast(r.error)}
+      if(r.error)return toast(r.error);
+      if(r.pending){ls.set('enivel_kidtoken_'+email,{token:tok,at:Date.now()});S.ks=null;go('landing',{authMode:'login'});return modal(`<div class="kc-hd"><span class="kc-badge">${ICON.check}</span><h3>Check your email</h3><p class="muted small">Open the link we sent to <b>${h(email)}</b> on this phone, then log in.</p></div><button class="btn wide" style="margin-top:16px" onclick="closeModal()">OK</button>`)}
+      S.session={userId:r.userId};S.admin=false;ls.set('enivel_session',S.session);ls.set('enivel_admin',false);ls.set('enivel_2fa_'+r.userId,1);
+      await cloudPull(true)}
+    else{const r=await kcLocalCreate(ks.kidId,email,pw);if(r.error)return toast(r.error);S.session={userId:r.id};S.admin=false;ls.set('enivel_session',S.session);ls.set('enivel_admin',false)}
+    S.ks=null;go('k-home');toast(`Welcome, ${kcFirst(k.name)}!`);if(typeof confetti==='function')setTimeout(confetti,300)}
+  catch(e){toast('Could not create your login: '+e.message)}finally{const b=$('#ks-go');if(b)b.disabled=false}}
+
+/* first sign-in after confirming the email: claim the kept code */
+const _kcEnsure=ensureProfile;ensureProfile=async function(user){const email=(user?.email||'').toLowerCase();const t=ls.get('enivel_kidtoken_'+email);
+  if(S.cloud&&t&&t.token){S.session={userId:user.id};ls.set('enivel_session',S.session);if(me())return;
+    const {error}=await sb.rpc('kid_link_claim',{p_token:t.token});ls.set('enivel_kidtoken_'+email,null);
+    if(error){try{await sb.auth.signOut()}catch(e){}S.session=null;ls.set('enivel_session',null);go('landing',{authMode:'login'});return toast(error.message)}
+    S.admin=false;ls.set('enivel_admin',false);ls.set('enivel_2fa_'+user.id,1);await cloudPull(true);go('k-home');return toast('Welcome to Enivel!')}
+  return _kcEnsure(user)};
+
+/* ---------- parent: "Kid's app" on each child card ---------- */
+function kidAppSection(k){const on=!!k.accountId;const p=kidPerms(k);const first=kcFirst(k.name);
+  const chips=[p.track&&'Map',p.ready&&'Ready buttons',p.chat&&'Chat',p.absent&&'Day off'].filter(Boolean);
+  const hasChats=on&&Store.all('messages').some(m=>m.from===k.accountId||m.to===k.accountId);
+  return `<div class="kc-app" data-kc-app="${h(k.id)}"><div class="kc-top"><span class="kc-ic">${KC_ICON.mobile}</span><div class="grow"><b class="small">Kid's app</b><div class="tiny muted kc-ell">${on?`<span class="kc-dot"></span>${h(k.accountEmail||'Login on')}`:'No login yet'}</div></div></div>
+    ${chips.length?`<div class="kc-chips">${chips.map(c=>`<span class="chip-on">${c}</span>`).join('')}</div>`:''}
+    <div class="row">${on?'':`<button class="btn sm" data-kc-give="${h(k.id)}">${KC_ICON.kid} Give ${h(first)} their own login</button>`}<button class="btn sm ghost" data-kc-perms="${h(k.id)}">${KC_ICON.sliders} Permissions</button>${hasChats?`<button class="btn sm ghost" data-kc-chats="${h(k.id)}">${ICON.chat} Chats</button>`:''}${on?`<button class="btn sm ghost" data-kc-off="${h(k.id)}">Remove login</button>`:''}</div></div>`}
+const _kcPkids=VIEWS['p-kids'];VIEWS['p-kids']=()=>{let html=_kcPkids();const u=me();if(!u)return html;for(const k of kidsOf(u.id)){const m=`removeKid('${k.id}')">Remove</button></div>`;html=html.replace(m,m+kidAppSection(k))}return html};
+function kidLoginModal(kidId){const k=Store.get('kids',kidId);if(!k)return;const first=kcFirst(k.name);
+  modal(`<div class="kc-hd"><span class="kc-badge">${KC_ICON.kid}</span><h3>${h(first)}'s own login</h3><p class="muted small">${h(first)} signs in with this. You stay signed in.</p></div>
+  <form class="stack" style="margin-top:16px" id="kl-f"><div class="field"><label for="kl-e">${h(first)}'s email</label><input id="kl-e" type="email" required autocomplete="off" autocapitalize="off" spellcheck="false"></div>${kcPwField('kl-p','Password (8 or more)','new-password')}${kcPwField('kl-p2','Password again','new-password')}
+  <button class="btn wide" id="kl-go">Create login</button></form>`,m=>{$('#kl-f',m).onsubmit=async e=>{e.preventDefault();const email=val(m,'kl-e').trim().toLowerCase(),pw=val(m,'kl-p'),pw2=val(m,'kl-p2');const err=kcCheckLogin(email,pw,pw2);if(err)return toast(err);
+    if(email===(me()?.email||'').toLowerCase())return toast(`Use ${first}'s own email, not yours`);
+    const btn=$('#kl-go',m);btn.disabled=true;try{await kcCreateForKid(kidId,email,pw)}catch(er){toast('Could not create the login: '+er.message)}finally{btn.disabled=false}}})}
+async function kcCreateForKid(kidId,email,pw){const k=Store.get('kids',kidId);const first=kcFirst(k?.name);
+  if(!S.cloud){const r=await kcLocalCreate(kidId,email,pw);if(r.error)return toast(r.error);return kcReady(kidId,email)}
+  const {data:tok,error}=await sb.rpc('kid_link_create',{p_kid:kidId,p_email:email});if(error)return toast(error.message);
+  const kc=kcClient();const r=await kcSignUpAndClaim(kc,email,pw,tok);
+  if(r.pending)return modal(`<div class="kc-hd"><span class="kc-badge">${ICON.bell}</span><h3>Confirm ${h(first)}'s email</h3><p class="muted small">Open the link we sent to <b>${h(email)}</b>, then tap Finish (within 15 minutes).</p></div><button class="btn wide" style="margin-top:16px" id="kl-fin">Finish</button>`,m=>{$('#kl-fin',m).onclick=async()=>{const s=await kc.auth.signInWithPassword({email,password:pw});if(s.error)return toast(/confirm/i.test(s.error.message)?'Not confirmed yet. Open the email link first.':s.error.message);const {error:e3}=await kc.rpc('kid_link_claim',{p_token:tok});try{await kc.auth.signOut({scope:'local'})}catch(e){}if(e3)return toast(e3.message);await cloudPull(true);kcReady(kidId,email)}});
+  try{await kc.auth.signOut({scope:'local'})}catch(e){}
+  if(r.error)return toast(r.error);
+  await cloudPull(true);kcReady(kidId,email)}
+function kcReady(kidId,email){const k=Store.get('kids',kidId);const first=kcFirst(k?.name);render();
+  modal(`<div class="kc-hd"><span class="kc-badge" style="background:linear-gradient(135deg,#119e48,#0e8fd6)">${ICON.check}</span><h3>${h(first)} can sign in now</h3><p class="muted small">With <b>${h(email)}</b> and the password you chose.</p></div><button class="btn wide" style="margin-top:16px" id="kr-perm">${KC_ICON.sliders} Choose what ${h(first)} can do</button><button class="btn ghost wide" style="margin-top:8px" onclick="closeModal()">Done</button>`,m=>{$('#kr-perm',m).onclick=()=>kidPermsModal(kidId)});
+  if(typeof confetti==='function')setTimeout(confetti,200)}
+const KC_PERM_ROWS=[['track','pin','See the driver on the map','Only during the ride'],['ready','bolt','“I’m coming” & “Running late”','Buttons that tell the driver'],['chat','chat','Chat with the driver','You can read these chats too'],['absent','calOff','Tell the driver “not riding today”','You get a message when they do'],['theme','sun',"Change the app's look",'Light or dark'],['faceid','face','Face ID sign-in','No password on their phone'],['alerts','bell','Phone pop-ups','Alerts about their ride']];
+function kidPermsModal(kidId){const k=Store.get('kids',kidId);if(!k)return;const p=kidPerms(k);const first=kcFirst(k.name);
+  modal(`<div class="row" style="flex-wrap:nowrap;gap:12px"><span class="avatar">${initials(k.name)}</span><div><h3>What can ${h(first)} do?</h3><p class="tiny muted">Changes apply straight away.</p></div></div>
+  <div style="margin-top:8px">${KC_PERM_ROWS.map(([key,ic,t,s],i)=>`<label class="kc-perm" style="animation-delay:${i*40}ms"><span class="pi">${KC_ICON[ic]||ICON[ic]||ICON.check}</span><span class="grow"><b>${t}</b><small>${s}</small></span><span class="switch"><input type="checkbox" data-perm="${key}" ${p[key]?'checked':''} aria-label="${h(t)}"><i></i></span></label>`).join('')}
+  <div class="kc-perm kc-sosrow"><span class="pi">${ICON.shield}</span><span class="grow"><b>SOS button</b><small>Always on. It can't be switched off.</small></span><span class="pill bad">${ICON.lock} On</span></div></div>
+  <button class="btn wide" style="margin-top:12px" onclick="closeModal()">Done</button>`,m=>{m.querySelectorAll('input[data-perm]').forEach(inp=>inp.onchange=async()=>{const kk=Store.get('kids',kidId);if(!kk)return;const perms={...kidPerms(kk),[inp.dataset.perm]:inp.checked};buzz();try{await Store.patch('kids',kidId,{perms});toast('Saved')}catch(e){inp.checked=!inp.checked;toast('Could not save: '+e.message)}})})}
+function kidChatsModal(kidId){const k=Store.get('kids',kidId);if(!k?.accountId)return;const id=k.accountId;const ms=Store.all('messages').filter(m=>m.from===id||m.to===id).sort((a,b)=>b.ts-a.ts).slice(0,60);
+  modal(`<h3>${h(kcFirst(k.name))}'s chats</h3><p class="tiny muted" style="margin-bottom:8px">Read only.</p>${ms.length?ms.map(m=>`<div class="kc-msg"><div class="row between" style="flex-wrap:nowrap"><b class="small kc-ell">${h(userName(m.from))} → ${h(userName(m.to))}</b><span class="tiny muted" style="flex-shrink:0">${fmtDT(m.ts)}</span></div><div>${h(m.text)}</div></div>`).join(''):empty('No messages yet.','chat')}<button class="btn ghost wide" style="margin-top:12px" onclick="closeModal()">Close</button>`)}
+function kidUnlinkAsk(kidId){const k=Store.get('kids',kidId);if(!k)return;const first=kcFirst(k.name);
+  confirmBox(`Remove ${first}'s login?`,`${first} is signed out. You can set it up again any time.`,async()=>{try{await kcUnlink(kidId);toast(`${first}'s login removed`)}catch(e){toast('Could not remove it: '+e.message)}})}
+/* removing a child also switches off their own login (same steps as before otherwise) */
+removeKid=function(id){const k=Store.get('kids',id);confirmBox(`Remove ${k?.name||'this child'}?`,'Their transport is cancelled and the driver is told. Trip history is kept for safety records.',async()=>{if(k?.accountId)try{await kcUnlink(id)}catch(e){console.warn('unlink',e)}for(const b of Store.all('bookings').filter(b=>b.kidId===id&&(b.status==='active'||b.status==='trip'))){await Store.patch('bookings',b.id,{status:'cancelled',endedAt:Date.now()});await notify(b.driverId,`${k?.name||'A child'} was removed by their parent. The seat is free.`,'info','d-routes')}await Store.del('kids',id);toast('Removed')})};
+
+/* ---------- kid app screens (kidui builds on these) ---------- */
+function kcPreviewBar(){const k=myKidProfile();return S.admin&&S.adminApp==='kid'&&k?`<div class="notice kc-prev" style="margin-bottom:14px">${ICON.eye}<span>Preview of ${h(kcFirst(k.name))}'s app</span></div>`:''}
+function kcNoKid(){if(S.admin)return pageHead('Kid app')+`<div class="card" style="text-align:center">${empty('Add a child in Parent first. The Kid view shows your first child.','kids')}<button class="btn" onclick="S.adminApp='parent';go('p-kids')">Go to Parent</button></div>`;
+  return pageHead('Hi!')+`<div class="card" style="text-align:center">${empty('We can’t find your profile. Ask your parent to check the Kids page.','kids')}<button class="btn ghost" onclick="logout()">Log out</button></div>`}
+function kcCar(r){const v=r&&Store.get('vehicles',r.vehicleId);const label=v?[v.color,v.make,v.model].filter(Boolean).join(' '):(r?.vehicleLabel||'');return {label:label||'Car',plate:(r?.plate||v?.plate||'').toUpperCase()}}
+function kidRideInfo(k){const b=kidBookings(k)[0];if(!b)return null;const r=routeOf(b.routeId);const drv=Store.get('users',b.driverId);const st=kidStatus(k);const abs=isAbsent(k);
+  const tt=!b.once&&typeof todaysTimes==='function'?todaysTimes(b):null;const time=b.once?(b.time||''):(tt?.homePickup||r?.pickupTime||'');
+  const live=kidPerms(k).track&&!!r?.live?.active;const dropped=st.today.some(e=>e.type==='dropoff');
+  const state=abs?'Not riding today':st.onboard?'On board':dropped?'Dropped off':live?'Driver on the way':'Booked';
+  return {b,r,drv,st,abs,time,live,dropped,state,car:kcCar(r)}}
+VIEWS['k-home']=()=>{const k=myKidProfile();if(!k)return kcNoKid();const i=kidRideInfo(k);
+  const hour=new Date().getHours();const greet=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
+  const hero=i?`<div class="kc-hero ${i.abs?'off':i.st.onboard?'on':''}"><div class="row between"><span class="pill">${i.live||i.st.onboard?'<i class="blink"></i>':''}${h(i.state)}</span><span class="lbl">${i.b.once?h(i.b.date||'Once-off trip'):'Today'}</span></div>
+      <div style="margin-top:16px"><div class="lbl">Pickup</div><div class="t">${h(i.time||'—')}</div>${k.pickup?`<div class="small kc-ell" style="opacity:.9;margin-top:6px">${ICON.pin.replace('<svg','<svg width="14" height="14" style="vertical-align:-2px;margin-right:4px"')}${h(k.pickup)}</div>`:''}</div></div>
+    <div class="card kc-ride"><div class="kc-line"><span class="avatar">${initials(i.drv?.name)}</span><div class="grow"><span class="tiny muted">Your driver</span><b>${h(i.drv?.name||'Driver')}</b></div>${isVerified(i.drv)?`<span class="badge green">${ICON.shield}Verified</span>`:''}</div>
+      <div class="kc-line"><span class="kc-sq">${ICON.car}</span><div class="grow"><span class="tiny muted">Car</span><b class="wrap">${h(i.car.label)}</b></div>${i.car.plate?`<span class="kc-plate">${h(i.car.plate)}</span>`:''}</div>
+      <div class="kc-tip">${ICON.check}Check the number plate before you get in.</div></div>`
+    :`<div class="card" style="text-align:center">${empty('No ride booked yet. Ask your parent to book one.','car')}</div>`;
+  return kcPreviewBar()+`<div class="stack" style="gap:16px"><div class="hdr"><div><span class="eyebrow">${new Date().toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long'})}</span><h2>${greet}, ${h(kcFirst(k.name))} <span class="kc-wave">👋</span></h2></div></div>${hero}<!--kid:home--></div>`};
+VIEWS['k-trips']=()=>{const k=myKidProfile();if(!k)return kcNoKid();const lab={pickup:'Picked up',dropoff:'Dropped off',arrived:'Driver outside'};const ic={pickup:ICON.check,dropoff:ICON.home,arrived:ICON.bell};
+  const ev=Store.all('events').filter(e=>e.kidId===k.id&&lab[e.type]).sort((a,b)=>b.ts-a.ts).slice(0,40);const today=todayKey();const yd=new Date();yd.setDate(yd.getDate()-1);const yk=localKey(yd);
+  const groups=[];for(const e of ev){const d=localKey(new Date(e.ts));let g=groups.find(x=>x.d===d);if(!g)groups.push(g={d,xs:[]});g.xs.push(e)}
+  const dl=d=>d===today?'Today':d===yk?'Yesterday':new Date(d+'T12:00').toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'short'});
+  const off=[...(k.absences||[]).filter(d=>d>=today).map(d=>({from:d,to:d,label:'Not riding'})),...(k.termBreaks||[]).filter(t=>t&&t.to>=today)].sort((a,b)=>a.from.localeCompare(b.from)).slice(0,6);
+  const fd=d=>new Date(d+'T12:00').toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
+  return kcPreviewBar()+pageHead('My trips')+`<div class="stack"><div class="card"><div class="row between"><b>This week</b>${weekStrip(k)}</div></div>
+    ${groups.length?`<div class="card">${groups.map(g=>`<div class="kc-day">${dl(g.d)}</div>${g.xs.map(e=>`<div class="kc-ev ${e.type}"><span class="kc-sq">${ic[e.type]}</span><div class="grow"><b class="small">${lab[e.type]}</b>${e.where?`<div class="tiny muted kc-ell">${h(e.where)}</div>`:''}</div><span class="small muted">${fmtT(e.ts)}</span></div>`).join('')}`).join('')}</div>`:`<div class="card">${empty('No trips yet.','car')}</div>`}
+    ${off.length?`<div class="card"><h3>Days off</h3>${off.map(t=>`<div class="hol"><div class="grow"><b>${h(t.label||'Closed')}</b><div class="tiny muted">${t.from===t.to?fd(t.from):fd(t.from)+' – '+fd(t.to)}</div></div></div>`).join('')}</div>`:''}</div>`};
+function kidChatPartners(k){k=k||myKidProfile();if(!k)return [];const mine=me()?.id;return [...new Set([k.parentId,...kidBookings(k).map(b=>b.driverId)])].filter(id=>id&&id!==mine&&Store.get('users',id))}
+const KC_QR=["I'm ready","Running late","I'm at the gate",'Thank you!'];
+VIEWS['k-chat']=()=>{const k=myKidProfile();if(!k)return kcNoKid();if(!kidPerms(k).chat)return kcPreviewBar()+pageHead('Chat')+`<div class="card">${empty('Chat is off. Ask your parent to switch it on.','chat')}</div>`;
+  const ids=kidChatPartners(k);if(S.chatWith&&!ids.includes(S.chatWith))S.chatWith=null;
+  if(S.chatWith){let html=chatView();html=html.replace(/<div class="qr">[\s\S]*?<\/div><form class="compose"/,`<div class="kc-qr">${KC_QR.map(q=>`<button type="button" data-kc-qr="${h(q)}">${h(q)}</button>`).join('')}</div><form class="compose"`);return kcPreviewBar()+html}
+  const msgs=Store.all('messages');const u=me();
+  return kcPreviewBar()+pageHead('Chat')+(ids.length?`<div class="card">${ids.map(id=>{const o=Store.get('users',id);const th=msgs.filter(m=>(m.from===u.id&&m.to===id)||(m.from===id&&m.to===u.id)).sort((a,b)=>b.ts-a.ts);const un=th.filter(m=>m.to===u.id&&!m.read).length;
+    return `<button class="kc-row" data-kc-chat="${h(id)}"><span class="avatar">${initials(o.name)}</span><span class="grow"><b>${h(o.name)}</b><span class="tiny muted kc-ell" style="display:block">${h(th[0]?.text||(id===k.parentId?'Your parent':'Your driver'))}</span></span>${un?`<span class="pill ink">${un}</span>`:`<span class="chev">${KC_ICON.chev}</span>`}</button>`}).join('')}</div>`:`<div class="card">${empty('No one to chat with yet.','chat')}</div>`)};
+function kcPopOn(){const u=me();return !!u&&'Notification' in window&&Notification.permission==='granted'&&ls.get('enivel_kcpop_'+u.id)!==false}
+VIEWS['k-more']=()=>{const u=me();const k=myKidProfile();if(!k)return kcNoKid();const p=kidPerms(k);const par=Store.get('users',k.parentId);const canPop='Notification' in window;
+  return kcPreviewBar()+pageHead('Settings')+`<div class="stack">
+  <div class="card"><div class="kc-line"><span class="avatar" style="width:52px;height:52px;font-size:1.1rem">${initials(k.name)}</span><div class="grow"><b>${h(k.name)}</b><span class="tiny muted kc-ell" style="display:block">${h(S.admin?'Preview':u.email||'')}</span></div></div>
+    <div class="kc-chips" style="margin-top:12px">${par?`<span class="chip-on">${ICON.users}${h(kcFirst(par.name))}'s child</span>`:''}${k.school?`<span class="chip-on">${h(k.school)}</span>`:''}</div></div>
+  ${p.theme?`<div class="card"><h3>Look</h3><div class="seg kc-look" style="margin-top:8px"><button class="${S.theme!=='dark'?'on':''}" onclick="saveTheme('light')">${ICON.sun} Light</button><button class="${S.theme==='dark'?'on':''}" onclick="saveTheme('dark')">${ICON.moon} Dark</button></div></div>`:''}
+  ${p.faceid&&typeof faceCard==='function'?faceCard().replace('style="margin-top:14px"',''):''}
+  ${p.alerts?`<div class="card"><div class="row between" style="flex-wrap:nowrap"><div><h3>Phone pop-ups</h3><p class="tiny muted" style="margin-top:4px">${canPop?'Alerts about your ride while Enivel is open.':'This browser can’t show pop-ups.'}</p></div>${canPop?`<label class="switch"><input type="checkbox" id="kc-pop" ${kcPopOn()?'checked':''} aria-label="Phone pop-ups"><i></i></label>`:''}</div></div>`:''}
+  <div class="card" style="padding-block:6px"><button class="kc-row" data-kc-rules="1"><span class="kc-sq">${ICON.shield}</span><span class="grow"><b>Ride rules</b></span><span class="chev">${KC_ICON.chev}</span></button><button class="kc-row" onclick="go('notifs')"><span class="kc-sq">${ICON.bell}</span><span class="grow"><b>Alerts</b></span><span class="chev">${KC_ICON.chev}</span></button></div>
+  <p class="kc-tip" style="justify-content:center">${ICON.lock}Your parent chooses what's switched on.</p>
+  <button class="btn ghost wide" onclick="logout()">${KC_ICON.out} Log out</button></div>`};
+function kidRulesModal(force){const u=me();if(!u)return;if(!force&&(!isRealKid()||u.kidRulesAt||$('.overlay')||S._kcRules===u.id||!String(S.route).startsWith('k-')))return;S._kcRules=u.id;
+  const rules=[[ICON.check,'Be ready on time'],[ICON.car,'Check the number plate'],[ICON.shield,'Seatbelt on, every ride'],[ICON.users,'Be kind to your driver'],[ICON.bell,'Feel unsafe? Press SOS']];
+  modal(`<div class="kc-hd"><span class="kc-badge">${KC_ICON.kid}</span><h3>Ride rules</h3><p class="muted small">Five quick ones.</p></div><div class="kc-rules">${rules.map(([i,t],n)=>`<div class="kc-rule" style="--d:${n*70}ms"><span>${i}</span><b class="small">${t}</b></div>`).join('')}</div><button class="btn wide" id="kc-rules-ok">Got it</button>`,
+    m=>{$('#kc-rules-ok',m).onclick=async()=>{closeModal();buzz();const x=me();if(isRealKid()&&!x.kidRulesAt)await Store.patch('users',x.id,{kidRulesAt:Date.now()}).catch(()=>{})}})}
+
+/* ---------- pop-ups for kids (parent's "Phone pop-ups" switch) ---------- */
+S._kcPopSeen=null;
+function kcPopups(){const u=me();if(!isRealKid()||!kidPerms(myKidProfile()).alerts)return;const ns=myNotifs().filter(n=>!n.read);
+  if(!S._kcPopSeen){S._kcPopSeen=new Set(ns.map(n=>n.id));return}
+  for(const n of ns){if(S._kcPopSeen.has(n.id))continue;S._kcPopSeen.add(n.id);if(Date.now()-(n.ts||0)>10*60000)continue;
+    if(document.hidden&&kcPopOn()){try{new Notification('Enivel',{body:String(n.text||''),tag:n.id})}catch(e){}}else if(!document.hidden){toast(String(n.text||''));buzz([20,40,20])}}}
+
+/* ---------- delegated taps (no user text in inline handlers) ---------- */
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-kc-give],[data-kc-perms],[data-kc-off],[data-kc-chats],[data-kc-pick],[data-kc-qr],[data-kc-chat],[data-kc-rules]');if(!t)return;const d=t.dataset;
+  if(d.kcGive)return kidLoginModal(d.kcGive);if(d.kcPerms)return kidPermsModal(d.kcPerms);if(d.kcOff)return kidUnlinkAsk(d.kcOff);if(d.kcChats)return kidChatsModal(d.kcChats);
+  if(d.kcPick)return kidSetupPick(d.kcPick);if(d.kcChat){S.chatWith=d.kcChat;return render()}if(d.kcRules)return kidRulesModal(true);
+  if(d.kcQr&&S.chatWith){buzz();return sendMsg(S.chatWith,{value:d.kcQr})}});
+document.addEventListener('change',async e=>{if(e.target?.id!=='kc-pop')return;const u=me();if(!u)return;
+  if(e.target.checked){let p='denied';try{p=await Notification.requestPermission()}catch(er){}if(p!=='granted'){e.target.checked=false;return toast('Allow notifications for Enivel in your phone settings')}ls.set('enivel_kcpop_'+u.id,true);toast('Pop-ups on')}
+  else{ls.set('enivel_kcpop_'+u.id,false);toast('Pop-ups off')}});
+
+/* ---------- routing: kids only ever see kid screens ---------- */
+const _kcGo=go;go=function(r,extra){try{if(S.session&&me()){if(isKidView())r=kidRouteFor(r);else if(typeof r==='string'&&r.startsWith('k-'))r=kcHomeOf()}}catch(e){}return _kcGo(r,extra)};
+const _kcRender=render;render=function(){
+  try{if(S.session&&me()){if(isKidView())S.route=kidRouteFor(S.route);else if(String(S.route).startsWith('k-'))S.route=kcHomeOf()}}catch(e){}
+  _kcRender();
+  try{kcShell()}catch(e){console.warn('kid shell',e)}};
+function kcShell(){const top=$('.top');if(!top)return;
+  if(S.admin){const sw=top.querySelector('.seg.sw');if(sw&&!sw.querySelector('[data-kc-sw]')){const b=document.createElement('button');b.dataset.kcSw='1';b.textContent='Kid';b.className=S.adminApp==='kid'?'on':'';b.setAttribute('onclick',"S.adminApp='kid';S.chatWith=null;go('k-home')");sw.appendChild(b)}}
+  if(!isKidView())return;
+  const nav=NAV.kid;const mk=nav.map(([r,l,i])=>`<button class="${S.route.startsWith(r)?'on':''}" onclick="go('${r}')">${ICON[i]}${l}</button>`).join('');
+  const rail=$('#app .rail'),tabs=$('#app .tabs');if(rail)rail.innerHTML=mk;if(tabs)tabs.innerHTML=mk;
+  top.querySelector('.logo')?.setAttribute('onclick',"go('k-home')");top.querySelector('.ib[title="Account"]')?.setAttribute('onclick',"go('k-more')");
+  if(!isRealKid()||!S.ready)return;const u=me();
+  if(u.suspended||u.unlinked||u.banned){if(!S._kcOut){S._kcOut=true;setTimeout(async()=>{await logout();S._kcOut=false;toast('Your parent switched off this login. Ask them to set it up again.')},50)}return}
+  if(!u.kidRulesAt)setTimeout(()=>kidRulesModal(),900);
+  kcPopups()}
+/* kids are covered by their parent's consent: no adult terms screen; look prompt only if allowed */
+const _kcTerms=termsGate;termsGate=function(){if(isKidView())return;return _kcTerms()};
+const _kcTheme=themePrompt;themePrompt=function(){if(isKidView()&&!kidPerms(myKidProfile()).theme)return;return _kcTheme()};
+const _kcFace=facePrompt;facePrompt=function(){if(isKidView())return;return _kcFace()};
+/* a switched-off kid login gets a clear message instead of "suspended" */
+const _kcPull=cloudPull;cloudPull=async function(full){await _kcPull(full);try{const u=me();S._kcOff=!!(u&&u.role==='kid'&&(u.unlinked||u.suspended))}catch(e){}};
+const _kcToast=toast;toast=function(m){if(S._kcOff&&/suspended|banned/i.test(String(m))){S._kcOff=false;m='Your parent switched off this login. Ask them to set it up again.'}return _kcToast(m)};
+const _kcLogin=login;login=async function(email,password){const e=String(email||'').trim().toLowerCase();if(!S.cloud){const u=Store.all('users').find(x=>x.email===e);if(u&&u.role==='kid'&&u.unlinked&&u.password===await sha(password))return toast('Your parent switched off this login. Ask them to set it up again.')}return _kcLogin(email,password)};
+const _kcLogout=logout;logout=async function(){closeModal();await kcDrop();S._kcPopSeen=null;S._kcRules=null;S.ks=null;return _kcLogout()};
+</script>

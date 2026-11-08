@@ -1,0 +1,501 @@
+<style>
+/* ===== Round 10 · docs: document validity (d-docs), roadblock card (d-roadblock), public live check (#verify=) ===== */
+/* d-home: warning card + two tiles */
+.dd-home{display:flex;flex-direction:column;gap:10px}
+.dd-warn{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:18px;border:1px solid var(--warn);background:color-mix(in srgb,var(--warn) 10%,var(--bg));cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%;min-height:56px}
+.dd-warn.bad{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 9%,var(--bg))}
+.dd-warn .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex-shrink:0;background:var(--warn);color:#fff}
+.dd-warn.bad .ic{background:var(--bad)}
+.dd-warn .ic svg{width:20px;height:20px}
+.dd-warn b{display:block;font-size:.95rem}
+.dd-warn small{display:block;font-size:.78rem;color:var(--fg2);margin-top:2px}
+.dd-warn .chev{margin-left:auto;font-size:1.3rem;color:var(--fg3)}
+.dd-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dd-tile{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:14px;border-radius:18px;border:1px solid var(--line);background:var(--bg);cursor:pointer;min-height:100px;min-width:0;font:inherit;color:inherit;position:relative;overflow:hidden;transition:transform .15s,box-shadow .2s}
+.dd-tile:hover{box-shadow:var(--shadow)}
+.dd-tile:active{transform:scale(.98)}
+.dd-tile b{font-size:.95rem;line-height:1.2;position:relative;z-index:1}
+.dd-tile small{font-size:.75rem;color:var(--fg3);line-height:1.25;position:relative;z-index:1;overflow-wrap:anywhere}
+.dd-tile .ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;flex-shrink:0;position:relative;z-index:1}
+.dd-tile .ic svg{width:20px;height:20px}
+.dd-tile.rb{background:linear-gradient(135deg,#0b1f4b,#173f94 60%,#0b1f4b);color:#fff;border-color:transparent}
+.dd-tile.rb small{color:rgba(255,255,255,.78)}
+.dd-tile.rb .ic{background:linear-gradient(135deg,#fde68a,#f59e0b);color:#0b1f4b;box-shadow:0 0 0 3px rgba(253,230,138,.22)}
+.dd-tile.rb::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 35%,rgba(255,255,255,.16) 50%,transparent 65%);transform:translateX(-100%);animation:ddSheen 5s ease-in-out infinite}
+@keyframes ddSheen{0%,62%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.dd-tile.doc .ic{background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
+.dd-tile.doc.t-bad .ic{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.dd-tile.doc.t-warn .ic{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.dd-tile.doc.t-ok .ic{background:color-mix(in srgb,var(--live) 14%,transparent);color:var(--live)}
+/* countdown pills */
+.dd-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:.74rem;font-weight:700;white-space:nowrap;border:1px solid transparent;flex-shrink:0}
+.dd-pill.ok{background:color-mix(in srgb,var(--live) 14%,transparent);color:var(--live);border-color:color-mix(in srgb,var(--live) 45%,transparent)}
+.dd-pill.soon{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 50%,transparent)}
+.dd-pill.expired{background:var(--bad);color:#fff}
+.dd-pill.none{background:var(--bg2);color:var(--fg2)}
+.dd-pill.missing{background:transparent;color:var(--fg3);border:1px dashed var(--fg3)}
+/* d-docs */
+.dd-alert{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:18px;background:color-mix(in srgb,var(--bad) 10%,var(--bg));border:1px solid var(--bad);margin-bottom:14px}
+.dd-alert .ic{width:34px;height:34px;border-radius:11px;background:var(--bad);color:#fff;display:grid;place-items:center;flex-shrink:0}
+.dd-alert .ic svg{width:18px;height:18px}
+.dd-alert b{display:block}
+.dd-sum{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.dd-sum .s{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:var(--bg2);font-size:.8rem;font-weight:600}
+.dd-sum .s i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.dd-sec{display:flex;align-items:center;gap:8px;font-size:.78rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fg3);margin:18px 0 10px}
+.dd-sec svg{width:16px;height:16px}
+.dd-tl{position:relative;display:flex;flex-direction:column;gap:10px;padding-left:20px}
+.dd-tl::before{content:"";position:absolute;left:6px;top:14px;bottom:14px;width:2px;border-radius:1px;background:linear-gradient(var(--line),var(--line))}
+.dd-it{position:relative;display:flex;align-items:center;gap:12px;padding:12px;border-radius:18px;border:1px solid var(--line);background:var(--bg);cursor:pointer;min-height:68px;min-width:0;transition:transform .15s,box-shadow .2s,border-color .2s}
+.dd-anim .dd-it{animation:ddIn .35s ease both}
+.dd-it:hover{box-shadow:var(--shadow);border-color:var(--s2)}
+.dd-it:active{transform:scale(.99)}
+.dd-it::before{content:"";position:absolute;left:-19px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--bg);border:3px solid var(--fg3)}
+.dd-it.ok::before{border-color:var(--live)}.dd-it.soon::before{border-color:var(--warn);background:var(--warn)}.dd-it.expired::before{border-color:var(--bad);background:var(--bad);box-shadow:0 0 0 4px color-mix(in srgb,var(--bad) 22%,transparent)}.dd-it.none::before{border-color:var(--s4)}.dd-it.missing::before{border-style:dashed}
+.dd-it.expired{border-color:color-mix(in srgb,var(--bad) 55%,var(--line))}
+.dd-it.soon{border-color:color-mix(in srgb,var(--warn) 55%,var(--line))}
+@keyframes ddIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.dd-th{width:52px;height:52px;border-radius:12px;flex-shrink:0;border:1px solid var(--line);background:var(--bg2);display:grid;place-items:center;overflow:hidden;padding:0;cursor:zoom-in;color:var(--fg3)}
+.dd-th img{width:100%;height:100%;object-fit:cover;display:block}
+.dd-th svg{width:22px;height:22px}
+.dd-th.no{cursor:pointer;border-style:dashed}
+.dd-it .grow{flex:1;min-width:0}
+.dd-it .t{font-weight:700;font-size:.95rem;line-height:1.25}
+.dd-it .m{font-size:.78rem;color:var(--fg3);line-height:1.35;overflow-wrap:anywhere}
+.dd-it .n{font-size:.74rem;font-weight:600;color:var(--warn);margin-top:2px}
+.dd-it .side{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+@media(max-width:420px){.dd-it{flex-wrap:wrap;row-gap:6px}.dd-it .side{flex-basis:100%;flex-direction:row;align-items:center;justify-content:space-between;padding-left:64px}.dd-veh{padding:12px 10px}.dd-veh .dd-it{padding:10px}.dd-veh .dd-it .side{padding-left:62px}}
+.dd-veh{border:1px solid var(--line);border-radius:22px;padding:14px;background:var(--bg2);margin-bottom:12px}
+.dd-veh .hd{display:flex;align-items:center;gap:12px;margin-bottom:12px;min-width:0}
+.dd-veh .hd img,.dd-veh .hd .ph{width:64px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;background:var(--bg3);display:grid;place-items:center;color:var(--fg3)}
+.dd-veh .hd .ph svg{width:22px;height:22px}
+.dd-veh .dd-tl{padding-left:20px}
+.dd-veh .dd-it{background:var(--bg)}
+.dd-plate{display:inline-block;font-weight:800;letter-spacing:.06em;background:#fff;color:#0a0a0a;border:2px solid #0a0a0a;border-radius:7px;padding:1px 8px;font-size:.8rem;white-space:nowrap}
+.dd-foot{font-size:.76rem;color:var(--fg3);margin-top:16px;text-align:center}
+.dd-sw{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg2);cursor:pointer;min-height:48px;font-weight:600;font-size:.9rem}
+.dd-sw input{width:22px;height:22px;accent-color:var(--acc)}
+.dd-calc{font-size:.85rem;padding:10px 14px;border-radius:12px;background:var(--bg2)}
+.dd-mod .field input:disabled{opacity:.45}
+.dd-mod .btn{min-height:46px}
+.dd-hl{animation:ddHl 1.6s ease 2}
+@keyframes ddHl{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 45%,transparent);border-radius:12px}}
+.dd-link{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--bg2);cursor:pointer;border:0;width:100%;text-align:left;font:inherit;color:inherit;min-height:52px}
+.dd-link .ic{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc);flex-shrink:0}
+.dd-link .ic svg{width:18px;height:18px}
+.dd-hold{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--bad);color:#fff;white-space:nowrap}
+/* trip-mode badge */
+.dd-tmbtn{display:inline-flex;align-items:center;gap:6px;height:44px;min-width:44px;padding:0 12px;border-radius:12px;border:1px solid rgba(253,230,138,.5);background:linear-gradient(135deg,#0b1f4b,#173f94);color:#fde68a;font:inherit;font-weight:700;font-size:.8rem;cursor:pointer}
+.dd-tmbtn svg{width:20px;height:20px}
+.tripmode .row.between:has(.dd-tmbtn){flex-wrap:nowrap}
+.tripmode .row.between:has(.dd-tmbtn)>b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+@media(max-width:400px){.dd-tmbtn span{display:none}.dd-tmbtn{padding:0;justify-content:center}}
+/* roadblock card */
+.rbk{position:fixed;inset:0;z-index:92;background:var(--bg);color:var(--fg);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.rbk .in{max-width:540px;margin:0 auto;padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
+.rbk-top{display:flex;align-items:center;gap:10px}
+.rbk-top .ttl{font-weight:800;font-size:1rem;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rbk .x{width:44px;height:44px;border-radius:14px;border:1px solid var(--line);background:var(--bg2);display:grid;place-items:center;cursor:pointer;color:var(--fg);flex-shrink:0}
+.rbk .x svg{width:20px;height:20px}
+.rbk-strip{position:relative;height:30px;border-radius:12px;overflow:hidden;background:linear-gradient(120deg,#6d5dfc,#22d3ee,#6d5dfc);background-size:200% 100%;animation:ddStripBg 6s linear infinite;color:#fff;font-size:.68rem;font-weight:800;letter-spacing:.22em;display:flex;align-items:center}
+.rbk-strip::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.14) 0 6px,transparent 6px 12px)}
+.rbk-strip .mq{display:flex;white-space:nowrap;animation:ddMarq 14s linear infinite;position:relative}
+.rbk-strip .mq span{padding-right:28px}
+@keyframes ddMarq{to{transform:translateX(-50%)}}
+@keyframes ddStripBg{to{background-position:-200% 0}}
+.rbk-clock{display:flex;align-items:center;justify-content:center;gap:10px;font-variant-numeric:tabular-nums;font-weight:800;font-size:clamp(.92rem,4.3vw,1.35rem);white-space:nowrap;letter-spacing:-.01em;padding:10px 12px;border-radius:14px;background:var(--bg2);text-align:center}
+.rbk-clock i{width:10px;height:10px;border-radius:50%;background:var(--live);flex-shrink:0;animation:bl 1s infinite}
+.rbk-status{display:flex;align-items:center;gap:14px;padding:16px;border-radius:22px;color:#fff;background:linear-gradient(135deg,#0f8a43,#1db954)}
+.rbk-status.pending{background:linear-gradient(135deg,#a86f00,#e0a000)}
+.rbk-status.bad{background:linear-gradient(135deg,#9b2219,#d6382b)}
+.rbk-status.none{background:linear-gradient(135deg,#3a3a38,#5f5f5b)}
+.rbk-status .ic{width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.2);display:grid;place-items:center;flex-shrink:0}
+.rbk-status .ic svg{width:30px;height:30px}
+.rbk-status b{display:block;font-size:1.15rem;line-height:1.2}
+.rbk-status small{display:block;font-size:.85rem;opacity:.92;margin-top:2px}
+.rbk-who{display:flex;gap:14px;align-items:center}
+.rbk-who .ph{width:92px;height:92px;border-radius:22px;object-fit:cover;flex-shrink:0;background:var(--bg3);display:grid;place-items:center;font-weight:800;font-size:1.8rem;border:3px solid var(--line);cursor:zoom-in;padding:0;overflow:hidden}
+.rbk-who .ph img{width:100%;height:100%;object-fit:cover;display:block}
+@media(max-width:360px){.rbk-who .ph{width:74px;height:74px;border-radius:18px}.rbk-who{gap:12px}}
+.rbk-who .nm{font-size:clamp(1.4rem,6.5vw,1.9rem);font-weight:800;letter-spacing:-.02em;line-height:1.1;overflow-wrap:anywhere}
+.rbk-id{margin-top:8px;display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;min-height:44px;padding:7px 12px;text-align:left;border-radius:12px;border:1px solid var(--line);background:var(--bg2);font:inherit;color:inherit;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;max-width:100%}
+.rbk-id .v{font-variant-numeric:tabular-nums;font-weight:700;letter-spacing:.08em;font-size:.95rem;white-space:nowrap}
+.rbk-id small{font-size:.68rem;color:var(--fg3);white-space:nowrap}
+.rbk-id.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,var(--bg))}
+.rbk-sec{border:1px solid var(--line);border-radius:22px;padding:14px 16px;background:var(--bg)}
+.rbk-sec h3{font-size:.76rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--fg3);margin-bottom:10px}
+.rbk-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);min-width:0}
+.rbk-row:last-child{border-bottom:0}
+.rbk-row .k{flex:1;min-width:0}
+.rbk-row .k b{display:block;font-size:.92rem}
+.rbk-row .k span{display:block;font-size:.8rem;color:var(--fg2);overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.rbk-plate{display:flex;align-items:center;justify-content:center;background:#fff;color:#0a0a0a;border:3px solid #0a0a0a;border-radius:12px;font-weight:900;letter-spacing:.08em;font-size:clamp(1.7rem,9vw,2.5rem);padding:6px 10px;text-align:center;font-variant-numeric:tabular-nums;box-shadow:0 6px 18px rgba(0,0,0,.12);overflow-wrap:anywhere;line-height:1.15}
+.rbk-car{display:flex;gap:12px;align-items:center;margin-top:12px}
+.rbk-car img{width:96px;height:64px;border-radius:12px;object-fit:cover;flex-shrink:0;cursor:zoom-in}
+.rbk-car .d{font-size:1rem;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.rbk-car .s{font-size:.82rem;color:var(--fg2)}
+.rbk-vpick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.rbk-vpick button{min-height:44px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg2);font:inherit;font-weight:700;font-size:.82rem;cursor:pointer;color:var(--fg)}
+.rbk-vpick button.on{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.rbk-kids{display:flex;align-items:center;gap:14px}
+.rbk-kids .n{font-size:2.6rem;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;min-width:56px;height:64px;border-radius:18px;display:grid;place-items:center;background:var(--bg2)}
+.rbk-qr{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.rbk-qr .box{width:min(70vw,250px);aspect-ratio:1;background:#fff;border-radius:18px;padding:12px;display:grid;place-items:center;box-shadow:0 8px 26px rgba(0,0,0,.12);border:1px solid var(--line)}
+.rbk-qr .box svg{width:100%;height:100%;display:block}
+.rbk-qr .box .lnk{color:#0a0a0a;font-size:.72rem;word-break:break-all;line-height:1.4}
+.rbk-qr .btn{min-height:44px}
+.rbk-gal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rbk-gal button{padding:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg2);cursor:zoom-in;display:flex;flex-direction:column;font:inherit;color:inherit;min-width:0}
+.rbk-gal img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.rbk-gal span{font-size:.66rem;font-weight:600;padding:5px 6px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--fg2)}
+.rbk-tip{display:flex;gap:10px;align-items:center;font-size:.82rem;color:var(--fg2);padding:10px 12px;border-radius:14px;background:var(--bg2)}
+.rbk-tip svg{width:18px;height:18px;flex-shrink:0;color:var(--acc3)}
+.rbk-fine{font-size:.72rem;color:var(--fg3);line-height:1.5;text-align:center;padding:0 6px}
+.dd-lb{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:calc(56px + env(safe-area-inset-top,0px)) 12px calc(20px + env(safe-area-inset-bottom,0px));animation:ddFade .2s ease}
+.dd-lb img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;min-height:0;flex:1}
+.dd-lb .t{color:#eee;font-weight:600;font-size:.9rem;text-align:center}
+.dd-lb .c{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:12px;width:44px;height:44px;border-radius:14px;border:0;background:rgba(255,255,255,.14);color:#fff;display:grid;place-items:center;cursor:pointer}
+.dd-lb .c svg{width:22px;height:22px}
+@keyframes ddFade{from{opacity:0}to{opacity:1}}
+/* public live check */
+.vfy{min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:16px;padding:calc(18px + env(safe-area-inset-top,0px)) 16px calc(28px + env(safe-area-inset-bottom,0px));position:relative;isolation:isolate;overflow:hidden}
+.vfy::before{content:"";position:absolute;z-index:-1;width:min(90vw,520px);height:min(90vw,520px);border-radius:50%;filter:blur(90px);opacity:.22;top:-18vh;left:50%;transform:translateX(-50%);background:var(--acc2);pointer-events:none}
+.vfy.ok::before{background:var(--live)}.vfy.bad::before{background:var(--bad)}.vfy.warn::before{background:var(--warn)}
+.vfy-top{width:100%;max-width:480px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.vfy-top .logo{font-size:1.4rem}
+.vfy-card{width:100%;max-width:480px;background:var(--bg);border:1px solid var(--line);border-radius:28px;padding:22px 18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:16px;animation:ddIn .4s ease both}
+.vfy-st{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
+.vfy-st .big{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;color:#fff;background:var(--fg3);animation:pop .6s cubic-bezier(.2,.8,.2,1) both;box-shadow:0 0 0 10px color-mix(in srgb,var(--fg3) 16%,transparent)}
+.vfy-st .big svg{width:52px;height:52px}
+.vfy-st.ok .big{background:var(--live);box-shadow:0 0 0 10px color-mix(in srgb,var(--live) 18%,transparent)}
+.vfy-st.warn .big{background:var(--warn);box-shadow:0 0 0 10px color-mix(in srgb,var(--warn) 18%,transparent)}
+.vfy-st.bad .big{background:var(--bad);box-shadow:0 0 0 10px color-mix(in srgb,var(--bad) 18%,transparent)}
+.vfy-st h1{font-size:clamp(1.6rem,7vw,2.1rem)}
+.vfy-st.ok h1{color:var(--live)}.vfy-st.bad h1{color:var(--bad)}.vfy-st.warn h1{color:var(--warn)}
+.vfy-name{font-size:1.25rem;font-weight:800;text-align:center;overflow-wrap:anywhere}
+.vfy-time{display:flex;align-items:center;justify-content:center;gap:8px;font-size:.88rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--fg2);text-align:center;flex-wrap:wrap}
+.vfy-time i{width:8px;height:8px;border-radius:50%;background:var(--live);animation:bl 1.2s infinite}
+.vfy-sec h3{font-size:.74rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--fg3);margin-bottom:6px}
+.vfy-veh{padding:12px;border-radius:16px;background:var(--bg2);margin-bottom:8px}
+.vfy-veh.use{outline:2px solid var(--acc)}
+.vfy-vh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.vfy-veh .dd-plate{font-size:1.05rem}
+.vfy-tags{display:flex;gap:8px 12px;flex-wrap:wrap;margin-top:8px}
+.vfy-actions{width:100%;max-width:480px;display:flex;gap:10px;flex-wrap:wrap}
+.vfy-actions .btn{flex:1;min-height:48px}
+@media(prefers-reduced-motion:reduce){.dd-tile.rb::after,.rbk-strip,.rbk-strip .mq,.rbk-clock i,.dd-anim .dd-it,.vfy-card,.vfy-st .big,.vfy-time i{animation:none}}
+</style>
+<script>
+/* ===================== Round 10 · docs =====================
+   Driver document validity (users.docValid / vehicles.docValid), the "My documents" screen (d-docs),
+   expiry reminders, hiding expired drivers from Find, the roadblock card (d-roadblock) and the public
+   live check page (#verify=<token>, no sign-in). */
+const DD_IC={
+  badge:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z"/><path d="m12 7.2 1.4 2.8 3.1.5-2.3 2.2.6 3.1-2.8-1.5-2.8 1.5.6-3.1-2.3-2.2 3.1-.5z" fill="currentColor" stroke-width="1"/></svg>',
+  doc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>',
+  alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3 2 20h20z" stroke-linejoin="round"/><path d="M12 10v4M12 17.5v.01"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  cross:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  wait:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  car:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M5 17h14v-5l-2-5H7l-2 5z"/><circle cx="8" cy="17" r="1.6"/><circle cx="16" cy="17" r="1.6"/></svg>'
+};
+/* ---------- data contract ----------
+   users.docValid = { id:{until:'none'}, licence:{until:'YYYY-MM-DD'|'none',no}, prdp:{until,no}, police:{issued:'YYYY-MM-DD'},
+                      opLicence:{until:'YYYY-MM-DD'|'none',no}, insurance:{until,insurer,policy} }   (legacy users.prdpExpiry / policeDate kept in sync)
+   vehicles.docValid = { disc:{until}, rwc:{until:'YYYY-MM-DD'|'none'} } */
+const DOC_VALID_DEFS={
+  id:{label:'SA ID / passport',say:'ID',hint:'An SA ID has no expiry',kind:'fixed',doc:'id'},
+  licence:{label:"Driver's licence",say:"driver's licence",hint:'The card is valid for 5 years',kind:'until',none:true,no:'Licence number',doc:'licence',hold:true},
+  prdp:{label:'PrDP',say:'PrDP',hint:'Valid for 2 years',kind:'until',no:'PrDP number',doc:'prdp',hold:true},
+  police:{label:'Police clearance',say:'police clearance',hint:'Renew every 12 months. Must be under 6 months old when you upload it.',kind:'issued',doc:'police'},
+  opLicence:{label:'Operating licence',say:'operating licence',hint:'Use the date printed on it',kind:'until',none:true,no:'Licence / permit number',doc:'oplicence'},
+  insurance:{label:'Passenger insurance',say:'passenger insurance',hint:'Renewal date on your policy schedule',kind:'until',insurer:true,doc:'insurance'},
+  disc:{label:'Licence disc',say:'licence disc',hint:'Renew every year',kind:'until',veh:true,doc:'disc',hold:true},
+  rwc:{label:'Roadworthy',say:'roadworthy',hint:'Date on the certificate, or no expiry',kind:'until',none:true,veh:true,doc:'roadworthy'}
+};
+const DD_USER_KEYS=['id','licence','prdp','police','opLicence','insurance'];
+const DD_MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+/* 'YYYY-MM-DD' -> UTC ms of that calendar day, or null */
+function docsParse(s){if(typeof s!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(s))return null;const [y,m,d]=s.split('-').map(Number);const t=Date.UTC(y,m-1,d);const x=new Date(t);return x.getUTCMonth()===m-1&&x.getUTCDate()===d?t:null}
+/* whole days from today (SA local calendar) to s; negative = past */
+function docsDays(s){const t=docsParse(s);if(t==null)return null;return Math.round((t-docsParse(localKey()))/864e5)}
+function docsAddMonths(s,n){const t=docsParse(s);if(t==null)return null;const d=new Date(t);const y=d.getUTCFullYear(),m=d.getUTCMonth()+n;const last=new Date(Date.UTC(y,m+1,0)).getUTCDate();return new Date(Date.UTC(y,m,Math.min(d.getUTCDate(),last))).toISOString().slice(0,10)}
+function docsFmt(s){if(s==='none')return 'No expiry';const t=docsParse(s);if(t==null)return '';const d=new Date(t);return d.getUTCDate()+' '+DD_MON[d.getUTCMonth()]+' '+d.getUTCFullYear()}
+function docsItem(key,until,extra){const def=DOC_VALID_DEFS[key];const it={key,label:def.label,until:null,days:null,state:'missing',note:'',...(extra||{})};
+  if(until==='none'){it.until='none';it.state='none'}else if(docsParse(until)!=null){it.until=until;it.days=docsDays(until);it.state=it.days<0?'expired':it.days<=30?'soon':'ok'}return it}
+/* driver's own documents -> [{key,label,until,days,state:'ok'|'soon'|'expired'|'none'|'missing',note,...}] */
+function docStatus(u){if(!u)return [];const dv=(u.docValid&&typeof u.docValid==='object')?u.docValid:{};const docs=u.verification?.docs||{};const g=k=>(dv[k]&&typeof dv[k]==='object')?dv[k]:{};
+  const out=[docsItem('id',(u.idNumber||docs.id)?'none':null),
+    docsItem('licence',g('licence').until,{no:g('licence').no||''}),
+    docsItem('prdp',g('prdp').until||u.prdpExpiry||null,{no:g('prdp').no||''})];
+  const iss=g('police').issued||u.policeDate||null;const pol=docsItem('police',docsParse(iss)!=null?docsAddMonths(iss,12):null,{issued:docsParse(iss)!=null?iss:null});
+  if(pol.issued){const age=-docsDays(iss);const sub=u.verification?.submittedAt;if(age<0)pol.note='Issue date is in the future';else if(sub&&(sub-docsParse(iss))/864e5>183)pol.note='Was over 6 months old at upload'}
+  out.push(pol,docsItem('opLicence',g('opLicence').until,{no:g('opLicence').no||''}),docsItem('insurance',g('insurance').until,{insurer:g('insurance').insurer||'',policy:g('insurance').policy||''}));
+  for(const it of out){const d=DOC_VALID_DEFS[it.key].doc;it.photo=!!docs[d];if(!it.note&&!it.photo&&it.key!=='id')it.note='No photo uploaded yet'}
+  return out}
+/* one vehicle -> licence disc + roadworthy */
+function vehDocStatus(v){if(!v)return [];const dv=(v.docValid&&typeof v.docValid==='object')?v.docValid:{};return [docsItem('disc',dv.disc?.until,{vehicleId:v.id,plate:v.plate||''}),docsItem('rwc',dv.rwc?.until,{vehicleId:v.id,plate:v.plate||''})]}
+const DD_RANK={expired:4,soon:3,missing:2,ok:1,none:0};
+function docsAllItems(u){if(!u)return [];return docStatus(u).concat(...Store.all('vehicles').filter(v=>v.driverId===u.id).map(vehDocStatus))}
+/* worst state across the driver's documents and vehicles: 'expired' | 'soon' | 'missing' | 'ok' | 'none' */
+function docWorst(u){let w='none';for(const it of docsAllItems(u))if(DD_RANK[it.state]>DD_RANK[w])w=it.state;return w}
+/* soon + expired items, most urgent first (also used by the admin expiry watch) */
+function docsAttention(u){return docsAllItems(u).filter(i=>i.state==='expired'||i.state==='soon').sort((a,b)=>a.days-b.days)}
+/* why a driver is held off Find: PrDP or licence expired (driver), licence disc expired (that vehicle's routes) */
+function docsDriverHolds(u){return docStatus(u).filter(i=>DOC_VALID_DEFS[i.key].hold&&i.state==='expired').map(i=>i.label)}
+function docsRouteHeld(r){if(!r)return [];const d=Store.get('users',r.driverId);const mine=me()?.id===r.driverId;let out=[];
+  if(S.cloud&&!S.admin&&!mine){if(S.docsHeld&&S.docsHeld.has(r.driverId))out.push('Driver documents')}else if(d)out=docsDriverHolds(d);
+  const v=Store.get('vehicles',r.vehicleId);if(v)for(const i of vehDocStatus(v))if(i.key==='disc'&&i.state==='expired')out.push(i.label);return out}
+function docsPill(it,pub){const d=it.days;let t;if(it.state==='none')t='No expiry';else if(it.state==='missing')t=pub?'Not on record':'Add date';else if(d<0)t='Expired';else if(d===0)t='Today';else if(d===1)t='Tomorrow';else if(d<=60)t=d+' days';else if(d<730)t=Math.round(d/30.44)+' months';else t=Math.floor(d/365.25)+' years';return `<span class="dd-pill ${it.state}">${t}</span>`}
+function docsUntilText(it){if(it.key==='police')return it.issued?`Issued ${docsFmt(it.issued)} · valid to ${docsFmt(it.until)}`:'Add the issue date';if(it.state==='none')return it.key==='id'?'No expiry':'No expiry';if(it.state==='missing')return 'Add the valid-until date';return (it.state==='expired'?'Expired ':'Valid until ')+docsFmt(it.until)}
+function docsSummary(u){const all=docsAllItems(u);const miss=all.filter(i=>i.state==='missing').length;const ex=all.filter(i=>i.state==='expired').length,so=all.filter(i=>i.state==='soon').length;
+  if(ex)return {tone:'bad',text:`${ex} expired`+(so?`, ${so} expiring`:'')};if(so)return {tone:'warn',text:`${so} expiring soon`};
+  if(miss)return {tone:'',text:`${miss} date${miss>1?'s':''} to add`};return {tone:'ok',text:'All valid'}}
+
+/* ---------- saving ---------- */
+function docsCleanTxt(s){return String(s||'').replace(/[\u0000-\u001f]/g,'').trim().slice(0,40)}
+async function docsMarkSeen(rk){const u=me();if(!u)return;const it=docsReminderItems(u).find(i=>i.rk===rk);if(!it)return;const st=docsStage(it.days);const rem={...(u.remind||{})};const dv={...(rem.dv||{})};
+  if(st==null){if(!dv[rk])return;delete dv[rk]}else{if(dv[rk]&&dv[rk].until===it.until&&dv[rk].stage===st)return;dv[rk]={until:it.until,stage:st}}rem.dv=dv;await Store.patch('users',u.id,{remind:rem})}
+async function docsSaveUser(key,rec){const u=me();if(!u)return;const dv={...((u.docValid&&typeof u.docValid==='object')?u.docValid:{})};dv[key]={...((dv[key]&&typeof dv[key]==='object')?dv[key]:{}),...rec};dv.id={until:'none'};const p={docValid:dv};
+  if(key==='prdp'&&docsParse(dv.prdp.until)!=null)p.prdpExpiry=dv.prdp.until;if(key==='police'&&docsParse(dv.police.issued)!=null)p.policeDate=dv.police.issued;
+  await Store.patch('users',u.id,p);await docsMarkSeen(key)}
+async function docsSaveVeh(vid,key,rec){const v=Store.get('vehicles',vid);if(!v)return;const dv={...((v.docValid&&typeof v.docValid==='object')?v.docValid:{})};dv[key]={...((dv[key]&&typeof dv[key]==='object')?dv[key]:{}),...rec};await Store.patch('vehicles',vid,{docValid:dv});await docsMarkSeen('v_'+vid+'_'+key)}
+/* d-verify still writes prdpExpiry / policeDate: copy them into docValid */
+async function docsSyncLegacy(){const u=me();if(!u)return;const dv={...((u.docValid&&typeof u.docValid==='object')?u.docValid:{})};let ch=false;
+  if(docsParse(u.prdpExpiry)!=null&&dv.prdp?.until!==u.prdpExpiry){dv.prdp={...(dv.prdp||{}),until:u.prdpExpiry};ch=true}
+  if(docsParse(u.policeDate)!=null&&dv.police?.issued!==u.policeDate){dv.police={...(dv.police||{}),issued:u.policeDate};ch=true}
+  if(ch)await Store.patch('users',u.id,{docValid:dv})}
+if(typeof MOUNT==='object'&&typeof MOUNT.dvSubmit==='function'){const _docsDvSubmit=MOUNT.dvSubmit;MOUNT.dvSubmit=btn=>{_docsDvSubmit(btn);const inner=btn.onclick;if(typeof inner!=='function')return;btn.onclick=async function(...a){const r=await inner.apply(this,a);try{await docsSyncLegacy()}catch(e){console.warn('docs sync',e)}return r}}}
+
+/* ---------- reminders: 30, 14, 7, 1 days and on expiry, once each (users.remind.dv[key]={until,stage}) ---------- */
+function docsStage(days){if(days==null)return null;if(days<0)return 0;for(const s of [1,7,14,30])if(days<=s)return s;return null}
+function docsReminderItems(u){const out=docStatus(u).filter(i=>i.key!=='id').map(i=>({...i,rk:i.key}));for(const v of Store.all('vehicles').filter(v=>v.driverId===u.id))for(const i of vehDocStatus(v))out.push({...i,rk:'v_'+v.id+'_'+i.key});return out}
+function docsRemText(it,st){const def=DOC_VALID_DEFS[it.key];const name='Your '+def.say+(it.plate?' for '+it.plate:'');
+  if(st===0)return def.hold?`${name} has expired. Your routes are hidden from parents until you update it.`:`${name} has expired. Renew it and update the date.`;
+  if(it.days===0)return `${name} expires today. Renew it now.`;if(it.days===1)return `${name} expires tomorrow.`;return `${name} expires in ${it.days} days (${docsFmt(it.until)}).`}
+expiryReminders=async function(){const u=me();if(!u||u.role!=='driver')return;if(S._ddRemBusy)return;S._ddRemBusy=true;try{S._ddRemAt=Date.now();
+  const m=monthKey();const rem={...(u.remind||{})};const dv={...(rem.dv||{})};const msgs=[];
+  for(const it of docsReminderItems(u)){const st=docsStage(it.days);if(st==null)continue;const was=dv[it.rk];if(was&&was.until===it.until&&was.stage===st)continue;dv[it.rk]={until:it.until,stage:st};msgs.push(docsRemText(it,st))}
+  /* the old monthly PrDP / 6-month police reminder is replaced by this one */
+  if(!msgs.length&&rem.prdp===m&&rem.police===m)return;rem.dv=dv;rem.prdp=m;rem.police=m;
+  await Store.patch('users',u.id,{remind:rem});for(const t of msgs)await notify(u.id,t,'info','d-docs')}finally{S._ddRemBusy=false}};
+/* the original 2.5 s start-up call was captured before this layer: run ours first so the old one sees this month as done */
+(function docsRemBoot(){let n=0;const t=setInterval(()=>{n++;if(S.ready&&me()){clearInterval(t);expiryReminders().catch(e=>console.warn('docs remind',e))}else if(n>200)clearInterval(t)},100)})();
+
+/* ---------- police clearance screening: 12 months valid, under 6 months old at upload ---------- */
+if(typeof screenUser==='function'){const _docsScreen=screenUser;screenUser=function(u){const r=_docsScreen(u);try{if(u&&u.role==='driver'&&r&&Array.isArray(r.flags)){const i=r.flags.findIndex(f=>f.text==='Police clearance is older than 6 months');
+  if(i>=0){const pol=docStatus(u).find(x=>x.key==='police');const sub=u.verification?.submittedAt;const t=docsParse(pol?.issued);
+    if(pol&&pol.state==='expired')r.flags[i]={level:'bad',text:'Police clearance has expired (older than 12 months)'};
+    else if(pol&&t!=null&&sub&&(sub-t)/864e5<=183)r.flags[i]={level:'ok',text:'Police clearance was under 6 months old at upload · valid to '+docsFmt(pol.until)};
+    r.level=r.flags.some(f=>f.level==='bad')?'bad':r.flags.some(f=>f.level==='warn')?'warn':'ok'}}}catch(e){console.warn('docs screen',e)}return r}}
+
+/* ---------- Find: hide routes of drivers whose PrDP, licence or that vehicle's disc has expired ---------- */
+async function docsFetchHeld(){if(!S.cloud||typeof sb==='undefined'||!sb||!S.session||S._ddHeldBusy)return;S._ddHeldBusy=true;const before=S.docsHeld?[...S.docsHeld].sort().join(','):null;
+  try{const {data,error}=await sb.rpc('docs_held_drivers');if(error)throw error;S.docsHeld=new Set(Array.isArray(data)?data:[]);S.docsHeldErr=false}catch(e){S.docsHeldErr=true;if(!S.docsHeld)S.docsHeld=new Set()}finally{S.docsHeldAt=Date.now();S._ddHeldBusy=false}
+  return before!==[...S.docsHeld].sort().join(',')}
+if(typeof pullStats==='function'){const _ddPullStats=pullStats;pullStats=async function(...a){const r=await _ddPullStats.apply(this,a);try{await docsFetchHeld()}catch(e){}return r}}
+const _ddPFind=VIEWS['p-find'];
+VIEWS['p-find']=function(...a){if(S.cloud&&!S.admin&&(!S.docsHeldAt||Date.now()-S.docsHeldAt>60000)&&!S._ddHeldBusy)docsFetchHeld().then(ch=>{if(ch&&S.route==='p-find')(typeof cloudRender==='function'?cloudRender:render)()});
+  const keep=r=>!(r&&docsRouteHeld(r).length);const _all=Store.all;Store.all=function(c){const x=_all.call(Store,c);return c==='routes'?x.filter(keep):x};
+  try{return _ddPFind.apply(this,a)}finally{Store.all=_all}};
+if(typeof bookRoute==='function'){const _ddBook=bookRoute;bookRoute=function(id,...a){const r=routeOf(id);if(r&&!S.admin&&me()?.id!==r.driverId&&docsRouteHeld(r).length){toast("This driver's documents need updating. Pick another route for now.");return}return _ddBook.call(this,id,...a)}}
+if(typeof makeOffer==='function'){const _ddOffer=makeOffer;makeOffer=function(...a){const u=me();const hold=u?docsDriverHolds(u):[];if(hold.length&&!S.admin){toast(`Update your ${hold.join(' and ')} first`);return go('d-docs')}return _ddOffer.apply(this,a)}}
+
+/* ---------- d-docs: My documents ---------- */
+function docsThumb(it,u,vehIdx){const docs=u?.verification?.docs||{};const k=DOC_VALID_DEFS[it.key].doc;const sec=DOC_VALID_DEFS[it.key].veh&&vehIdx>0;const src=sec?'':docs[k];
+  if(sec)return `<span class="dd-th no" style="cursor:default" aria-hidden="true">${DD_IC.doc}</span>`;
+  return src&&safeImg(src)?`<button type="button" class="dd-th" data-dd-img="${k}" aria-label="View ${h(it.label)} photo"><img src="${safeImg(src)}" alt=""></button>`:`<button type="button" class="dd-th no" data-dd-up="${k}" aria-label="Upload ${h(it.label)} photo">${DD_IC.doc}</button>`}
+function docsRow(it,u,vehIdx,i){const meta=[docsUntilText(it)];if(it.no)meta.push('No. '+it.no);if(it.insurer)meta.push(it.insurer+(it.policy?' · '+it.policy:''));
+  const edit=it.key!=='id';return `<div class="dd-it ${it.state}" style="animation-delay:${Math.min(i,8)*40}ms" ${edit?`role="button" tabindex="0" data-dd-edit="${it.key}" ${it.vehicleId?`data-dd-veh="${h(it.vehicleId)}"`:''} aria-label="Edit ${h(it.label)}"`:''}>${docsThumb(it,u,vehIdx)}
+    <div class="grow"><div class="t">${h(it.label)}</div><div class="m">${h(meta.join(' · '))}</div>${it.note?`<div class="n">${h(it.note)}</div>`:''}</div>
+    <div class="side">${docsPill(it)}${edit?`<span class="tiny muted">Edit</span>`:''}</div></div>`}
+const DD_SORT=it=>it.state==='expired'?-1e6+it.days:it.state==='soon'?it.days:it.state==='ok'?1e4+it.days:it.state==='missing'?1e7:2e7;
+VIEWS['d-docs']=()=>{const anim=S.anim;const u=me();if(!u)return empty('Sign in to see your documents.','shield');const mine=docStatus(u);const vs=Store.all('vehicles').filter(v=>v.driverId===u.id).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  const all=docsAllItems(u);const c=s=>all.filter(i=>i.state===s).length;const hold=docsDriverHolds(u);const vHold=vs.filter(v=>vehDocStatus(v).some(i=>i.key==='disc'&&i.state==='expired'));
+  const alert=(hold.length||vHold.length)?`<div class="dd-alert"><span class="ic">${DD_IC.alert}</span><div><b>Hidden from parents</b><span class="small">${hold.length?`Your routes are off Find until you update your ${h(hold.join(' and '))}.`:''}${vHold.length?` Routes using ${h(vHold.map(v=>v.plate).join(', '))} are off Find until the licence disc is updated.`:''}</span></div></div>`:'';
+  const sum=`<div class="dd-sum">${[['ok','var(--live)','valid'],['soon','var(--warn)','expiring'],['expired','var(--bad)','expired'],['missing','var(--fg3)','to add']].filter(([s])=>c(s)).map(([s,col,l])=>`<span class="s"><i style="background:${col}"></i>${c(s)} ${l}</span>`).join('')}</div>`;
+  let i=0;const rows=mine.slice().sort((a,b)=>DD_SORT(a)-DD_SORT(b)).map(it=>docsRow(it,u,0,i++)).join('');
+  const vehs=vs.length?vs.map((v,vi)=>{const items=vehDocStatus(v).sort((a,b)=>DD_SORT(a)-DD_SORT(b));return `<div class="dd-veh"><div class="hd">${v.photos?.front&&safeImg(v.photos.front)?`<img src="${safeImg(v.photos.front)}" alt="">`:`<span class="ph">${DD_IC.car}</span>`}<div style="min-width:0"><b>${h(v.make)} ${h(v.model)}</b><div class="row" style="gap:6px;margin-top:3px"><span class="dd-plate">${h(v.plate||'')}</span>${vi===0&&vs.length>1?'<span class="tiny muted">Main</span>':''}</div></div></div><div class="dd-tl">${items.map(it=>docsRow(it,u,vi,i++)).join('')}</div></div>`}).join(''):`<p class="small muted">Add a vehicle to track its licence disc and roadworthy.</p>`;
+  return `<div data-mount="ddInit" class="${anim?'dd-anim':''}">${pageHead('My documents','When each one runs out. We remind you before.',`<button class="btn sm" onclick="docsOpenRoadblock()">${DD_IC.badge} Roadblock card</button>`)}${alert}${sum}
+    <div class="dd-sec">${ICON.user} You</div><div class="dd-tl">${rows}</div>
+    <div class="dd-sec">${ICON.car} Vehicles</div>${vehs}
+    <p class="dd-foot">Dates are what you enter. Enivel checks them against your photos. <a href="#" data-dd-up="">Upload photos</a></p></div>`};
+MOUNT.ddInit=el=>{const act=e=>{const im=e.target.closest('[data-dd-img]');if(im){e.stopPropagation();const k=im.dataset.ddImg;const src=me()?.verification?.docs?.[k];const def=(typeof DOCS!=='undefined'?DOCS:[]).find(d=>d[0]===k);if(src)docsLightbox(src,def?def[1]:k);return true}
+    const up=e.target.closest('[data-dd-up]');if(up){e.preventDefault();e.stopPropagation();S.docsFocus=up.dataset.ddUp||null;go('d-verify');return true}
+    const ed=e.target.closest('[data-dd-edit]');if(ed){docsEdit(ed.dataset.ddEdit,ed.dataset.ddVeh||null);return true}return false};
+  el.addEventListener('click',act);el.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-dd-edit]')){e.preventDefault();act(e)}})};
+function docsEdit(key,vid){const def=DOC_VALID_DEFS[key];if(!def||def.kind==='fixed')return;const u=me();if(!u)return;let it;
+  if(vid){const v=Store.get('vehicles',vid);if(!v)return;it=vehDocStatus(v).find(x=>x.key===key)}else it=docStatus(u).find(x=>x.key===key);if(!it)return;
+  const today=localKey();const cur=it.until&&it.until!=='none'?it.until:'';const isNone=it.until==='none';
+  const body=def.kind==='issued'?`<div class="field"><label for="dd-iss">Issue date</label><input id="dd-iss" type="date" max="${today}" value="${h(it.issued||'')}"></div><div class="dd-calc" id="dd-calc"></div>`
+   :`<div class="field"><label for="dd-until">Valid until</label><input id="dd-until" type="date" value="${h(cur)}" ${isNone?'disabled':''}></div>${def.none?`<label class="dd-sw"><span>No expiry date</span><input type="checkbox" id="dd-none" ${isNone?'checked':''}></label>`:''}
+     ${def.no?`<div class="field"><label for="dd-no">${h(def.no)}</label><input id="dd-no" maxlength="40" autocomplete="off" value="${h(it.no||'')}"></div>`:''}
+     ${def.insurer?`<div class="grid g2" style="gap:10px"><div class="field"><label for="dd-ins">Insurer</label><input id="dd-ins" maxlength="40" value="${h(it.insurer||'')}"></div><div class="field"><label for="dd-pol">Policy number</label><input id="dd-pol" maxlength="40" autocomplete="off" value="${h(it.policy||'')}"></div></div>`:''}`;
+  const mainVeh=!vid||docsRbVehicles(u)[0]?.id===vid;const ph=mainVeh?safeImg(u.verification?.docs?.[def.doc]):'';
+  modal(`<div class="dd-mod stack" style="gap:14px"><div class="row" style="gap:12px;flex-wrap:nowrap">${ph?`<span class="dd-th" style="cursor:default"><img src="${ph}" alt=""></span>`:`<span class="dd-th no" style="cursor:default">${DD_IC.doc}</span>`}<div style="min-width:0"><h3>${h(def.label)}${it.plate?' · '+h(it.plate):''}</h3><p class="tiny muted" style="margin-top:2px">${h(def.hint)}</p></div></div>
+    ${body}<div class="row"><button class="btn" id="dd-save" style="flex:1">Save</button><button class="btn ghost" id="dd-reup" style="flex:1">New photo</button></div></div>`,m=>{
+    const calc=()=>{const c=$('#dd-calc',m);if(!c)return;const s=val(m,'dd-iss');if(docsParse(s)==null){c.textContent='Valid for 12 months from the issue date.';return}const age=-docsDays(s);const until=docsAddMonths(s,12);
+      c.innerHTML=age<0?'<b>That date is in the future.</b>':`Valid to <b>${h(docsFmt(until))}</b>${age>183?'<br><span style="color:var(--warn)">Over 6 months old. A new upload must be newer.</span>':''}`};
+    const iss=$('#dd-iss',m);if(iss){iss.addEventListener('input',calc);calc()}
+    const nb=$('#dd-none',m);if(nb)nb.onchange=()=>{const d=$('#dd-until',m);d.disabled=nb.checked;if(nb.checked)d.value=''};
+    $('#dd-reup',m).onclick=()=>{closeModal();S.docsFocus=def.doc;go('d-verify')};
+    $('#dd-save',m).onclick=async()=>{const b=$('#dd-save',m);let rec;
+      if(def.kind==='issued'){const s=val(m,'dd-iss');if(docsParse(s)==null)return toast('Pick the issue date');if(s>today)return toast('The issue date cannot be in the future');if(s<'1990-01-01')return toast('Check the year');rec={issued:s}}
+      else{const none=!!$('#dd-none',m)?.checked;const s=val(m,'dd-until');if(!none&&docsParse(s)==null)return toast(def.none?'Pick a date or tick No expiry':'Pick the valid-until date');if(!none&&(s<'1990-01-01'||s>'2100-12-31'))return toast('Check the year');rec={until:none?'none':s};
+        if(def.no)rec.no=docsCleanTxt(val(m,'dd-no'));if(def.insurer){rec.insurer=docsCleanTxt(val(m,'dd-ins'));rec.policy=docsCleanTxt(val(m,'dd-pol'))}}
+      b.disabled=true;try{if(vid)await docsSaveVeh(vid,key,rec);else await docsSaveUser(key,rec);closeModal();buzz();toast('Saved');render()}catch(e){b.disabled=false;toast('Could not save: '+(e.message||e))}}})}
+/* re-upload: scroll the verification page to that photo */
+const _ddVerify=VIEWS['d-verify'];
+VIEWS['d-verify']=function(...a){const html=_ddVerify.apply(this,a);const link=`<button type="button" class="dd-link" onclick="go('d-docs')"><span class="ic">${DD_IC.doc}</span><span class="grow"><b>Valid-until dates</b><span class="tiny muted" style="display:block">Licence, PrDP, insurance, disc and more</span></span>›</button>`;
+  return html.replace('<div class="stack">','<div class="stack">'+link)+(S.docsFocus?'<i data-mount="ddFocus" hidden></i>':'')};
+MOUNT.ddFocus=()=>{const k=S.docsFocus;S.docsFocus=null;setTimeout(()=>{const b=k&&document.getElementById('doc-'+k);if(b){b.scrollIntoView({behavior:'smooth',block:'center'});b.classList.add('dd-hl')}},120)};
+
+/* ---------- d-home, d-more, d-routes links ---------- */
+const _ddHome=VIEWS['d-home'];
+VIEWS['d-home']=function(...a){const html=_ddHome.apply(this,a);const u=me();if(!u)return html;
+  const att=docsAttention(u);const hold=docsDriverHolds(u);const vHold=Store.all('vehicles').filter(v=>v.driverId===u.id&&vehDocStatus(v).some(i=>i.key==='disc'&&i.state==='expired'));const bad=hold.length||vHold.length;
+  const warn=att.length?`<button type="button" class="dd-warn ${bad||att[0].state==='expired'?'bad':''}" onclick="go('d-docs')"><span class="ic">${DD_IC.alert}</span><span style="min-width:0"><b>${bad?'Your routes are hidden from parents':att.length===1?'A document needs attention':att.length+' documents need attention'}</b><small>${h(att.slice(0,3).map(i=>`${i.label}${i.plate?' '+i.plate:''} ${i.state==='expired'?'expired':i.days===0?'today':i.days===1?'tomorrow':'in '+i.days+' days'}`).join(' · '))}</small></span><span class="chev">›</span></button>`:'';
+  const sm=docsSummary(u);
+  const tiles=`<div class="dd-tiles"><button type="button" class="dd-tile rb" onclick="docsOpenRoadblock()"><span class="ic">${DD_IC.badge}</span><b>Roadblock card</b><small>Show a traffic officer</small></button><button type="button" class="dd-tile doc t-${sm.tone||'none'}" onclick="go('d-docs')"><span class="ic">${DD_IC.doc}</span><b>My documents</b><small>${h(sm.text)}</small></button></div>`;
+  const block=`<div class="dd-home">${warn}${tiles}</div>`;
+  return html.includes('<div class="kpi">')?html.replace('<div class="kpi">',block+'<div class="kpi">'):html+block};
+const _ddMore=VIEWS['d-more'];
+VIEWS['d-more']=function(...a){const html=_ddMore.apply(this,a);const u=me();const sm=u?docsSummary(u):{text:''};
+  const items=`<div class="item" style="cursor:pointer;min-height:48px" onclick="go('d-docs')"><div class="grow">My documents <span class="tiny muted">· ${h(sm.text)}</span></div>›</div><div class="item" style="cursor:pointer;min-height:48px" onclick="docsOpenRoadblock()"><div class="grow">Roadblock card</div>›</div>`;
+  const anchor=`onclick="go('d-verify')"><div class="grow">Verification documents</div>›</div>`;
+  return html.includes(anchor)?html.replace(anchor,anchor+items):html+`<div class="card" style="margin-top:14px"><div class="list">${items}</div></div>`};
+const _ddRoutes=VIEWS['d-routes'];
+VIEWS['d-routes']=function(...a){let html=_ddRoutes.apply(this,a);const u=me();if(!u)return html;const held=Store.all('routes').filter(r=>r.driverId===u.id&&r.active&&docsRouteHeld(r).length);if(!held.length)return html;
+  for(const r of held)html=html.replace(`<b>${h(r.name)}</b>`,`<b>${h(r.name)}</b> <span class="dd-hold">Hidden</span>`);
+  const reasons=[...new Set(held.flatMap(r=>docsRouteHeld(r)))];
+  const note=`<button type="button" class="dd-warn bad" style="margin-bottom:14px" onclick="go('d-docs')"><span class="ic">${DD_IC.alert}</span><span style="min-width:0"><b>Hidden from parents</b><small>${h(reasons.join(', '))} expired. Update it to list again.</small></span><span class="chev">›</span></button>`;
+  return html.includes('<div class="grid g2">')?html.replace('<div class="grid g2">',note+'<div class="grid g2">'):html+note};
+
+/* ---------- roadblock card ---------- */
+let docsWakeLock=null,docsClockT=null;
+function docsNewToken(){const a=new Uint8Array(24);try{crypto.getRandomValues(a)}catch(e){for(let i=0;i<24;i++)a[i]=Math.floor(Math.random()*256)}let s='';for(const b of a)s+=String.fromCharCode(b);return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+function docsVerifyUrl(token,vid){return location.origin+location.pathname+'#verify='+encodeURIComponent(token)+(vid?'&v='+encodeURIComponent(vid):'')}
+function docsOpenRoadblock(routeId){S.rbFrom=routeId?{trip:routeId}:{route:S.route&&S.route!=='d-roadblock'?S.route:'d-home'};if(S.tripModeRoute){S.tripModeRoute=null;document.querySelector('.tripmode')?.remove()}buzz();go('d-roadblock')}
+function docsCloseRoadblock(){docsUnwake();const f=S.rbFrom||{route:'d-home'};S.rbFrom=null;if(f.trip&&typeof tripMode==='function'&&routeOf(f.trip)){go('d-trip',{tripRoute:f.trip});tripMode(f.trip)}else go(safeRoute(f.route)||'d-home')}
+function docsClockText(){const d=new Date();const p=n=>String(n).padStart(2,'0');return `Shown ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())} · ${d.getDate()} ${DD_MON[d.getMonth()]} ${d.getFullYear()}`}
+function docsClockStart(){if(docsClockT)return;docsClockT=setInterval(()=>{const c=document.getElementById('rbk-clock');if(!c||S.route!=='d-roadblock'){clearInterval(docsClockT);docsClockT=null;return}c.textContent=docsClockText()},1000)}
+async function docsWake(){if(docsWakeLock||S._ddWakeBusy||!('wakeLock' in navigator)){docsWakeUi();return}S._ddWakeBusy=true;try{const l=await navigator.wakeLock.request('screen');if(S.route!=='d-roadblock'){l.release().catch(()=>{})}else{docsWakeLock=l;l.addEventListener('release',()=>{if(docsWakeLock===l)docsWakeLock=null;docsWakeUi()})}}catch(e){docsWakeLock=null}finally{S._ddWakeBusy=false}docsWakeUi()}
+function docsUnwake(){try{docsWakeLock&&docsWakeLock.release()}catch(e){}docsWakeLock=null}
+function docsWakeUi(){const w=document.getElementById('rbk-wake');if(w)w.textContent=docsWakeLock?'Screen stays on. Turn your brightness up.':'Turn your brightness up and keep the screen on.'}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.route==='d-roadblock'&&!docsVerifyParam())docsWake()});
+function docsMaskId(id){id=String(id||'');if(!id)return '';return '•'.repeat(Math.max(0,id.length-3))+id.slice(-3)}
+function docsFullId(id){id=String(id||'');return /^\d{13}$/.test(id)?id.slice(0,6)+' '+id.slice(6,10)+' '+id.slice(10):id}
+function docsOnBoard(u){const ids=new Set(Store.all('bookings').filter(b=>b.driverId===u.id&&(b.status==='active'||b.status==='trip')).map(b=>b.kidId));let n=0;for(const id of ids){const k=Store.get('kids',id);if(k&&kidStatus(k).onboard)n++}return n}
+function docsRbVehicles(u){return Store.all('vehicles').filter(v=>v.driverId===u.id).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0))}
+function docsRbVehicle(u,vs){if(!vs.length)return null;const pick=vs.find(v=>v.id===S.rbVeh);if(pick)return pick;const live=Store.all('routes').find(r=>r.driverId===u.id&&r.live?.active&&vs.some(v=>v.id===r.vehicleId));return live?vs.find(v=>v.id===live.vehicleId):vs[0]}
+const DD_GAL=['licence','prdp','oplicence','insurance','police','disc','roadworthy','id'];
+VIEWS['d-roadblock']=()=>{S.anim=false;const u=me();if(!u)return empty('Sign in first.','shield');
+  const ver=u.verification?.status||'none';const inactive=u.banned||u.suspended;
+  const st=inactive?['bad',DD_IC.cross,'Enivel driver','Not active on Enivel']:ver==='approved'?['',DD_IC.check,'Enivel verified driver','Approved ✓ by Enivel']:ver==='pending'?['pending',DD_IC.wait,'Enivel driver','Verification pending']:ver==='rejected'?['bad',DD_IC.cross,'Enivel driver','Not verified']:['none',DD_IC.cross,'Enivel driver','Not verified'];
+  const docs=u.verification?.docs||{};const selfie=safeImg(docs.selfie);const items=docStatus(u);const by=k=>items.find(i=>i.key===k);
+  const row=(label,it,sub)=>`<div class="rbk-row"><div class="k"><b>${h(label)}</b><span>${h(sub)}</span></div>${docsPill(it,true)}</div>`;
+  const lic=by('licence'),pr=by('prdp'),op=by('opLicence'),ins=by('insurance'),pol=by('police');
+  const vt=it=>it.state==='none'?'No expiry':it.state==='missing'?'Not on record':(it.state==='expired'?'Expired ':'Valid until ')+docsFmt(it.until);
+  const vs=docsRbVehicles(u);const v=docsRbVehicle(u,vs);const vd=v?vehDocStatus(v):[];
+  const gal=DD_GAL.filter(k=>safeImg(docs[k])).map(k=>{const d=(typeof DOCS!=='undefined'?DOCS:[]).find(x=>x[0]===k);return `<button type="button" data-rb-img="${k}"><img src="${safeImg(docs[k])}" alt=""><span>${h(d?d[1]:k)}</span></button>`}).join('');
+  const kids=docsOnBoard(u);
+  return `<div class="rbk" data-mount="rbInit" role="dialog" aria-label="Roadblock card"><div class="in">
+    <div class="rbk-top"><button type="button" class="x" data-rb="close" aria-label="Close">${ICON.x}</button><span class="ttl">Roadblock card</span><span class="pill live tiny"><i class="blink"></i>Live</span></div>
+    <div class="rbk-strip" aria-hidden="true"><div class="mq">${'<span>ENIVEL · LIVE CARD · CHECK THE TICKING CLOCK ·</span>'.repeat(4)}</div></div>
+    <div class="rbk-clock"><i></i><span id="rbk-clock">${docsClockText()}</span></div>
+    <div class="rbk-status ${st[0]}"><span class="ic">${st[1]}</span><div><b>${st[2]}</b><small>${st[3]}</small></div></div>
+    <div class="rbk-who">${selfie?`<button type="button" class="ph" data-rb-img="selfie" aria-label="Driver photo"><img src="${selfie}" alt=""></button>`:`<span class="ph">${h(initials(u.name))}</span>`}
+      <div style="min-width:0"><div class="nm">${h(u.name)}</div>${u.idNumber?`<button type="button" class="rbk-id" id="rbk-id" aria-label="Hold to show ID number"><span class="v" id="rbk-idv">${h(docsMaskId(u.idNumber))}</span><small>ID number · hold to show</small></button>`:'<div class="small muted" style="margin-top:6px">No ID number on file</div>'}</div></div>
+    <div class="rbk-sec"><h3>Vehicle</h3>${v?`${vs.length>1?`<div class="rbk-vpick">${vs.map(x=>`<button type="button" data-rb-veh="${h(x.id)}" class="${x.id===v.id?'on':''}">${h(x.plate||x.make||'Vehicle')}</button>`).join('')}</div>`:''}
+      <div class="rbk-plate">${h(v.plate||'—')}</div>
+      <div class="rbk-car">${safeImg(v.photos?.front)?`<img src="${safeImg(v.photos.front)}" alt="" data-rb-vimg="${h(v.id)}">`:''}<div style="min-width:0"><div class="d">${h(v.make)} ${h(v.model)}</div><div class="s">${h(v.color||'')}${v.color?' · ':''}${h(v.seats)} passenger seats</div></div></div>
+      <div style="margin-top:6px">${vd.map(it=>row(it.label,it,vt(it))).join('')}</div>`:'<p class="small muted">No vehicle added yet.</p>'}</div>
+    <div class="rbk-sec rbk-kids"><span class="n">${kids}</span><div><b>${kids===1?'Child':'Children'} on board now</b><div class="tiny muted">Count only. No names shown.</div></div></div>
+    <div class="rbk-sec rbk-qr"><h3 style="margin:0">Officer: scan to check live</h3><div class="box" data-mount="rbQr" aria-label="QR code for the live check"></div><div class="tiny muted">Opens Enivel's live record. No app or sign-in needed.</div><button type="button" class="btn sm ghost" data-rb="reset">Reset QR code</button></div>
+    <div class="rbk-sec"><h3>Documents</h3>
+      ${row("Driver's licence",lic,[lic.no?'No. '+lic.no:'',vt(lic)].filter(Boolean).join(' · '))}
+      ${row('PrDP',pr,[pr.no?'No. '+pr.no:'',vt(pr)].filter(Boolean).join(' · '))}
+      ${row('Operating licence / permit',op,[op.no?'No. '+op.no:'',vt(op)].filter(Boolean).join(' · '))}
+      ${row('Passenger insurance',ins,[ins.insurer,ins.policy?'Policy '+ins.policy:'',vt(ins)].filter(Boolean).join(' · '))}
+      ${row('Police clearance',pol,pol.issued?`Issued ${docsFmt(pol.issued)} · valid to ${docsFmt(pol.until)}`:'Not on record')}</div>
+    ${gal?`<div class="rbk-sec"><h3>Document photos</h3><div class="rbk-gal">${gal}</div></div>`:''}
+    <div class="rbk-tip">${DD_IC.sun}<span id="rbk-wake">Turn your brightness up and keep the screen on.</span></div>
+    <p class="rbk-fine">Not a driver's licence, PrDP or operating permit. Carry your original documents, as the law requires. Enivel's verification is its own check, not a government one.</p>
+  </div></div>`};
+MOUNT.rbInit=el=>{const u=me();if(!u)return;
+  if(!u.verifyToken&&!S._rbTokBusy){S._rbTokBusy=true;Store.patch('users',u.id,{verifyToken:docsNewToken(),verifyTokenAt:Date.now()}).catch(()=>{}).finally(()=>{S._rbTokBusy=false})}
+  docsWake();docsClockStart();
+  el.addEventListener('click',e=>{const b=e.target.closest('[data-rb],[data-rb-img],[data-rb-veh],[data-rb-vimg]');if(!b)return;
+    if(b.dataset.rb==='close')return docsCloseRoadblock();
+    if(b.dataset.rb==='reset')return confirmBox('Reset the QR code?','Old QR codes and screenshots of them stop working straight away.',async()=>{const me_=me();if(!me_)return;await Store.patch('users',me_.id,{verifyToken:docsNewToken(),verifyTokenAt:Date.now()});toast('New QR code ready')});
+    if(b.dataset.rbVeh){S.rbVeh=b.dataset.rbVeh;buzz();return render()}
+    if(b.dataset.rbVimg){const v=Store.get('vehicles',b.dataset.rbVimg);if(v?.photos?.front)docsLightbox(v.photos.front,`${v.make} ${v.model} · ${v.plate}`);return}
+    if(b.dataset.rbImg){const k=b.dataset.rbImg;const src=me()?.verification?.docs?.[k];const d=(typeof DOCS!=='undefined'?DOCS:[]).find(x=>x[0]===k);if(src)docsLightbox(src,k==='selfie'?(me()?.name||''):(d?d[1]:k))}});
+  const idb=el.querySelector('#rbk-id');if(idb){let t=null;const v=el.querySelector('#rbk-idv');const show=()=>{const x=me();if(!x)return;v.textContent=docsFullId(x.idNumber);idb.classList.add('on');buzz(8)};const hide=()=>{clearTimeout(t);t=null;const x=me();v.textContent=docsMaskId(x?.idNumber);idb.classList.remove('on')};
+    idb.addEventListener('pointerdown',e=>{e.preventDefault();clearTimeout(t);t=setTimeout(show,250)});['pointerup','pointerleave','pointercancel','blur'].forEach(n=>idb.addEventListener(n,hide));
+    idb.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();show()}});idb.addEventListener('keyup',hide);idb.addEventListener('contextmenu',e=>e.preventDefault())}};
+/* QR: qrcode-generator 1.4.4, loaded only here; cached so it also shows offline */
+let docsQrLib=null;
+function docsLoadQr(){if(typeof qrcode==='function')return Promise.resolve(true);if(docsQrLib)return docsQrLib;docsQrLib=new Promise(res=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';s.async=true;s.onload=()=>res(typeof qrcode==='function');s.onerror=()=>{docsQrLib=null;res(false)};document.head.appendChild(s);setTimeout(()=>res(typeof qrcode==='function'),8000)});return docsQrLib}
+MOUNT.rbQr=async el=>{const u=me();if(!u)return;const tok=u.verifyToken;if(!tok){el.innerHTML='<span class="lnk">Making your code…</span>';return}
+  const vs=docsRbVehicles(u);const v=docsRbVehicle(u,vs);const url=docsVerifyUrl(tok,v?.id);el.dataset.url=url;
+  const cache=ls.get('enivel_rbqr');if(cache&&cache.url===url&&typeof cache.svg==='string'&&cache.svg.startsWith('<svg')){el.innerHTML=cache.svg;el.dataset.ok='1';return}
+  el.innerHTML='<span class="lnk">Loading QR…</span>';const ok=await docsLoadQr();if(el.dataset.url!==url)return;
+  if(!ok){el.innerHTML=`<span class="lnk">QR could not load. Live check link:<br><b>${h(url)}</b></span>`;return}
+  try{const q=qrcode(0,'M');q.addData(url);q.make();const svg=q.createSvgTag({cellSize:4,margin:0,scalable:true});el.innerHTML=svg;el.dataset.ok='1';ls.set('enivel_rbqr',{url,svg})}catch(e){el.innerHTML=`<span class="lnk">Live check link:<br><b>${h(url)}</b></span>`}};
+function docsLightbox(src,label){document.querySelector('.dd-lb')?.remove();const s=safeImg(src);if(!s)return;const d=document.createElement('div');d.className='dd-lb';d.setAttribute('role','dialog');d.setAttribute('aria-label',label||'Photo');
+  d.innerHTML=`<button type="button" class="c" aria-label="Close">${ICON.x}</button><img src="${s}" alt="${h(label||'')}"><div class="t">${h(label||'')}</div>`;d.onclick=()=>d.remove();document.body.appendChild(d)}
+/* trip mode: police-badge button next to the close button (observer, so it survives redraws by any layer) */
+(function docsTripBadge(){const add=()=>{const tm=document.querySelector('.tripmode');if(!tm||tm.querySelector('.dd-tmbtn'))return;const rid=S.tripModeRoute;if(!rid)return;
+  const b=document.createElement('button');b.type='button';b.className='dd-tmbtn';b.setAttribute('aria-label','Roadblock card');b.innerHTML=DD_IC.badge+'<span>Roadblock</span>';b.onclick=e=>{e.stopPropagation();docsOpenRoadblock(rid)};
+  const x=tm.querySelector('.row .ib');if(x&&x.parentNode)x.parentNode.insertBefore(b,x);else{b.style.cssText='position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:70px';tm.appendChild(b)}};
+  try{new MutationObserver(add).observe(document.body,{childList:true,subtree:true})}catch(e){}})();
+
+/* ---------- public live check: #verify=<token> (or ?verify=), no sign-in ---------- */
+function docsVerifyParam(){const s=(location.hash||'')+'&'+(location.search||'');const m=s.match(/[#&?]verify=([A-Za-z0-9_-]{1,128})/);if(!m)return null;const v=s.match(/[#&?]v=([A-Za-z0-9_-]{1,64})/);return {token:m[1],vid:v?v[1]:null}}
+/* same shape as SQL verify_driver(): used in local / preview mode */
+function docsCheckData(u){if(!u)return null;const sl=it=>{const o={key:it.key,label:it.label,state:it.state};if(it.until)o.until=it.until;if(it.days!=null)o.days=it.days;if(it.issued)o.issued=it.issued;return o};
+  return {name:u.name,status:u.verification?.status||'none',active:!(u.banned===true||u.suspended===true),
+    vehicles:Store.all('vehicles').filter(v=>v.driverId===u.id).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)).map(v=>{const [d,r]=vehDocStatus(v);return {id:v.id,make:v.make,model:v.model,color:v.color,plate:v.plate,seats:v.seats,disc:sl(d),rwc:sl(r)}}),
+    docs:docStatus(u).map(sl),checkedAt:new Date().toISOString()}}
+async function docsVerifyLoad(){const c=S.ddCheck;if(!c||c.busy)return;c.busy=true;
+  try{let data=null;if(c.token.length<24)data=null;else if(S.cloud){if(typeof sb==='undefined'||!sb)throw new Error('offline');const r=await sb.rpc('verify_driver',{p_token:c.token});if(r.error)throw r.error;data=r.data||null}
+    else data=docsCheckData(Store.all('users').find(x=>x.verifyToken===c.token)||null);
+    c.data=data;c.state='done';c.err=null}catch(e){c.state='error';c.err=e?.message||String(e)}finally{c.busy=false;c.at=Date.now()}
+  if(S.ddCheck===c)render()}
+function docsVerifyTime(iso){const d=new Date(iso);if(isNaN(d))return '';try{const o={timeZone:'Africa/Johannesburg'};const t=d.toLocaleTimeString('en-GB',{...o,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});const dt=d.toLocaleDateString('en-GB',{...o,day:'numeric',month:'short',year:'numeric'});return t+' · '+dt}catch(e){return d.toLocaleString()}}
+function docsVerifyHtml(c){const top=`<div class="vfy-top"><span class="logo gtext">Enivel</span><span class="pill">Live check</span></div>`;
+  const acts=`<div class="vfy-actions"><button type="button" class="btn ghost" onclick="docsVerifyAgain()">Check again</button><button type="button" class="btn" onclick="docsVerifyExit()">Open Enivel</button></div>`;
+  if(c.state==='loading')return `<div class="vfy">${top}<div class="vfy-card"><div class="vfy-st"><div class="big">${DD_IC.wait}</div><h1>Checking…</h1><p class="muted small">Getting the live record from Enivel.</p></div><div class="skel" style="height:60px;border-radius:16px"></div></div></div>`;
+  if(c.state==='error')return `<div class="vfy">${top}<div class="vfy-card"><div class="vfy-st"><div class="big">${DD_IC.alert}</div><h1>Can't check right now</h1><p class="muted small">No connection to Enivel. Check your internet and try again.</p></div></div>${acts}</div>`;
+  const d=c.data;
+  if(!d)return `<div class="vfy bad">${top}<div class="vfy-card"><div class="vfy-st bad"><div class="big">${DD_IC.cross}</div><h1>Not found</h1><p class="muted small">This code is not valid. It may have been reset, or it is a copy.</p></div><div class="vfy-time"><i></i>Checked ${h(docsVerifyTime(new Date().toISOString()))}</div></div>${acts}</div>`;
+  const docs=Array.isArray(d.docs)?d.docs:[];const vs=Array.isArray(d.vehicles)?d.vehicles:[];const exp=docs.filter(x=>x.state==='expired'&&x.key!=='id').map(x=>x.label).concat(vs.filter(v=>!c.vid||v.id===c.vid).flatMap(v=>[v.disc,v.rwc].filter(x=>x&&x.state==='expired').map(x=>`${x.label} ${v.plate||''}`.trim())));
+  const tone=!d.active?'bad':d.status!=='approved'?'bad':exp.length?'warn':'ok';
+  const title=!d.active?'Not active':d.status!=='approved'?(d.status==='pending'?'Not verified yet':'Not verified'):exp.length?'Verified · check documents':'Verified driver';
+  const sub=!d.active?'This account is suspended or banned on Enivel.':d.status!=='approved'?'Enivel has not approved this driver.':exp.length?exp.join(', ')+' expired on Enivel records.':'Active on Enivel. Documents checked by Enivel.';
+  const pill=x=>docsPill({state:x?.state||'missing',days:x?.days??docsDays(x?.until)},true);
+  const dtxt=x=>x.key==='police'&&x.issued?`Issued ${docsFmt(x.issued)} · to ${docsFmt(x.until)}`:x.state==='none'?'No expiry':x.state==='missing'?'Not on record':(x.state==='expired'?'Expired ':'Until ')+docsFmt(x.until);
+  const vsS=vs.slice().sort((a,b)=>(b.id===c.vid)-(a.id===c.vid));
+  return `<div class="vfy ${tone}">${top}<div class="vfy-card">
+    <div class="vfy-st ${tone}"><div class="big">${tone==='ok'?DD_IC.check:tone==='warn'?DD_IC.alert:DD_IC.cross}</div><h1>${h(title)}</h1><p class="muted small">${h(sub)}</p></div>
+    <div class="vfy-name">${h(d.name||'')}</div>
+    <div class="vfy-time"><i></i>Checked ${h(docsVerifyTime(d.checkedAt))}</div>
+    ${vsS.length?`<div class="vfy-sec"><h3>Vehicles</h3>${vsS.map(v=>`<div class="vfy-veh ${v.id&&v.id===c.vid?'use':''}"><div class="vfy-vh"><span class="dd-plate">${h(v.plate||'')}</span><b>${h(v.make||'')} ${h(v.model||'')}</b><span class="small muted">${h(v.color||'')}</span>${v.id&&v.id===c.vid?'<span class="pill info tiny">In use</span>':''}</div><div class="vfy-tags">${[['Disc',v.disc],['Roadworthy',v.rwc]].map(([l,x])=>`<span class="small" style="display:inline-flex;align-items:center;gap:6px">${l} ${pill(x)}</span>`).join('')}</div></div>`).join('')}</div>`:''}
+    <div class="vfy-sec"><h3>Documents</h3>${docs.map(x=>`<div class="rbk-row"><div class="k"><b>${h(x.label)}</b><span>${h(dtxt(x))}</span></div>${pill(x)}</div>`).join('')}</div>
+    <p class="rbk-fine">Enivel's own records at the time shown. Not a government check. Ask to see the original documents.</p></div>${acts}</div>`}
+function docsVerifyRender(p){if(!S.ddCheck||S.ddCheck.token!==p.token)S.ddCheck={token:p.token,state:'loading'};S.ddCheck.vid=p.vid;const app=$('#app');if(!app)return;app.innerHTML=docsVerifyHtml(S.ddCheck);
+  if(S.ddCheck.state==='loading'&&!S.ddCheck.busy&&S.ready)docsVerifyLoad()}
+function docsVerifyAgain(){if(!S.ddCheck)return;S.ddCheck.state='loading';S.ddCheck.data=null;buzz();render()}
+function docsVerifyExit(){try{history.replaceState(null,'',location.pathname)}catch(e){location.hash=''}S.ddCheck=null;render()}
+window.addEventListener('hashchange',()=>{if(docsVerifyParam()||S.ddCheck){if(!docsVerifyParam())S.ddCheck=null;render()}});
+const _ddRender=render;
+render=function(...a){const vp=docsVerifyParam();if(vp){if(S.route!=='verify'){S._ddPrevRoute=S.route;S.route='verify'}return docsVerifyRender(vp)}
+  if(S.route==='verify')S.route=S._ddPrevRoute&&S._ddPrevRoute!=='verify'?S._ddPrevRoute:(me()?(S.admin?'a-home':me().role==='driver'?'d-home':'p-home'):'landing');
+  if(S.route!=='d-roadblock'&&docsWakeLock)docsUnwake();
+  const u=me();if(u&&u.role==='driver'&&S.ready&&S._ddRemAt&&Date.now()-S._ddRemAt>6*36e5)setTimeout(()=>expiryReminders().catch(()=>{}),500);
+  return _ddRender.apply(this,a)};
+/* no intro, terms or theme pop-ups over the public check page */
+for(const n of ['showIntro','termsGate','themePrompt']){try{const f=window[n];if(typeof f==='function')window[n]=function(...a){if(docsVerifyParam())return;return f.apply(this,a)}}catch(e){}}
+</script>

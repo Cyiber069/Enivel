@@ -161,3 +161,11 @@ Round 11 (in progress): 4 subagents → layers r10-maps2 (Carto light/dark tiles
 ## 08 Nov — owner reports setup done (not checked from here; this session can't reach enivel.co.za or Supabase)
 - setup.sql rerun; Worker ALLOWED_ORIGIN/APP_URL = enivel.co.za; TomTom whitelist; Supabase Site URL; Enforce HTTPS.
 - Next: owner does a small real PayFast test (R5–R10) end to end. Big upgrade (bug sweep, live visits, curved graphs, role features) still not started.
+
+## 08 Nov — map far-pin fix, payouts page, cleanup
+- layers/r10-mapfix3.html: map zooms out to show every pin (min zoom 5 only when needed, 9 otherwise); red note when home/stop/school are >60 km apart; suggestions far from home say "· N km away", schools near home listed first.
+- layers/r10-payout2.html: Driver payouts page starts with total still to pay, per-driver cards (parents paid − R100 fee − parking − already paid = You pay), full bank details + reference with Copy buttons, "I've paid this" → "Paid this month" list with date. Money tab card "Driver payouts · R… to pay". Money KPI renamed "Drivers' share (before payout)".
+- layers/r10-kidabs.html: kid app "Not riding today" button (permission existed, button was missing).
+- Removed the unused Google Maps layer (moved to layers/retired). build.sh now minifies (tools/minify.mjs, html-minifier-terser 7.2.0): ~1.50 MB → 1.38 MB.
+- Layer sources now also kept in the repo under layers/.
+- Retired outdated tests: r10-grow (old SMS sign-up), r12-pin/pin2 (tap-to-move pins, removed on purpose), r12-gmaps. r10-ops "Checks this month" fails on Sundays only (date-dependent).

@@ -9,3 +9,8 @@ head='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="vie
 open('index.html','w').write(head+s+'\n</body></html>\n')
 PY
 grep -c "ADMIN_HASH=''" index.html
+# shrink the file phones download (needs Node; installs the minifier the first time)
+if command -v node >/dev/null 2>&1; then
+  [ -d node_modules/html-minifier-terser ] || npm install --no-audit --no-fund >/dev/null 2>&1
+  node tools/minify.mjs index.html index.html || echo "minify skipped"
+fi

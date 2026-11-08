@@ -1,0 +1,397 @@
+<style>
+/* ===================== Round 10 extras: smart match, calendar, forecast, seats, lost & found, help, text size ===================== */
+/* text size (per device) */
+html[data-ts="l"]{font-size:112.5%}
+html[data-ts="xl"]{font-size:125%}
+html[data-ts="l"] body{font-size:16.9px}
+html[data-ts="xl"] body{font-size:18.75px}
+@media (max-width:700px){html[data-ts="l"] :is(input,select,textarea){font-size:18px!important}html[data-ts="xl"] :is(input,select,textarea){font-size:20px!important}}
+html[data-ts] .btn{white-space:normal;text-align:center}
+html[data-ts] .pill{white-space:normal}
+html[data-ts] .tabs button{font-size:.62rem}
+i[data-exrid]{display:none!important}
+@keyframes exPop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+@keyframes exUp{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:1}}
+@keyframes exShine{to{background-position:-200% 0}}
+@keyframes exRing{from{stroke-dashoffset:var(--full)}}
+.ex-ic{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;flex-shrink:0;color:#fff;background:var(--grad);box-shadow:0 6px 16px color-mix(in srgb,var(--acc) 28%,transparent)}
+.ex-ic svg{width:20px;height:20px}
+.ex-ic.warm{background:linear-gradient(135deg,#f59e0b,#f97316);box-shadow:0 6px 16px rgba(245,158,11,.28)}
+.ex-ic.cool{background:linear-gradient(135deg,#22d3ee,#0ea5e9);box-shadow:0 6px 16px rgba(14,165,233,.28)}
+.ex-ic.green{background:linear-gradient(135deg,#34d399,#1db954);box-shadow:0 6px 16px rgba(29,185,84,.28)}
+/* 1. smart match */
+.ex-kids{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.ex-kids .kidchip{min-height:44px}
+.ex-hint{margin-top:12px;font-size:.8rem;color:var(--fg2);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.card.ex-top{border:1.5px solid transparent;background:linear-gradient(var(--bg),var(--bg)) padding-box,var(--grad) border-box;box-shadow:0 14px 34px color-mix(in srgb,var(--acc) 16%,transparent)}
+.ex-best{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-bottom:12px;font-size:.8rem;font-weight:600;color:var(--fg2)}
+.ex-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;color:#fff;font-weight:800;font-size:.74rem;background:linear-gradient(100deg,#6d5dfc 0%,#22d3ee 50%,#6d5dfc 100%);background-size:200% 100%;animation:exPop .45s cubic-bezier(.2,.8,.2,1) both,exShine 5s linear infinite;box-shadow:0 6px 16px color-mix(in srgb,var(--acc) 35%,transparent);white-space:nowrap}
+.ex-badge svg{width:13px;height:13px}
+.ex-why{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.ex-why span{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:600;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--acc) 9%,var(--bg2));color:var(--fg2)}
+.ex-why svg{width:12px;height:12px}
+.ex-strip{display:inline-flex;flex-wrap:wrap;gap:2px;max-width:150px;align-items:center;vertical-align:middle}
+.ex-strip i{width:8px;height:10px;border-radius:3px 3px 2px 2px;background:var(--bg3);border:1px solid var(--line)}
+.ex-strip i.t{background:var(--acc);border-color:transparent}
+/* 2. calendar */
+.ex-calsum{display:flex;gap:28px;margin-top:14px;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,color-mix(in srgb,var(--acc2) 12%,var(--bg2)),var(--bg2))}
+.ex-day{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:.88rem}
+.ex-day:last-child{border-bottom:0}
+.ex-day .d{width:44px;text-align:center;font-weight:800;line-height:1.05;flex-shrink:0;font-family:var(--display);font-size:1.15rem}
+.ex-day .d small{display:block;font-weight:600;font-size:.66rem;color:var(--fg3);text-transform:uppercase;letter-spacing:.04em}
+.ex-day .grow{min-width:0;flex:1}
+/* 3. earnings forecast */
+.ex-earn{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:14px}
+.ex-ring{width:104px;height:104px;flex-shrink:0}
+.ex-ring circle.a{animation:exRing 1.1s cubic-bezier(.2,.8,.2,1) both}
+.ex-earn .grow{flex:1;min-width:160px}
+.ex-kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;font-size:.85rem;font-variant-numeric:tabular-nums;margin-top:8px}
+.ex-kv span{color:var(--fg3)}
+.ex-kv .tot{font-weight:800;color:var(--fg);border-top:1px solid var(--line);padding-top:5px}
+.ex-tip{display:flex;gap:10px;align-items:center;margin-top:12px;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,var(--live) 10%,var(--bg2));font-size:.85rem}
+.ex-tip>svg{width:20px;height:20px;color:var(--live);flex-shrink:0}
+.ex-tip.goal{background:color-mix(in srgb,var(--acc) 10%,var(--bg2))}.ex-tip.goal>svg{color:var(--acc)}
+/* 4. seat map */
+.ex-van{position:relative;margin:14px auto 6px;max-width:300px;padding:36px 14px 16px;border-radius:46px 46px 22px 22px;background:var(--bg2);border:2px solid var(--line)}
+.ex-van::before{content:"";position:absolute;left:16%;right:16%;top:10px;height:12px;border-radius:10px 10px 4px 4px;background:linear-gradient(90deg,color-mix(in srgb,var(--acc2) 45%,var(--bg3)),color-mix(in srgb,var(--acc) 35%,var(--bg3)))}
+.ex-van .ex-r{display:grid;grid-template-columns:repeat(var(--c),minmax(0,1fr));gap:8px;margin-top:8px}
+.ex-van .ex-r:first-child{margin-top:0;padding-bottom:10px;border-bottom:1px dashed var(--s4,var(--line))}
+.ex-seat{min-height:48px;min-width:0;border-radius:14px 14px 9px 9px;border:1.5px solid var(--line);background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font:inherit;font-size:.68rem;font-weight:700;color:var(--fg3);padding:3px 2px;position:relative;overflow:hidden;transition:transform .15s}
+button.ex-seat{cursor:pointer}button.ex-seat:active{transform:scale(.94)}
+.ex-seat b{font-size:.74rem;color:var(--fg);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.1}
+.ex-seat.t{background:color-mix(in srgb,var(--acc) 14%,var(--bg));border-color:color-mix(in srgb,var(--acc) 45%,transparent);color:var(--acc)}
+.ex-seat.me{background:var(--grad);border-color:transparent;color:#fff;animation:exPop .4s ease both}.ex-seat.me b{color:#fff}
+.ex-seat.drv{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}.ex-seat.drv svg{width:22px;height:22px}
+.ex-seat.sel{outline:3px solid var(--acc);outline-offset:2px}
+.ex-sp{min-height:48px}
+.ex-legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;font-size:.74rem;color:var(--fg3);margin-top:8px}
+.ex-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--bg);border:1px solid var(--line)}
+.ex-legend i.t{background:var(--acc);border-color:transparent}.ex-legend i.me{background:var(--grad);border-color:transparent}
+.ex-pick{margin-top:12px;padding:12px;border-radius:16px;background:var(--bg2);animation:exUp .25s ease both}
+.ex-who{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.ex-who .kidchip{min-height:44px}
+/* 5. lost & found */
+.ex-lf{display:flex;gap:12px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--line)}
+.ex-lf:first-child{padding-top:0}.ex-lf:last-child{border-bottom:0;padding-bottom:0}
+.ex-lf .ph{width:64px;height:64px;border-radius:14px;flex-shrink:0;cursor:zoom-in;border:1px solid var(--line);padding:0;background:var(--bg2);overflow:hidden}
+.ex-lf .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ex-lf .noph{width:64px;height:64px;border-radius:14px;flex-shrink:0;display:grid;place-items:center;background:color-mix(in srgb,var(--acc3) 14%,var(--bg2));color:var(--acc3)}
+.ex-lf .noph svg{width:26px;height:26px}
+.ex-lf .grow{min-width:0;flex:1}
+.ex-lf .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+/* 6. help centre */
+.ex-hero{position:relative;overflow:hidden;border-radius:var(--r);padding:22px 18px;background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 16%,var(--bg)),color-mix(in srgb,var(--acc2) 14%,var(--bg)));border:1px solid var(--line)}
+.ex-hero::after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--acc3) 30%,transparent),transparent 70%);pointer-events:none}
+.ex-hero h2{margin-bottom:4px;position:relative}
+.ex-hero p{position:relative}
+.ex-hero .searchbar{background:var(--bg);box-shadow:var(--shadow);margin-top:14px;position:relative;z-index:1;min-height:48px}
+.ex-hero .searchbar input{font-size:16px}
+.ex-cats{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0}
+.ex-cats::-webkit-scrollbar{display:none}
+.ex-cats button{flex:0 0 auto;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 14px;font-weight:600;font-size:.82rem;cursor:pointer;min-height:44px;color:var(--fg2)}
+.ex-cats button.on{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.ex-faq details{border-bottom:1px solid var(--line)}
+.ex-faq details.last{border-bottom:0}
+.ex-faq summary{list-style:none;cursor:pointer;display:flex;gap:12px;align-items:center;padding:12px 0;min-height:52px;font-weight:700}
+.ex-faq summary::-webkit-details-marker{display:none}
+.ex-faq summary .q{flex:1;min-width:0}
+.ex-faq summary .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--acc)}
+.ex-faq summary .dot.safe{background:var(--live)}.ex-faq summary .dot.money{background:var(--acc3)}.ex-faq summary .dot.ride{background:var(--acc2)}.ex-faq summary .dot.acct{background:var(--fg3)}
+.ex-faq summary::after{content:"";width:9px;height:9px;border-right:2px solid var(--fg3);border-bottom:2px solid var(--fg3);transform:rotate(45deg);transition:transform .2s;flex-shrink:0;margin:0 6px 5px 0}
+.ex-faq details[open] summary::after{transform:rotate(225deg);margin:5px 6px 0 0}
+.ex-faq .a{padding:0 0 14px 20px;color:var(--fg2);font-size:.92rem;animation:exUp .2s ease both}
+.ex-faq .a .btn{margin-top:10px}
+/* 7. text size */
+.ex-ts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}
+.ex-ts button{border:1.5px solid var(--line);border-radius:14px;background:var(--bg);min-height:64px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;color:var(--fg);font:inherit;min-width:0}
+.ex-ts button.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 9%,var(--bg));box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 18%,transparent)}
+.ex-ts b{font-family:var(--display);line-height:1}
+.ex-ts span{font-size:.7rem;color:var(--fg3);text-align:center;line-height:1.2}
+@media(prefers-reduced-motion:reduce){.ex-badge,.ex-seat.me,.ex-pick,.ex-faq .a,.ex-ring circle.a{animation:none}}
+</style>
+<script>
+/* ===================== Round 10 extras (daily-use) =====================
+   Data written here:
+   - users.earnGoal (number, rand per month)            · driver monthly goal
+   - routes.seatMap {"<seat number>": kidId}            · driver seat assignment (parents only see counts + their own child's seat)
+   - routes.areaGeo {lat,lng,label} (+ routes.schoolGeo) · saved when the driver picks a suggestion in the route form
+   - messages.lost {kind:'lost'|'found'|'reply', item, kidId, bookingId, photo, day, note, ref, status}
+   Views: 'help-centre', 'lost-found'. Per-device setting: localStorage 'enivel_textsize' = 'n'|'l'|'xl'. */
+const EX_IC={
+cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"/></svg>',
+help:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.2-2.5 3.9M12 17.2h.01"/></svg>',
+bag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l1 12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/><path d="M9 8V6a3 3 0 0 1 6 0v2M9 13h6"/></svg>',
+seat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h6a2 2 0 0 1 2 2v7H7z"/><path d="M5 13h12a2 2 0 0 1 2 2v2H5zM7 17v3M17 17v3"/></svg>',
+target:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',
+spark:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>',
+wheel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M3.5 10.5h6.6M13.9 10.5h6.6M12 14v7"/></svg>',
+dl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>'};
+function exRole(){return typeof viewRole==='function'?viewRole():me()?.role}
+function exHome(){const r=exRole();return r==='driver'?'d-more':r==='admin'?'a-more':'p-more'}
+function exKm(m){return m<1000?Math.max(50,Math.round(m/50)*50)+' m':(m/1000).toFixed(m<10000?1:0)+' km'}
+function exNorm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim()}
+function exR2(n){return Math.round((Number(n)||0)*100)/100}
+function exNowHm(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+async function exDownload(filename,text,type){
+  if(typeof claude!=='undefined'&&claude&&claude.use&&!S.cloud){try{const dl=await claude.use('downloads');if(dl&&dl.save){await dl.save({filename,data:text});return 'saved'}}catch(e){}}
+  try{const url=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=url;a.download=filename;a.rel='noopener';a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove()},4000);return 'download'}catch(e){return null}}
+
+/* ---------- 7. text size: Normal / Large / Extra large, saved on this device ---------- */
+const EX_TS=[['n','Normal',15],['l','Large',18],['xl','Extra large',21]];
+function exTextSize(){const t=ls.get('enivel_textsize');return t==='l'||t==='xl'?t:'n'}
+function exApplyTextSize(t){const el=document.documentElement;if(t==='l'||t==='xl')el.setAttribute('data-ts',t);else el.removeAttribute('data-ts')}
+function exSetTextSize(t){if(!EX_TS.some(x=>x[0]===t))return;ls.set('enivel_textsize',t);exApplyTextSize(t);buzz();render();toast(t==='n'?'Normal text size':t==='l'?'Large text on':'Extra large text on')}
+exApplyTextSize(exTextSize());
+function exTextBlock(){const cur=exTextSize();return `<div class="ex-tsw"><div class="eyebrow" style="margin-top:14px">Text size</div><div class="ex-ts" role="radiogroup" aria-label="Text size">${EX_TS.map(([k,l,px])=>`<button type="button" role="radio" aria-checked="${cur===k}" class="${cur===k?'on':''}" data-ts="${k}" onclick="exSetTextSize('${k}')"><b style="font-size:${px}px">Aa</b><span>${l}</span></button>`).join('')}</div></div>`}
+
+/* ---------- 1. smart match on Find ---------- */
+function exMatchKid(){const u=me();const id=S.exMatchKid||S.findKid;const k=id&&Store.get('kids',id);return k&&u&&k.parentId===u.id?k:null}
+function exSameSchool(r,k){const ks=exNorm(k?.school);if(ks){const parts=String(r.schools||'').split(/[,;\/&]+/).map(exNorm).filter(Boolean);if(parts.some(p=>p===ks||(Math.min(p.length,ks.length)>=6&&(p.includes(ks)||ks.includes(p)))))return true}const a=k?.schoolGeo,b=r.schoolGeo;return !!(a&&b&&isFinite(a.lat)&&isFinite(b.lat)&&distM(a,b)<=300)}
+function exMatchFacts(r,k){const f={open:(+r.seats||0)-routeSeatsUsed(r.id),price:+r.price||0,sameSchool:exSameSchool(r,k)};
+  const area=r.areaGeo||r.pickupGeo;if(k?.geo&&isFinite(k.geo.lat)&&area&&isFinite(area.lat))f.dist=distM(k.geo,area);
+  if(f.dist==null&&k){const sub=exNorm(k.pickupAddr?.suburb||k.pickupAddr?.neighbourhood||'');const pick=' '+exNorm(k.pickup)+' ';const hit=String(r.area||'').split(/[,;\/&]+/).map(x=>x.trim()).filter(Boolean).find(a=>{const n=exNorm(a);return n.length>=4&&((sub&&sub===n)||pick.includes(' '+n+' '))});if(hit)f.serves=hit}
+  f.nR=Store.all('ratings').filter(x=>x.driverId===r.driverId).length;f.rating=f.nR?driverRating(r.driverId):0;f.onTime=onTimeScore(r.driverId);return f}
+function exMatchKey(f){return [f.open>0?0:1,f.sameSchool?0:1,f.dist!=null?(f.dist<=2000?0:f.dist<=5000?1:f.dist<=10000?2:3):(f.serves?1:3),-(f.nR?f.rating:0),-(f.onTime==null?-1:f.onTime),f.price]}
+function exCmp(a,b){for(let i=0;i<a.length;i++){if(a[i]<b[i])return -1;if(a[i]>b[i])return 1}return 0}
+function exReasons(f){const out=[];if(f.sameSchool)out.push(['school','Same school']);if(f.dist!=null)out.push(['pin',exKm(f.dist)+' from home']);else if(f.serves)out.push(['pin','Serves '+f.serves]);if(f.nR)out.push(['star',f.rating.toFixed(1)+'★']);if(f.onTime!=null)out.push(['check',f.onTime+'% on time']);if(f.open>0)out.push(['users',f.open+(f.open===1?' seat':' seats')+' left']);return out}
+function exIsGood(f){return f.open>0&&(f.sameSchool||(f.dist!=null&&f.dist<=5000)||!!f.serves||f.nR>0||f.onTime!=null)}
+function exMatchCard(kids){const k=exMatchKid();const miss=k&&(!k.geo||!k.school);
+  return `<div class="card ex-match" data-mount="exFind"><div class="row" style="gap:12px;flex-wrap:nowrap"><span class="ex-ic">${EX_IC.spark}</span><div style="min-width:0"><b>Smart match</b><div class="tiny muted">${k?`Best routes for ${h(k.name)} first`:'Pick a child to rank routes by fit'}</div></div></div>
+  <div class="ex-kids">${kids.map(x=>`<button type="button" class="kidchip ${k&&k.id===x.id?'on':''}" data-exkid="${h(x.id)}" aria-pressed="${!!(k&&k.id===x.id)}"><span class="avatar">${initials(x.name)}</span>${h(x.name)}</button>`).join('')}${k?`<button type="button" class="btn sm ghost" data-exkid="">Clear</button>`:''}</div>
+  ${miss?`<div class="ex-hint"><span>${!k.geo&&!k.school?`Add ${h(k.name)}'s school and pickup pin for better matches.`:!k.geo?`Pin ${h(k.name)}'s pickup address to see distances.`:`Add ${h(k.name)}'s school to find same-school routes.`}</span><button type="button" class="btn sm ghost" data-exedit="${h(k.id)}">Edit ${h(k.name)}</button></div>`:''}</div>`}
+MOUNT.exFind=el=>{
+  el.querySelectorAll('[data-exkid]').forEach(b=>b.onclick=()=>{const id=b.dataset.exkid;buzz();const cur=exMatchKid();if(!id||(cur&&cur.id===id)){S.exMatchKid=null;S.findKid=null;if(S.filters.sort==='match')S.filters.sort=''}else{const k=Store.get('kids',id);S.exMatchKid=id;S.findKid=k&&!bookingOf(k)?id:null;if(!S.filters.sort)S.filters.sort='match'}render()});
+  el.querySelectorAll('[data-exedit]').forEach(b=>b.onclick=()=>addKid(b.dataset.exedit));
+  const k=exMatchKid();if(!k)return;
+  const items=[...document.querySelectorAll('main i[data-exrid]')].map((m,i)=>({m,i,card:m.nextElementSibling,r:routeOf(m.dataset.exrid)})).filter(x=>x.card&&x.r&&x.card.classList.contains('card'));if(!items.length)return;
+  items.forEach(x=>x.f=exMatchFacts(x.r,k));
+  const ranked=[...items].sort((a,b)=>exCmp(exMatchKey(a.f),exMatchKey(b.f))||a.i-b.i);
+  const prices=items.map(x=>x.f.price).filter(p=>p>0);const minP=prices.length?Math.min(...prices):0;const cheapest=items.filter(x=>x.f.price===minP).length<items.length;
+  const parent=items[0].m.parentNode;
+  if(!['price','rating'].includes(S.filters.sort)&&items.every(x=>x.m.parentNode===parent&&x.card.parentNode===parent))ranked.forEach(x=>{parent.appendChild(x.m);parent.appendChild(x.card)});
+  ranked.forEach((x,i)=>{const rs=exReasons(x.f);if(cheapest&&x.f.price===minP)rs.push(['money','Lowest price']);x.card.dataset.exrank=i+1;
+    if(i===0&&exIsGood(x.f)){x.card.classList.add('ex-top');x.card.insertAdjacentHTML('afterbegin',`<div class="ex-best"><span class="ex-badge">${EX_IC.spark}Best match</span><span class="ex-reasons">${rs.map(r=>h(r[1])).join(' · ')}</span></div>`)}
+    else if(rs.length){const hd=x.card.querySelector('.row.between');const html=`<div class="ex-why ex-reasons">${rs.map(([ic,t])=>`<span>${ICON[ic]||''}${h(t)}</span>`).join('')}</div>`;hd?hd.insertAdjacentHTML('afterend',html):x.card.insertAdjacentHTML('beforeend',html)}})};
+/* parents see free/taken seat counts on route cards (no names) */
+function exSeatStrip(r){const n=+r.seats||0;if(!n||n>24)return '';const used=Math.max(0,Math.min(n,routeSeatsUsed(r.id)));return ` <span class="ex-strip" role="img" title="${used} taken · ${n-used} free" aria-label="${used} seats taken, ${n-used} free">${'<i class="t"></i>'.repeat(used)}${'<i></i>'.repeat(n-used)}</span>`}
+const _exRouteCard=routeCard;routeCard=function(r,kids){let html=_exRouteCard(r,kids);try{const strip=exSeatStrip(r);if(strip)html=html.replace(/(<span class="pill (?:live|bad)">(?:\d+ of \d+ seats open|Full)<\/span>)/,'$1'+strip)}catch(e){}return `<i hidden data-exrid="${h(r.id)}"></i>`+html};
+const _exPFind=VIEWS['p-find'];VIEWS['p-find']=()=>{let html=_exPFind();try{const u=me();if(!u)return html;const kids=kidsOf(u.id);if(!kids.length)return html;
+  if(S.filters.sort==='match'&&!exMatchKid()){const pick=kids.find(k=>!bookingOf(k))||kids[0];S.exMatchKid=pick.id}
+  html=html.replace('<option value="">Newest</option>',`<option value="">Newest</option><option value="match" ${S.filters.sort==='match'?'selected':''}>Best match</option>`);
+  const i=html.indexOf('<div class="grid g2">');if(i<0)return html;return html.slice(0,i)+exMatchCard(kids)+html.slice(i)}catch(e){console.warn('extras find',e);return html}};
+/* route form: keep the picked area / school location so distances are real */
+const _exAddRoute=addRoute;addRoute=function(id){const res=_exAddRoute(id);try{const m=$('.modal');const b=m&&$('#r-save',m);if(b&&!b.dataset.exgeo){b.dataset.exgeo='1';const orig=b.onclick;const old=id?routeOf(id):null;
+  b.onclick=async e=>{const g=x=>{try{return x&&x.dataset.geo?JSON.parse(x.dataset.geo):null}catch(er){return null}};const ag=g($('#r-area',m)),sg=g($('#r-sch',m));const areaTxt=val(m,'r-area'),schTxt=val(m,'r-sch');const before=new Set(myRoutes().map(r=>r.id));
+    await orig.call(b,e);if(document.body.contains(m))return;
+    const r=id?routeOf(id):myRoutes().filter(x=>!before.has(x.id)).sort((a,c)=>(c.createdAt||0)-(a.createdAt||0))[0];if(!r)return;const p={};const pt=x=>({lat:+x.lat,lng:+x.lng,label:String(x.label||'').slice(0,140)});
+    if(ag&&isFinite(ag.lat)&&isFinite(ag.lng))p.areaGeo=pt(ag);else if(old&&old.areaGeo&&areaTxt!==old.area)p.areaGeo=null;
+    if(sg&&isFinite(sg.lat)&&isFinite(sg.lng))p.schoolGeo=pt(sg);else if(old&&old.schoolGeo&&schTxt!==old.schools)p.schoolGeo=null;
+    if(Object.keys(p).length)await Store.patch('routes',r.id,p)}}}catch(e){console.warn('extras route geo',e)}return res};
+
+/* ---------- 2. calendar export (.ics, Africa/Johannesburg) ---------- */
+function exHm(s){return /^\d{1,2}:\d{2}$/.test(s||'')?String(s).padStart(5,'0'):null}
+function exAddMin(hm,min){const [H,M]=hm.split(':').map(Number);const t=Math.min(H*60+M+min,23*60+59);return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')}
+function exEnd(start,end,def){return end&&end>start?end:exAddMin(start,def||45)}
+function exDays(from,n){const [y,m,d]=from.split('-').map(Number);const out=[];for(let i=0;i<n;i++){const dt=new Date(y,m-1,d+i,12);out.push({key:localKey(dt),dow:dt.getDay()})}return out}
+function exSchoolDay(day){return day.dow>=1&&day.dow<=5&&!(typeof SA_HOLIDAYS!=='undefined'&&SA_HOLIDAYS[day.key])}
+function exPmTime(s,day){if(!s)return null;let pm=exHm(s.regular?.schoolPickup),exam=false;if(s.exam&&s.exam.from&&s.exam.to&&day.key>=s.exam.from&&day.key<=s.exam.to&&(s.exam.days||[]).includes(day.dow)&&exHm(s.exam.schoolPickup)){pm=exHm(s.exam.schoolPickup);exam=true}return pm?{pm,exam}:null}
+/* every ride of the signed-in parent or driver in a date window; skips weekends, SA public holidays, absences, term breaks and driver off days */
+function exRides(opts){opts=opts||{};const u=me();if(!u)return [];const role=opts.role||exRole();const out=[];
+  for(const day of exDays(opts.from||localKey(),opts.days||28)){const school=exSchoolDay(day);
+    if(role==='driver'){if((u.offDays||[]).includes(day.key))continue;const groups={};
+      if(school)for(const b of activeBookings(x=>x.driverId===u.id&&!x.once)){const k=Store.get('kids',b.kidId),r=routeOf(b.routeId);if(!k||!r||isAbsent(k,day.key))continue;const s=b.schedule?.status==='agreed'?b.schedule:null;const reg=s?.regular||{};
+        const am=exHm(reg.homePickup)||exHm(r.pickupTime);if(am){const g=groups[r.id+'am']||(groups[r.id+'am']={uid:`r-${r.id}-${day.key}-am`,day:day.key,start:am,end:null,title:`${r.name||'Route'}: morning run`,where:r.area||'',kids:[]});if(am<g.start)g.start=am;const e=exHm(reg.schoolDrop)||exHm(r.dropoffTime);if(e&&(!g.end||e>g.end))g.end=e;g.kids.push(k.name+' '+am)}
+        const p=exPmTime(s,day);if(p){const g=groups[r.id+'pm']||(groups[r.id+'pm']={uid:`r-${r.id}-${day.key}-pm`,day:day.key,start:p.pm,end:null,title:`${r.name||'Route'}: afternoon run`,where:r.schools||'',kids:[],exam:false});if(p.pm<g.start)g.start=p.pm;const e=exHm(reg.homeDrop);if(e&&(!g.end||e>g.end))g.end=e;if(p.exam)g.exam=true;g.kids.push(k.name+' '+p.pm+(p.exam?' (exam)':''))}}
+      for(const g of Object.values(groups))out.push({uid:g.uid,day:g.day,start:g.start,end:exEnd(g.start,g.end,60),title:g.title+(g.exam?' (exam time)':''),where:g.where,note:'Pick up: '+g.kids.join(', ')});
+      for(const b of Store.all('bookings').filter(x=>x.once&&x.driverId===u.id&&x.status==='trip'&&x.date===day.key&&exHm(x.time))){const k=Store.get('kids',b.kidId);const t=exHm(b.time);out.push({uid:`b-${b.id}-${day.key}-once`,day:day.key,start:t,end:exAddMin(t,60),title:`Once-off trip${k?': '+k.name:''}`,where:b.from||'',note:`To ${b.to||''} · ${userName(b.parentId)}`})}
+    }else{
+      for(const b of Store.all('bookings').filter(x=>x.parentId===u.id)){const k=Store.get('kids',b.kidId);if(!k)continue;const drv=Store.get('users',b.driverId);if((drv?.offDays||[]).includes(day.key))continue;const r=routeOf(b.routeId);
+        if(b.once){if(b.status==='trip'&&b.date===day.key&&exHm(b.time)){const t=exHm(b.time);out.push({uid:`b-${b.id}-${day.key}-once`,day:day.key,start:t,end:exAddMin(t,45),title:`${k.name}: once-off trip`,where:b.from||'',note:`To ${b.to||''} · ${drv?.name||'Driver'}`})}continue}
+        if(b.status!=='active'||!school||!r||isAbsent(k,day.key))continue;const s=b.schedule?.status==='agreed'?b.schedule:null;const reg=s?.regular||{};const who=[drv?.name,[r.vehicleLabel,r.plate].filter(Boolean).join(' ')].filter(Boolean).join(' · ');
+        const am=exHm(reg.homePickup)||exHm(r.pickupTime);if(am)out.push({uid:`b-${b.id}-${day.key}-am`,day:day.key,start:am,end:exEnd(am,exHm(reg.schoolDrop)||exHm(r.dropoffTime)),title:`${k.name}: home → school`,where:k.pickup||'',note:who});
+        const p=exPmTime(s,day);if(p){const sec=s.second&&(s.second.days||[]).includes(day.dow)?s.second:null;out.push({uid:`b-${b.id}-${day.key}-pm`,day:day.key,start:p.pm,end:exEnd(p.pm,exHm(reg.homeDrop)),title:`${k.name}: school → home${p.exam?' (exam time)':''}`,where:k.school||'',note:who+(sec?` · Then ${sec.location||''}${sec.time?' at '+sec.time:''}`:'')})}}}}
+  return out.sort((a,b)=>(a.day+a.start).localeCompare(b.day+b.start))}
+function exIcsEsc(s){return String(s??'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n')}
+function exFold(line){const enc=new TextEncoder();const parts=[];let cur='',n=0,lim=75;for(const ch of line){const b=enc.encode(ch).length;if(n+b>lim){parts.push(cur);cur='';n=0;lim=74}cur+=ch;n+=b}parts.push(cur);return parts.join('\r\n ')}
+function exIcsText(rides){const stamp=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');const dt=(d,t)=>d.replace(/-/g,'')+'T'+t.replace(':','')+'00';
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Enivel//Scholar rides//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:Enivel rides','X-WR-TIMEZONE:Africa/Johannesburg','BEGIN:VTIMEZONE','TZID:Africa/Johannesburg','BEGIN:STANDARD','DTSTART:19700101T000000','TZOFFSETFROM:+0200','TZOFFSETTO:+0200','TZNAME:SAST','END:STANDARD','END:VTIMEZONE'];
+  for(const r of rides)L.push('BEGIN:VEVENT','UID:'+exIcsEsc(r.uid)+'@enivel.co.za','DTSTAMP:'+stamp,'DTSTART;TZID=Africa/Johannesburg:'+dt(r.day,r.start),'DTEND;TZID=Africa/Johannesburg:'+dt(r.day,r.end),'SUMMARY:'+exIcsEsc(r.title),...(r.where?['LOCATION:'+exIcsEsc(r.where)]:[]),...(r.note?['DESCRIPTION:'+exIcsEsc(r.note)]:[]),'TRANSP:OPAQUE','END:VEVENT');
+  L.push('END:VCALENDAR');return L.map(exFold).join('\r\n')+'\r\n'}
+function exIcsBuild(opts){const rides=exRides(opts);return {rides,text:exIcsText(rides)}}
+function exDayRow(r){const d=new Date(r.day+'T12:00:00');return `<div class="ex-day"><div class="d">${d.getDate()}<small>${d.toLocaleDateString('en-ZA',{weekday:'short'})}</small></div><div class="grow"><b>${h(r.start)}–${h(r.end)}</b> · ${h(r.title)}${r.where?`<div class="tiny muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h(r.where)}</div>`:''}</div></div>`}
+function exCalModal(){const u=me();if(!u)return;const role=exRole();const rides=exRides();const days=new Set(rides.map(r=>r.day));const now=localKey(),hm=exNowHm();const next=rides.filter(r=>r.day>now||(r.day===now&&r.end>=hm)).slice(0,4);
+  const waiting=role!=='driver'&&activeBookings(b=>b.parentId===u.id&&!b.once).some(b=>b.schedule?.status!=='agreed');
+  modal(`<div class="row" style="gap:12px;flex-wrap:nowrap"><span class="ex-ic cool">${EX_IC.cal}</span><div><h3>Rides in your calendar</h3><p class="tiny muted">Next 4 weeks · South African time</p></div></div>
+  <div class="ex-calsum"><div><div class="num">${rides.length}</div><div class="tiny muted">ride${rides.length===1?'':'s'}</div></div><div><div class="num">${days.size}</div><div class="tiny muted">day${days.size===1?'':'s'}</div></div></div>
+  ${next.length?`<div class="eyebrow" style="margin-top:14px">Coming up</div><div>${next.map(exDayRow).join('')}</div>`:`<p class="muted small" style="margin-top:14px">No booked rides in the next 4 weeks.</p>`}
+  <p class="tiny muted" style="margin-top:12px">Weekends, public holidays, days off, school holidays and driver off days are left out.${waiting?' Afternoon rides appear once your driver accepts your times.':''}</p>
+  <button class="btn wide" id="ex-ics" style="margin-top:14px" ${rides.length?'':'disabled'}>${EX_IC.dl} Download calendar file</button><p class="tiny muted" style="text-align:center;margin-top:8px">Open it to add to Google, Apple or Outlook calendar.</p>`,m=>{$('#ex-ics',m).onclick=async()=>{const r=await exDownload(`enivel-rides-${localKey()}.ics`,exIcsText(exRides()),'text/calendar;charset=utf-8');buzz();toast(r?'Calendar file ready':'Download is not available here')}})}
+
+/* ---------- 3. driver earnings forecast & monthly goal (same numbers as Earnings and fees) ---------- */
+function exEarnInfo(){const u=me();const m=monthKey();
+  const received=exR2(typeof monthMoney==='function'?monthMoney(m).earned:Store.all('transactions').filter(t=>t.to===u.id&&t.month===m).reduce((s,t)=>s+t.amount,0));
+  const monthly=activeBookings(b=>b.driverId===u.id&&!b.once);const paid=b=>typeof bookingPaidFor==='function'?bookingPaidFor(b,m):Store.all('transactions').some(t=>t.bookingId===b.id&&t.month===m&&(t.type==='subscription'||t.type==='sponsorship'));
+  const pend=monthly.filter(b=>!paid(b));const pending=exR2(pend.reduce((s,b)=>s+(+b.price||0),0));const expected=exR2(received+pending);
+  const pax=driverPassengers(u.id);const slots=typeof parkingSlotsNeeded==='function'?parkingSlotsNeeded(u.id):0;const fees=exR2((pax?DRIVER_FEE:0)+slots*PARKING_FEE);
+  const prices=monthly.map(b=>+b.price||0).filter(x=>x>0);const routes=myRoutes().filter(r=>r.active);const rp=routes.map(r=>+r.price||0).filter(x=>x>0);
+  const avg=prices.length?exR2(prices.reduce((a,b)=>a+b,0)/prices.length):rp.length?exR2(rp.reduce((a,b)=>a+b,0)/rp.length):null;
+  const openSeats=routes.reduce((s,r)=>s+Math.max(0,(+r.seats||0)-routeSeatsUsed(r.id)),0);
+  return {month:m,received,pending,pendingN:pend.length,expected,fees,net:exR2(expected-fees),pax,avg,plusOne:avg!=null?exR2(avg-(pax?0:DRIVER_FEE)):null,openSeats,goal:+u.earnGoal>0?+u.earnGoal:0,routes:routes.length}}
+function exEarnCard(){const e=exEarnInfo();const g=e.goal;const R=44,C=+(2*Math.PI*R).toFixed(2);const base=g||e.expected||1;const pa=Math.min(1,e.received/base),pe=Math.min(1,e.expected/base);
+  const pct=g?Math.round(e.received/g*100):e.expected?Math.round(e.received/e.expected*100):0;
+  const ring=`<svg class="ex-ring" viewBox="0 0 104 104" role="img" aria-label="${pct}% ${g?'of your goal received':'received'}"><defs><linearGradient id="exg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#6d5dfc"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><circle cx="52" cy="52" r="${R}" fill="none" stroke="var(--bg3)" stroke-width="10"/>${pe>0?`<circle cx="52" cy="52" r="${R}" fill="none" stroke="color-mix(in srgb,var(--acc) 26%,transparent)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${(C*(1-pe)).toFixed(2)}" transform="rotate(-90 52 52)"/>`:''}${pa>0?`<circle class="a" style="--full:${C}" cx="52" cy="52" r="${R}" fill="none" stroke="url(#exg)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${(C*(1-pa)).toFixed(2)}" transform="rotate(-90 52 52)"/>`:''}<text x="52" y="55" text-anchor="middle" font-size="21" font-weight="800" fill="var(--fg)">${pct}%</text><text x="52" y="72" text-anchor="middle" font-size="10" font-weight="600" fill="var(--fg3)">${g?'of goal':'received'}</text></svg>`;
+  const more=g&&e.expected<g&&e.avg?Math.ceil((g-e.expected)/e.avg):0;
+  const goal=g?(e.expected>=g?`<div class="ex-tip goal">${EX_IC.target}<div><b>On track for your ${money(g)} goal</b><div class="tiny muted">Expected ${money(e.expected)} this month.</div></div></div>`:`<div class="ex-tip goal">${EX_IC.target}<div><b class="ex-short">${money(g-e.expected)} short of your goal</b>${more?`<div class="tiny muted">About ${more} more passenger${more===1?'':'s'} at ${money(e.avg)}.</div>`:''}</div></div>`):'';
+  const tip=e.openSeats>0&&e.plusOne>0?`<div class="ex-tip">${EX_IC.up}<div><b class="ex-plus">1 more passenger ≈ +${money(e.plusOne)}</b><span class="tiny muted"> /month${e.pax?'':' after the R100 fee'}</span><div class="tiny muted">${e.openSeats} open seat${e.openSeats===1?'':'s'} on your routes</div></div></div>`:e.routes&&e.openSeats===0?`<div class="ex-tip">${EX_IC.up}<div><b>Your routes are full</b><div class="tiny muted">Add seats or a new route to grow.</div></div></div>`:'';
+  return `<div class="card ex-earncard"><div class="row between" style="gap:8px"><div class="row" style="gap:10px;flex-wrap:nowrap;min-width:0"><span class="ex-ic green">${EX_IC.up}</span><div style="min-width:0"><h3>${new Date().toLocaleDateString('en-ZA',{month:'long'})} forecast</h3><div class="tiny muted">From your active bookings</div></div></div><button class="btn sm ghost" onclick="exGoalModal()">${EX_IC.target} ${g?'Goal':'Set goal'}</button></div>
+  <div class="ex-earn">${ring}<div class="grow"><div class="eyebrow">Expected income</div><div class="num ex-exp" style="font-size:1.6rem">${money(e.expected)}</div><div class="ex-kv"><span>Received</span><b class="ex-rec">${money(e.received)}</b><span>Still to come${e.pendingN?` (${e.pendingN})`:''}</span><b class="ex-pend">${money(e.pending)}</b><span>Enivel fees</span><b class="ex-fees">−${money(e.fees)}</b><span class="tot">After fees</span><b class="tot ex-net">${money(e.net)}</b></div></div></div>${goal}${tip}</div>`}
+function exGoalModal(){const u=me();if(!u)return;const e=exEarnInfo();modal(`<div class="row" style="gap:12px;flex-wrap:nowrap"><span class="ex-ic">${EX_IC.target}</span><div><h3>Monthly goal</h3><p class="tiny muted">What you want to earn each month.</p></div></div>
+  <div class="field" style="margin-top:14px"><label for="ex-g">Goal (R)</label><input id="ex-g" type="number" inputmode="numeric" min="1" step="50" value="${u.earnGoal||''}" placeholder="e.g. 15000"></div><p class="tiny muted" style="margin-top:6px">Expected this month: ${money(e.expected)}</p>
+  <div class="row" style="margin-top:14px"><button class="btn" id="ex-gs">Save goal</button>${u.earnGoal?'<button class="btn ghost" id="ex-gr">Remove</button>':''}</div>`,m=>{$('#ex-gs',m).onclick=async()=>{const v=Math.round(+val(m,'ex-g'));if(!(v>0&&v<=10000000))return toast('Enter an amount in rand');await Store.patch('users',u.id,{earnGoal:v});closeModal();buzz();toast('Goal saved')};const r=$('#ex-gr',m);if(r)r.onclick=async()=>{await Store.patch('users',u.id,{earnGoal:null});closeModal();toast('Goal removed')}})}
+
+/* ---------- 4. seat map ---------- */
+/* rows: front row has the driver on the right (South Africa); buses get an aisle */
+function exSeatRows(n,vs){vs=Math.max(n,+vs||n);const bus=vs>16;const cols=bus?5:3;const rows=[];let s=1;const front=new Array(cols).fill(null);front[cols-1]='D';const fs=bus?1:vs>=9?2:1;for(let i=0;i<fs&&s<=n;i++)front[i]=s++;rows.push(front);
+  while(s<=n){const row=[];for(let c=0;c<cols;c++){if(bus&&c===2){row.push('A');continue}row.push(s<=n?s++:null)}rows.push(row)}return {cols,rows}}
+function exSeatOrder(n,vs){const {rows}=exSeatRows(n,vs);const num=x=>typeof x==='number';return [...rows.slice(1).flat().filter(num),...rows[0].filter(num)]}
+function exVan(n,vs,cell){const {cols,rows}=exSeatRows(n,vs);return `<div class="ex-van" style="--c:${cols}">${rows.map(row=>`<div class="ex-r">${row.map(s=>s===null||s==='A'?'<span class="ex-sp"></span>':s==='D'?`<span class="ex-seat drv" role="img" aria-label="Driver">${EX_IC.wheel}</span>`:cell(s)).join('')}</div>`).join('')}</div>`}
+function exSeatMapClean(r,kidIds){const n=+r.seats||0;const out={};const used=new Set();for(const [s,id] of Object.entries(r.seatMap||{})){const k=+s;if(!(k>=1&&k<=n)||!kidIds.includes(id)||used.has(id))continue;out[String(k)]=id;used.add(id)}return out}
+function exSeatCount(r){return Object.keys(exSeatMapClean(r,activeBookings(b=>b.routeId===r.id&&!b.once).map(b=>b.kidId))).length}
+function exSeatModal(routeId){const r=routeOf(routeId);const u=me();if(!r||!u||(r.driverId!==u.id&&!S.admin))return;const n=+r.seats||0;if(!n)return toast('Set the seats on this route first');const v=Store.get('vehicles',r.vehicleId);
+  const kids=activeBookings(b=>b.routeId===routeId&&!b.once).map(b=>Store.get('kids',b.kidId)).filter(Boolean);const ids=kids.map(k=>k.id);let map=exSeatMapClean(r,ids);let sel=null;
+  const seatOf=id=>Object.keys(map).find(s=>map[s]===id);
+  const draw=m=>{const box=$('#ex-sm',m),pick=$('#ex-pick',m);
+    box.innerHTML=exVan(n,v?.seats,s=>{const k=map[s]&&Store.get('kids',map[s]);return `<button type="button" class="ex-seat ${k?'t':''} ${sel===String(s)?'sel':''}" data-seat="${s}" aria-label="Seat ${s}${k?', '+h(k.name):', free'}">${k?`<b>${h(k.name.split(' ')[0])}</b>${s}`:s}</button>`})+`<div class="ex-legend"><span><i class="t"></i>Seated</span><span><i></i>Free</span><span>${Object.keys(map).length}/${kids.length} seated</span></div>`;
+    const un=kids.filter(k=>!seatOf(k.id));
+    pick.innerHTML=sel?`<div class="ex-pick"><b>Seat ${sel}</b><span class="tiny muted"> · pick a child</span><div class="ex-who" style="margin:8px 0 0">${kids.map(k=>`<button type="button" class="kidchip ${map[sel]===k.id?'on':''}" data-pk="${h(k.id)}"><span class="avatar">${initials(k.name)}</span>${h(k.name)}${seatOf(k.id)&&map[sel]!==k.id?` <span class="tiny muted">· seat ${seatOf(k.id)}</span>`:''}</button>`).join('')}${map[sel]?'<button type="button" class="btn sm ghost" data-pk="">Empty seat</button>':''}</div></div>`
+      :kids.length?(un.length?`<div class="ex-pick"><div class="tiny muted">Not seated yet · tap to seat</div><div class="ex-who" style="margin:8px 0 0">${un.map(k=>`<button type="button" class="kidchip" data-un="${h(k.id)}"><span class="avatar">${initials(k.name)}</span>${h(k.name)}</button>`).join('')}</div></div>`:`<p class="small" style="margin-top:10px;color:var(--live);text-align:center">Everyone has a seat</p>`):`<p class="muted small" style="margin-top:10px;text-align:center">No passengers booked yet.</p>`;
+    box.querySelectorAll('[data-seat]').forEach(b=>b.onclick=()=>{const s=b.dataset.seat;sel=sel===s?null:s;buzz(8);draw(m)});
+    pick.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{const id=b.dataset.pk;if(id){for(const s of Object.keys(map))if(map[s]===id)delete map[s];map[sel]=id}else delete map[sel];sel=null;buzz();draw(m)});
+    pick.querySelectorAll('[data-un]').forEach(b=>b.onclick=()=>{const free=exSeatOrder(n,v?.seats).find(s=>!map[String(s)]);if(!free)return toast('No free seats');map[String(free)]=b.dataset.un;buzz();draw(m)})};
+  modal(`<div class="row" style="gap:12px;flex-wrap:nowrap"><span class="ex-ic">${EX_IC.seat}</span><div style="min-width:0"><h3>Seats · ${h(r.name||'Route')}</h3><p class="tiny muted">Tap a seat, then a child. Parents only see free and taken seats.</p></div></div><div id="ex-sm"></div><div id="ex-pick"></div>
+  <div class="row" style="margin-top:14px"><button class="btn" id="ex-ssave">Save seats</button>${kids.length?'<button class="btn ghost" id="ex-sauto">Auto-fill</button>':''}</div>`,m=>{draw(m);
+    $('#ex-ssave',m).onclick=async()=>{$('#ex-ssave',m).disabled=true;await Store.patch('routes',routeId,{seatMap:{...map}});closeModal();buzz([12,40,12]);toast('Seats saved')};
+    const a=$('#ex-sauto',m);if(a)a.onclick=()=>{const order=(r.order||[]).map(bid=>Store.get('bookings',bid)?.kidId).filter(id=>ids.includes(id));for(const id of ids)if(!order.includes(id))order.push(id);const seats=exSeatOrder(n,v?.seats);for(const id of order){if(seatOf(id))continue;const free=seats.find(s=>!map[String(s)]);if(!free)break;map[String(free)]=id}sel=null;buzz();draw(m)}})}
+/* parent: their own child's seat + free/taken counts, never other names */
+function exSeatCardParent(b){const r=routeOf(b.routeId);const k=Store.get('kids',b.kidId);if(!r||!k)return '';const n=+r.seats||0;if(!n)return '';const v=Store.get('vehicles',r.vehicleId);const seat=Object.entries(r.seatMap||{}).find(([s,id])=>id===k.id&&+s>=1&&+s<=n)?.[0];const used=Math.max(0,Math.min(n,routeSeatsUsed(r.id)));
+  return `<div class="card ex-myseat"><div class="row between"><h3>Seat</h3><span class="pill">${used} taken · ${n-used} free</span></div>${exVan(n,v?.seats,s=>String(s)===seat?`<span class="ex-seat me" role="img" aria-label="Seat ${s}, ${h(k.name)}"><b>${initials(k.name)}</b>${s}</span>`:`<span class="ex-seat" role="img" aria-label="Seat ${s}">${s}</span>`)}<p class="small" style="margin-top:8px;text-align:center">${seat?`<b>${h(k.name)}</b> sits in seat ${seat}.`:`${h(userName(r.driverId).split(' ')[0])} hasn't given ${h(k.name)} a seat yet.`}</p></div>`}
+
+/* ---------- 5. lost & found (messages + notifications) ---------- */
+function exLostAll(){const u=me();if(!u)return [];return Store.all('messages').filter(m=>m&&m.lost&&typeof m.lost==='object'&&(m.from===u.id||m.to===u.id))}
+function exLostReports(){return exLostAll().filter(m=>m.lost.kind==='lost'||m.lost.kind==='found').sort((a,b)=>b.ts-a.ts)}
+function exLostStatus(rep){const rs=exLostAll().filter(m=>m.lost.kind==='reply'&&m.lost.ref===rep.id&&(m.from===rep.from||m.from===rep.to)).sort((a,b)=>a.ts-b.ts);return rs.length?rs[rs.length-1].lost.status:null}
+function exLostChoices(role){const u=me();const now=Date.now();const out=[];const seen=new Set();
+  for(const b of Store.all('bookings').filter(b=>(role==='driver'?b.driverId===u.id:b.parentId===u.id)&&(b.status==='active'||(b.once&&['trip','done'].includes(b.status)&&now-(b.startedAt||0)<30*864e5)))){const k=Store.get('kids',b.kidId);const other=role==='driver'?b.parentId:b.driverId;if(!k||!other)continue;const key=k.id+'|'+other;if(seen.has(key))continue;seen.add(key);out.push({b,k,other})}return out}
+function exLostForm(kind,bookingId){const u=me();if(!u)return;const found=kind==='found';const ch=exLostChoices(found?'driver':'parent');const title=found?'Found an item':'Left something in the car?';
+  if(!ch.length)return modal(`<h3>${title}</h3><p class="muted small" style="margin:8px 0 14px">${found?'You need a booked passenger first.':'You need a booked ride first.'}</p><button class="btn wide" onclick="closeModal()">OK</button>`);
+  let sel=Math.max(0,ch.findIndex(c=>c.b.id===bookingId));
+  modal(`<div class="row" style="gap:12px;flex-wrap:nowrap"><span class="ex-ic warm">${EX_IC.bag}</span><div style="min-width:0"><h3>${title}</h3><p class="tiny muted">${found?'The parent gets a message and an alert.':'Your driver gets a message and an alert.'}</p></div></div>
+  <div class="ex-who" id="ex-lw">${ch.map((c,i)=>`<button type="button" class="kidchip ${i===sel?'on':''}" data-i="${i}"><span class="avatar">${initials(c.k.name)}</span>${h(c.k.name)} <span class="tiny muted">· ${h(String(userName(c.other)).split(' ')[0])}</span></button>`).join('')}</div>
+  <div class="stack"><div class="field"><label for="ex-li">${found?'What did you find?':'What was left behind?'}</label><input id="ex-li" maxlength="80" autocomplete="off" placeholder="${found?'e.g. Green school jersey':'e.g. Blue lunchbox'}"></div>
+  ${found?'<div class="field"><label for="ex-ln">Note for the parent (optional)</label><input id="ex-ln" maxlength="120" autocomplete="off" placeholder="e.g. Bringing it tomorrow"></div>':`<div class="field"><label for="ex-ld">When? (optional)</label><input id="ex-ld" type="date" max="${localKey()}" value="${localKey()}"></div>`}
+  ${photoBox('ex-lp','Add a photo (optional)')}
+  <button class="btn wide" id="ex-lgo">${found?'Tell the parent':'Tell my driver'}</button></div>`,m=>{bindPhotos(m);
+    m.querySelectorAll('#ex-lw .kidchip').forEach(b=>b.onclick=()=>{sel=+b.dataset.i;m.querySelectorAll('#ex-lw .kidchip').forEach(x=>x.classList.toggle('on',x===b))});
+    $('#ex-lgo',m).onclick=async()=>{const item=val(m,'ex-li').trim().slice(0,80);if(!item)return toast(found?'Say what you found':'Say what was left behind');const c=ch[sel];const raw=$('#ex-lp',m)?.dataset.url||null;const photo=raw&&safeImg(raw)?raw:null;const btn=$('#ex-lgo',m);btn.disabled=true;btn.textContent='Sending…';
+      const extra=found?val(m,'ex-ln').trim().slice(0,120):val(m,'ex-ld');const when=!found&&extra&&extra!==localKey()?' on '+new Date(extra+'T12:00:00').toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'}):'';
+      const text=found?`🎒 I found ${item} in the car (${c.k.name}).${extra?' '+extra:''}`:`🎒 ${c.k.name} left ${item} in the car${when}. Please check.`;
+      await Store.put('messages',uid(),{from:u.id,to:c.other,text,ts:Date.now(),read:false,lost:{kind,item,kidId:c.k.id,bookingId:c.b.id,photo,day:found?null:(extra||null),note:found?(extra||null):null}});
+      await notify(c.other,found?`🎒 ${u.name} found ${item} in the car (${c.k.name}).`:`🎒 ${u.name}: ${c.k.name} left ${item} in your car.`,'info','lost-found');
+      closeModal();buzz([12,40,12]);toast(found?'Parent told':'Driver told');go('lost-found')}})}
+function exLostModal(bookingId){return exLostForm('lost',bookingId)}
+function exFoundModal(bookingId){return exLostForm('found',bookingId)}
+async function exLostReply(id,status){const u=me();const m=Store.get('messages',id);if(!u||!m||!m.lost||(m.from!==u.id&&m.to!==u.id))return;const other=m.from===u.id?m.to:m.from;const L=m.lost;const k=Store.get('kids',L.kidId);const t={found:`✅ Found it: ${L.item}`,notfound:`❌ ${L.item} isn't in the car`,returned:`🏠 ${L.item} is back home`}[status];if(!t)return;
+  await Store.put('messages',uid(),{from:u.id,to:other,text:t+(k?` (${k.name})`:'')+'.',ts:Date.now(),read:false,lost:{kind:'reply',ref:id,status}});await notify(other,`${u.name}: ${t}`,'info','lost-found');buzz();toast('Sent')}
+function exLostRow(m){const u=me();const L=m.lost||{};const mine=m.from===u.id;const other=mine?m.to:m.from;const k=Store.get('kids',L.kidId);const st=exLostStatus(m);const isLost=L.kind==='lost';
+  const lbl={found:['live','Found'],notfound:['bad','Not in the car'],returned:['info','Back home']}[st]||(isLost?(mine?['warn','Waiting for driver']:['warn','New']):(mine?['warn','Parent told']:['warn','New']));
+  const ph=safeImg(L.photo);const acts=[];
+  if(st!=='returned'){if(isLost&&!mine&&st!=='found')acts.push(['found','Found it'],['notfound','Not in the car']);else if(isLost&&mine&&st==='found')acts.push(['returned','Got it back']);else if(!isLost)acts.push(['returned',mine?'Handed back':'Got it back'])}
+  return `<div class="ex-lf" data-exid="${h(m.id)}">${ph?`<button type="button" class="ph" data-exzoom="${h(m.id)}" aria-label="View photo"><img src="${ph}" alt=""></button>`:`<span class="noph">${EX_IC.bag}</span>`}<div class="grow"><div class="row between" style="gap:6px;align-items:flex-start;flex-wrap:nowrap"><b style="min-width:0;overflow-wrap:anywhere">${h(L.item||'Item')}</b><span class="pill ${lbl[0]}">${lbl[1]}</span></div><div class="tiny muted">${isLost?(mine?'You reported':'From '+h(userName(other))):(mine?'You found it':'Found by '+h(userName(other)))}${k?' · '+h(k.name):''} · ${fmtDT(m.ts)}</div>${L.note?`<div class="small" style="margin-top:4px">${h(L.note)}</div>`:''}<div class="acts">${acts.map(([s,t])=>`<button type="button" class="btn sm ${s==='notfound'?'ghost':''}" data-exl="${h(m.id)}" data-exs="${s}">${t}</button>`).join('')}<button type="button" class="btn sm ghost" data-exchat="${h(other)}">${ICON.chat} Chat</button></div></div></div>`}
+VIEWS['lost-found']=()=>{const u=me();if(!u)return VIEWS.landing();const isD=exRole()==='driver';const reps=exLostReports();
+  return `<div class="stack" style="gap:16px">${pageHead('Lost & found','',`<button class="btn sm ghost" onclick="go('${exHome()}')">Back</button>`)}
+  <div class="card soft"><div class="row" style="gap:12px;flex-wrap:nowrap"><span class="ex-ic warm">${EX_IC.bag}</span><div style="min-width:0"><b>${isD?'Found something in your car?':'Left something in the car?'}</b><div class="tiny muted">${isD?'Tell the parent in one tap.':'Tell your driver. Add a photo if you have one.'}</div></div></div><button class="btn wide" style="margin-top:12px" onclick="${isD?'exFoundModal()':'exLostModal()'}">${isD?'Found an item':'Report a lost item'}</button></div>
+  ${reps.length?`<div class="card" data-mount="exLost">${reps.map(exLostRow).join('')}</div>`:empty('Nothing reported yet.','check')}</div>`};
+MOUNT.exLost=el=>{el.querySelectorAll('[data-exl]').forEach(b=>b.onclick=async()=>{b.disabled=true;await exLostReply(b.dataset.exl,b.dataset.exs)});el.querySelectorAll('[data-exchat]').forEach(b=>b.onclick=()=>openChat(b.dataset.exchat));
+  el.querySelectorAll('[data-exzoom]').forEach(b=>b.onclick=()=>{const m=Store.get('messages',b.dataset.exzoom);const ph=safeImg(m?.lost?.photo);if(ph)modal(`<h3>${h(m.lost.item||'Photo')}</h3><img src="${ph}" alt="${h(m.lost.item||'')}" style="width:100%;border-radius:16px;margin-top:12px"><button class="btn ghost wide" style="margin-top:12px" onclick="closeModal()">Close</button>`)})};
+
+/* ---------- 6. help centre ---------- */
+const EX_CATS=[['all','All'],['start','Getting started'],['safe','Safety'],['ride','Rides & alerts'],['money','Money'],['acct','Account']];
+function exHasKidAccounts(){try{return Object.keys(VIEWS).some(k=>/^k-/.test(k))}catch(e){return false}}
+function exHasRoadblock(){try{return Object.keys(VIEWS).some(k=>/roadblock/i.test(k))||Object.keys(window).some(k=>/roadblock/i.test(k))}catch(e){return false}}
+/* r: 'p' parents, 'd' drivers, 'b' both. Answers match what the app does today and the legal pack. */
+const EX_FAQ=[
+ {r:'b',c:'safe',q:'Who can see where the car is?',a:'Only parents whose child is on board, and only while the trip is running. Other parents and strangers never see it.',k:'location gps live map privacy tracking'},
+ {r:'b',c:'safe',q:'What does the SOS button do?',a:'The red SOS button is on the live tracking screen (parents) and the trip screen (drivers). It shows Police 10111, Ambulance 10177 and 112, and alerts the Enivel safety team with your name and the time. In danger, always call the police first.',k:'emergency button panic police ambulance'},
+ {r:'b',c:'safe',q:'How does Enivel check drivers?',a:'Every driver uploads their ID, licence, PrDP, police clearance, roadworthy, operating licence, insurance, licence disc, proof of address and a selfie. Enivel reviews them before any parent can book. Police clearances older than 6 months are flagged.',k:'verification verified documents prdp police clearance'},
+ {r:'b',c:'money',q:'What does Enivel cost?',a:'Parents pay the driver\'s monthly price plus a 2% Enivel fee (R1 000 + R20 = R1 020). Drivers pay R100 a month, only in months with a paying passenger, plus R49.99 a month for each vehicle after the first 3.',k:'fees price 2% r100 parking slot cost'},
+ {r:'b',c:'money',q:'How do referral credits work?',a:'Share your code from Settings → Security. When a friend signs up with it, you both get R50 credit. Credit is used automatically on Enivel payments and can\'t be cashed out.',k:'referral code credit r50 invite friend'},
+ {r:'b',c:'money',q:'Where are my statements?',a:'Parents: Settings → Payments and invoices. Drivers: Settings → Earnings and fees. Tap Statement (CSV) to download every payment.',k:'receipt invoice statement csv history'},
+ {r:'b',c:'ride',q:'How do I get my rides into my calendar?',a:'Settings → Rides in my calendar. Download the next 4 weeks as a calendar file for Google, Apple or Outlook. Weekends, public holidays and days off are left out. Download again after times change.',k:'calendar ics google apple outlook schedule',act:['exCalModal()','Open calendar']},
+ {r:'b',c:'ride',q:'Something was left in the car',a:'Settings → Lost & found. Parents tell the driver (add a photo if you have one). Drivers tell the parent when they find something. You both get a message and an alert.',k:'lost found forgot bag jersey lunchbox item',act:["go('lost-found')",'Open Lost & found']},
+ {r:'b',c:'ride',q:'Are there rides on public holidays?',a:'No. There is no school transport on South African public holidays. They are skipped in reminders and calendar files automatically.',k:'holiday public holiday school closed'},
+ {r:'b',c:'start',q:'Shared or private transport?',a:'Shared transport is a driver\'s route with other children, paid monthly. A private chauffeur drives only your children. Both are on Find.',k:'shared private chauffeur difference'},
+ {r:'b',c:'acct',q:'How do I make my account safer?',a:'Settings → Security: turn on two-step sign-in with a PIN or an SMS code. On the live app you can also sign in with Face ID or a fingerprint.',k:'security 2fa pin sms face id fingerprint password'},
+ {r:'b',c:'acct',q:'How do I change the look or text size?',a:'Settings → Appearance: Light or Dark, and Normal, Large or Extra large text. Text size is saved on this phone.',k:'dark mode theme text size font bigger accessibility'},
+ {r:'b',c:'acct',q:'How do I contact Enivel?',a:'Tap Chat to Enivel at the bottom of this page. Parents can also use Report an issue on a booking.',k:'support contact help chat email'},
+ {r:'b',c:'acct',q:'Can I see or delete my data?',a:'Yes. Under POPIA you can see, correct or delete your information. Ask us with Chat to Enivel. The Privacy Policy in Settings → Legal centre says what we keep and for how long.',k:'privacy popia delete account data'},
+ {r:'p',c:'start',q:'How do I book transport?',a:'Add your child on the Kids tab and your ID in Settings. Then open Find, choose a route and tap Choose for a child. You pay the first month to confirm.',k:'book booking find route start'},
+ {r:'p',c:'start',q:'Why must I add my ID?',a:'Every parent adds an SA ID number and a photo of it once, before the first booking. It keeps the children on Enivel safe.',k:'id verification identity document'},
+ {r:'p',c:'start',q:'What is Best match on Find?',a:'Pick a child on Find. Routes are sorted by same school, distance from your pickup pin, open seats, rating, on-time record and price. The badge shows the real reasons.',k:'smart match best match ranking sort'},
+ {r:'p',c:'start',q:'The route I want is full',a:'Join the waiting list on the route. When a seat opens you are told first and have 24 hours to book. It doesn\'t guarantee a seat.',k:'full waiting list waitlist seat'},
+ {r:'p',c:'start',q:'Can I book a once-off trip?',a:'Yes. On Home tap Once-off trip. Drivers send offers and you pay when you accept one.',k:'once off single trip request offer'},
+ {r:'p',c:'ride',q:'What alerts will I get?',a:'A notification when your child is picked up and dropped off, when the driver is getting close to your pickup pin, and when the driver says they are outside.',k:'notification alert pickup dropoff arrive'},
+ {r:'p',c:'ride',q:'How do I track the car?',a:'While your child is on board, Home shows Track live. The map follows the car until drop-off.',k:'track live map where'},
+ {r:'p',c:'ride',q:'My child isn\'t riding',a:'On Home tap Not riding today, or Schedule a day off. For school holidays use Holidays on the Kids tab. Your driver is told straight away.',k:'absent sick day off holiday term break not riding'},
+ {r:'p',c:'ride',q:'Can I change times or add exam times?',a:'Open the booking (Details) → Times & exam schedule. Your driver must accept before the new times apply.',k:'times schedule exam change afternoon'},
+ {r:'p',c:'ride',q:'Where will my child sit?',a:'Your driver can give each child a seat. Open the booking to see your child\'s seat. You only see your own child, never other children\'s names.',k:'seat seat map sit'},
+ {r:'p',c:'safe',q:'What is the handover code?',a:'A 4 to 6 digit code you set for each child (Kids → Handover code). At home drop-off the driver must enter it before marking your child dropped off. Give it only to adults who may receive your child, never to the driver.',k:'handover code pin drop off safety'},
+ {r:'p',c:'safe',q:'Who are trusted guardians?',a:'People you add in Settings. Their names are added to your pickup and drop-off alerts. Enivel does not text them.',k:'guardian granny family'},
+ {r:'p',c:'safe',q:'How do I report a problem with a driver?',a:'Open the booking → Report an issue. Enivel reviews every report. In an emergency call 10111 first.',k:'report complaint problem issue unsafe'},
+ {r:'p',c:'money',q:'How do monthly payments work?',a:'Each month is paid in advance from Settings → Payments and invoices. Enivel credit is used first. If the app says test mode, no real money moves.',k:'pay payment monthly card'},
+ {r:'p',c:'money',q:'How do I cancel?',a:'Kids → Cancel transport, or Cancel on the booking. Your driver is told at once. It takes effect at the end of the month you have paid.',k:'cancel stop end booking'},
+ {r:'p',c:'money',q:'Do I get money back when my child is absent?',a:'No. Absences, days off and school holidays don\'t lower the price, because the driver keeps the seat. If the driver stops service mid-month you get a pro-rata refund.',k:'refund absent money back'},
+ {r:'d',c:'start',q:'How do I get verified?',a:'Settings → Verification documents. Upload all 10 photos, including your selfie, plus your PrDP expiry and police clearance date. Enivel reviews them and tells you when you are approved or if a photo must be redone.',k:'verification verify documents upload approved'},
+ {r:'d',c:'start',q:'How do I list a route?',a:'Add a vehicle first (photos of all sides and the plate, then the seat scan). Then Routes → New route. Pick the area and school from the suggestions so nearby parents see how close you are.',k:'route list vehicle new route'},
+ {r:'d',c:'start',q:'How do parents find me?',a:'Active routes of verified drivers show on Find. Parents see your rating, on-time record and badges. Keep your area and schools accurate.',k:'find visible listing parents'},
+ {r:'d',c:'money',q:'When do I pay the R100 fee?',a:'Only in a month where you have at least one active paying passenger. No passengers, no fee.',k:'r100 fee driver fee monthly'},
+ {r:'d',c:'money',q:'What are parking slots?',a:'Your first 3 vehicles are free. Each extra vehicle costs R49.99 a month while it is listed.',k:'parking slot vehicle r49.99 extra'},
+ {r:'d',c:'money',q:'What will I earn this month?',a:'Home and Earnings and fees show expected income from your bookings, money received so far, fees and your monthly goal. Add expenses on Earnings to see your profit.',k:'earnings forecast goal income profit expenses'},
+ {r:'d',c:'ride',q:'How do I mark pickups and drop-offs?',a:'Start the trip from Routes → Trip. Tap Pick up and Drop off at each stop; you must be close to the stop with GPS on. Automatic pickup can do it for you, with 10 seconds to undo.',k:'pickup drop off mark trip gps automatic'},
+ {r:'d',c:'ride',q:'How do reminders work?',a:'Enivel reminds you 30 and 10 minutes before each pickup. On Home, tap Get reminders even when Enivel is closed for phone pop-ups.',k:'reminder notification push countdown'},
+ {r:'d',c:'ride',q:'I can\'t drive one day',a:'Home → Not driving a day. Every parent on your routes is told immediately.',k:'off day sick not driving'},
+ {r:'d',c:'ride',q:'How do I assign seats?',a:'Routes → Seats. Tap a seat, then a child. Parents only see free and taken seats and their own child\'s seat.',k:'seat map assign seats'},
+ {r:'d',c:'ride',q:'What is the best pickup order?',a:'Routes → Trip → Pickup order. Suggest best order uses your passengers\' pins; you can move stops up or down. Parents see their stop number.',k:'order stops route optimise'},
+ {r:'d',c:'safe',q:'A child has a handover code',a:'At home drop-off, ask the adult for the code and enter it. If nobody has it, tap Ask parent to confirm. After 5 wrong codes it locks for 15 minutes.',k:'handover code drop off'},
+ {r:'p',c:'acct',q:'Can my child have their own account?',a:'Yes. A kid account lets your child see their own ride. You set it up and stay in control from your parent account.',k:'kid account child login',when:exHasKidAccounts},
+ {r:'d',c:'safe',q:'What is the roadblock card?',a:'A screen in the app with your Enivel verification details to show a traffic officer at a roadblock.',k:'roadblock traffic officer police stop',when:exHasRoadblock}];
+function exFaqFor(role){const want=role==='driver'?'d':role==='admin'?null:'p';return EX_FAQ.filter(f=>(f.r==='b'||!want||f.r===want)&&(!f.when||f.when()))}
+function exChatEnivel(){const u=me();if(!u)return;if(S.admin&&!S.adminApp)return toast('You are signed in as Enivel');const a=Store.all('users').find(x=>x.role==='admin'&&!x.banned&&x.id!==u.id);if(a){buzz();return openChat(a.id)}const em=Store.get('settings','legal')?.email;
+  modal(`<h3>Chat isn't set up yet</h3><p class="muted small" style="margin:8px 0 14px">Enivel support isn't available in the app yet.${em?` Email <b>${h(em)}</b>.`:''}</p><button class="btn wide" onclick="closeModal()">OK</button>`)}
+function exHelpFilter(){const words=exNorm(S.exHelpQ||'').split(' ').filter(Boolean);const cat=S.exHelpCat||'all';let n=0,first=null,last=null;
+  document.querySelectorAll('.ex-faq details').forEach(d=>{const ok=(cat==='all'||d.dataset.c===cat)&&words.every(w=>d.dataset.t.includes(w));d.hidden=!ok;d.classList.remove('last');if(ok){n++;first=first||d;last=d}});
+  if(last)last.classList.add('last');if(words.length&&first)first.open=true;const c=$('#ex-hn');if(c)c.textContent=n+' answer'+(n===1?'':'s');const z=$('#ex-h0');if(z)z.hidden=n>0}
+VIEWS['help-centre']=()=>{const u=me();if(!u)return VIEWS.landing();const list=exFaqFor(exRole());const cat=S.exHelpCat||'all';
+  return `<div class="stack" style="gap:16px">${pageHead('Help centre','',`<button class="btn sm ghost" onclick="go('${exHome()}')">Back</button>`)}
+  <div class="ex-hero"><h2>How can we help?</h2><p class="small muted">${list.length} answers for ${exRole()==='driver'?'drivers':exRole()==='admin'?'everyone':'parents'}.</p><div class="searchbar">${ICON.search}<input id="ex-hq" type="search" enterkeyhint="search" placeholder="Search fees, handover, cancel…" value="${h(S.exHelpQ||'')}" autocomplete="off" aria-label="Search help"></div></div>
+  <div class="ex-cats" role="group" aria-label="Topics">${EX_CATS.map(([k,l])=>`<button type="button" data-excat="${k}" class="${cat===k?'on':''}" aria-pressed="${cat===k}">${l}</button>`).join('')}</div>
+  <div class="card ex-faq" data-mount="exHelp"><div class="tiny muted" id="ex-hn" aria-live="polite"></div>${list.map(f=>`<details data-c="${f.c}" data-t="${h(exNorm(f.q+' '+f.a+' '+(f.k||'')))}"><summary><i class="dot ${f.c}"></i><span class="q">${h(f.q)}</span></summary><div class="a">${h(f.a)}${f.act?`<div><button type="button" class="btn sm ghost" onclick="${f.act[0]}">${h(f.act[1])}</button></div>`:''}</div></details>`).join('')}<div class="empty" id="ex-h0" hidden>${ICON.search}<p>No answer found. Ask us below.</p></div></div>
+  <div class="card ink"><div class="row between" style="gap:12px"><div style="min-width:0"><h3>Still stuck?</h3><p class="small" style="opacity:.75;margin-top:4px">The Enivel team answers in your chats.</p></div><button class="btn" id="ex-chat" style="background:var(--ink-fg);color:var(--ink);border-color:var(--ink-fg)" onclick="exChatEnivel()">${ICON.chat} Chat to Enivel</button></div></div></div>`};
+MOUNT.exHelp=el=>{const q=$('#ex-hq');if(q)q.oninput=()=>{S.exHelpQ=q.value;exHelpFilter()};document.querySelectorAll('[data-excat]').forEach(b=>b.onclick=()=>{S.exHelpCat=b.dataset.excat;document.querySelectorAll('[data-excat]').forEach(x=>{x.classList.toggle('on',x===b);x.setAttribute('aria-pressed',x===b)});buzz(8);exHelpFilter()});exHelpFilter()};
+
+/* ---------- where the extras appear ---------- */
+function exSettingsItems(){return [["go('help-centre')",'Help centre'],["go('lost-found')",'Lost &amp; found'],['exCalModal()','Rides in my calendar']].map(([f,l])=>`<div class="item ex-item" style="cursor:pointer" onclick="${f}"><div class="grow">${l}</div>›</div>`).join('')}
+function exSettings(html,withItems){let out=html;let done=false;const ap=out.indexOf('<h3>Appearance</h3>');
+  if(ap>=0){const j=out.indexOf('</div></div>',ap);if(j>=0){out=out.slice(0,j+6)+exTextBlock()+out.slice(j+6);done=true}}
+  if(withItems){const mk=`<div class="item" style="cursor:pointer" onclick="go('notifs')">`;const i=out.indexOf(mk);if(i>=0)out=out.slice(0,i)+exSettingsItems()+out.slice(i);else out+=`<div class="card" style="margin-top:14px"><h3>Help &amp; extras</h3><div class="list" style="margin-top:6px">${exSettingsItems()}</div></div>`}
+  if(!done)out+=`<div class="card" style="margin-top:14px"><h3>Text size</h3>${exTextBlock()}</div>`;return out}
+for(const r of ['p-more','d-more']){const f=VIEWS[r];VIEWS[r]=()=>{const html=f();try{return exSettings(html,true)}catch(e){console.warn('extras settings',e);return html}}}
+const _exAMore=VIEWS['a-more'];VIEWS['a-more']=()=>{const html=_exAMore();try{return exSettings(html,false)}catch(e){return html}};
+const _exDRoutes=VIEWS['d-routes'];VIEWS['d-routes']=()=>{let html=_exDRoutes();try{for(const r of myRoutes()){const bs=activeBookings(b=>b.routeId===r.id&&!b.once).length;html=html.replace(`onclick="addRoute('${r.id}')">Edit</button>`,`onclick="addRoute('${r.id}')">Edit</button><button class="btn sm ghost" onclick="exSeatModal('${r.id}')">${EX_IC.seat} Seats${bs?` ${exSeatCount(r)}/${bs}`:''}</button>`)}
+  html=html.replace(`<button class="btn sm" onclick="addRoute()"`,`<button class="btn sm ghost" onclick="exFoundModal()">${EX_IC.bag} Found an item</button><button class="btn sm" onclick="addRoute()"`)}catch(e){console.warn('extras routes',e)}return html};
+const _exDHome=VIEWS['d-home'];VIEWS['d-home']=()=>{const html=_exDHome();try{const u=me();if(!u||(!myRoutes().length&&!u.earnGoal))return html;const card=exEarnCard();const mk=`<div class="card"><div class="row between"><h3>Today's trips</h3>`;const i=html.indexOf(mk);return i>=0?html.slice(0,i)+card+html.slice(i):html+`<div style="margin-top:18px">${card}</div>`}catch(e){console.warn('extras home',e);return html}};
+const _exDBill=VIEWS['d-billing'];VIEWS['d-billing']=()=>{const html=_exDBill();try{if(!me())return html;const card=`<div style="margin-bottom:14px">${exEarnCard()}</div>`;const i=html.indexOf('<div class="kpi">');return i>=0?html.slice(0,i)+card+html.slice(i):card+html}catch(e){console.warn('extras billing',e);return html}};
+const _exPBooking=VIEWS['p-booking'];VIEWS['p-booking']=()=>{let html=_exPBooking();try{const b=Store.get('bookings',S.bookingId);if(!b||b.parentId!==me()?.id&&!S.admin)return html;
+  html=html.replace(`<button class="btn sm ghost" onclick="reportIssue('${b.id}')">`,`<button class="btn sm ghost" onclick="exLostModal('${b.id}')">${EX_IC.bag} Left something?</button><button class="btn sm ghost" onclick="reportIssue('${b.id}')">`);
+  if(!b.once){const seat=exSeatCardParent(b);const mk='<div class="card" style="grid-column:1/-1"><h3>Trip history</h3>';const i=html.indexOf(mk);if(seat)html=i>=0?html.slice(0,i)+seat+html.slice(i):html+`<div style="margin-top:14px">${seat}</div>`}}catch(e){console.warn('extras booking',e)}return html};
+</script>

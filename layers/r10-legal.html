@@ -1,0 +1,669 @@
+<style>
+/* ===== Round 10 legal update: what's new box, tags, new-section markers ===== */
+@keyframes lg10In{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.lg10-wn{position:relative;overflow:hidden;animation:lg10In .45s ease both}
+.lg10-wn:before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:var(--grad)}
+.lg10-wh{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.lg10-wh .grow{min-width:0;flex:1}
+.lg10-ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:0 0 auto;background:color-mix(in srgb,var(--acc) 14%,transparent);color:color-mix(in srgb,var(--acc) 85%,var(--fg))}
+.lg10-ic svg{width:18px;height:18px}
+.lg10-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(148px,100%),1fr));gap:8px;margin-top:14px}
+.lg10-chip{display:flex;align-items:center;gap:9px;min-height:48px;padding:8px 10px;border-radius:14px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:inherit;font-size:.84rem;font-weight:600;line-height:1.25;text-align:left;cursor:pointer;text-decoration:none;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease;animation:lg10In .4s ease both}
+.lg10-chip:hover,.lg10-chip:focus-visible{border-color:color-mix(in srgb,var(--acc) 70%,var(--line));transform:translateY(-1px);box-shadow:var(--shadow)}
+.lg10-chip .lg10-ic{width:30px;height:30px;border-radius:10px}
+.lg10-chip:active{transform:scale(.98)}
+.lg10-chip .lg10-ic svg{width:15px;height:15px}
+.lg10-chip>span:nth-child(2){flex:1;min-width:0}
+.lg10-chips .lg10-chip:nth-child(2){animation-delay:.04s}.lg10-chips .lg10-chip:nth-child(3){animation-delay:.08s}.lg10-chips .lg10-chip:nth-child(4){animation-delay:.12s}.lg10-chips .lg10-chip:nth-child(n+5){animation-delay:.16s}
+.lg10-tag{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:.68rem;font-weight:700;letter-spacing:.02em;white-space:nowrap;vertical-align:middle;background:color-mix(in srgb,var(--acc) 15%,transparent);color:color-mix(in srgb,var(--acc) 82%,var(--fg))}
+.lg10-tag.alt{background:color-mix(in srgb,var(--acc2) 16%,transparent);color:color-mix(in srgb,var(--acc2) 50%,var(--fg))}
+.legalcard .lg10-tag{align-self:flex-start;margin-bottom:2px}
+.lg10-jump{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 14px;margin:2px 0 6px;border-radius:999px;border:1px solid color-mix(in srgb,var(--acc) 40%,var(--line));background:color-mix(in srgb,var(--acc) 8%,var(--bg));color:var(--fg);font:inherit;font-size:.82rem;font-weight:600;cursor:pointer}
+.lg10-jump svg{width:15px;height:15px;color:color-mix(in srgb,var(--acc) 85%,var(--fg))}
+.lg10-div{display:flex;align-items:center;gap:10px;margin:30px 0 4px;color:color-mix(in srgb,var(--acc) 75%,var(--fg));font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.lg10-div:before,.lg10-div:after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--acc) 45%,var(--line)),transparent)}
+.legal li.lg10-ins,.legal tr.lg10-ins td{background:color-mix(in srgb,var(--acc) 6%,transparent)}
+.legal li.lg10-ins{border-radius:6px;padding:2px 6px;margin-left:-6px}
+.lg10-kid{border:1px dashed color-mix(in srgb,var(--acc2) 60%,var(--line));border-radius:16px;padding:6px 16px 10px;background:color-mix(in srgb,var(--acc2) 6%,transparent)}
+.lg10-gate h3{margin:0}
+.lg10-gate .lg10-chips{margin-top:10px}
+.lg10-gate .lg10-chip{min-height:44px;font-size:.8rem;padding:6px 10px}
+.lg10-consent{display:flex;gap:8px;line-height:1.45}
+.legal p,.legal li{overflow-wrap:break-word}
+@media (prefers-reduced-motion:reduce){.lg10-wn,.lg10-chip{animation:none}.lg10-chip:hover{transform:none}}
+</style>
+<script>
+/* ===================== Round 10: legal update (version 2026-10-31.1) =====================
+   TERMS_VERSION is a const in the base, so this layer keeps its own version and replaces every
+   place that uses it: acceptedNow(), termsGate(), the legal centre and document views, and the
+   child consent record. The base documents are extended (inserted rows/items + appended
+   sections) and three new documents are added. Nothing in the base text is rewritten except two
+   one-sentence amendments that would otherwise contradict the new features. */
+const LG10_VERSION='2026-10-31.1';
+const LG10_EFFECTIVE='31 October 2026';
+const LG10_PREV=TERMS_VERSION;
+const lg10Misses=[];
+/* public helpers other layers may use */
+function legalVersion(){return LG10_VERSION}
+function legalEffective(){return LG10_EFFECTIVE}
+function legalLink(id,label,sec){return `<a href="#" data-doc="${h(id)}"${sec?` data-sec="${h(sec)}"`:''}>${h(label)}</a>`}
+function legalConsentRecord(){const u=me();return {by:u?.id||null,at:Date.now(),version:LG10_VERSION}}
+function legalKidAccountConsent(id){return `<label class="tiny lg10-consent"><input type="checkbox" id="${h(id||'kc-consent')}"> <span>I am this child’s parent or legal guardian. I consent to Enivel processing their information as set out in the <a href="#" data-doc="kids">Children’s Accounts</a> terms and the <a href="#" data-doc="privacy" data-sec="p17">Privacy Policy</a>, and I am responsible for how they use the account.</span></label>`}
+function lg10IsKid(u){u=u||me();return !!u&&(u.role==='kid'||u.role==='child'||u.isKid===true||u.kid===true)}
+function lg10Div(){return `<div class="lg10-div"><span>New in version ${LG10_VERSION}</span></div>`}
+
+/* extend one base document. ops: {rep:[old,new]} | {at:anchor,find?:str,html:L=>str,pos?:'before'|'after',fb?:bool} | {end:L=>str} */
+function lg10Patch(id,ops,newFrom){const d=legalDoc(id);if(!d){lg10Misses.push(id+': no such document');return}
+  const base=d.body;if(!d._lg10orig)d._lg10orig=base;
+  d.body=L=>{let s=base(L),tail='';
+    for(const o of ops){
+      if(o.rep){const [a,b]=o.rep;if(s.includes(a))s=s.replace(a,()=>typeof b==='function'?b(L):b);else if(!lg10Misses.includes(id+': '+a.slice(0,40)))lg10Misses.push(id+': '+a.slice(0,40));continue}
+      if(o.end){tail+=o.end(L);continue}
+      const html=o.html(L);let i=s.indexOf(o.at);
+      if(i>=0&&o.find){const j=s.indexOf(o.find,i);i=j>=0?j:-1;if(i>=0&&o.pos==='after')i+=o.find.length}
+      else if(i>=0&&o.pos==='after')i+=o.at.length;
+      if(i<0){const k=id+': '+o.at.slice(0,40);if(!lg10Misses.includes(k))lg10Misses.push(k);if(o.fb!==false)tail=html+tail;continue}
+      s=s.slice(0,i)+html+s.slice(i)}
+    return s+(tail?lg10Div()+tail:'')};
+  d.lg10='updated';if(newFrom)d.lg10New=newFrom}
+function lg10AddDoc(after,doc){doc.lg10='new';const i=LEGAL_DOCS.findIndex(d=>d.id===after);if(LEGAL_DOCS.some(d=>d.id===doc.id))return;LEGAL_DOCS.splice(i<0?LEGAL_DOCS.length:i+1,0,doc)}
+const LG10_I=t=>`<li class="lg10-ins">${t}</li>`;
+const LG10_R=(a,b)=>`<tr class="lg10-ins"><td>${a}</td><td>${b}</td></tr>`;
+const LG10_NEW='<span class="lg10-tag">New</span> ';
+
+/* ============================== NEW DOCUMENT: Children’s Accounts ============================== */
+lg10AddDoc('parent',{id:'kids',title:'Children’s Accounts',sub:'How a parent creates and controls a child’s own Enivel sign-in, what the child can do, and who is responsible',body:L=>`
+<div class="notice"><b>In short:</b> only a parent or legal guardian can create a Children’s Account, using their own sign-in. You choose what your child can use, and you stay responsible for it. Your child cannot pay, book or accept terms. The emergency button is not an emergency service: in danger, call <b>10111</b> or <b>112</b>.</div>
+<p>These terms apply when a Parent creates a Children’s Account on Enivel. They are written for the Parent, form part of the Terms of Service, the Parent and Guardian Terms and the Privacy Policy, and are provided by ${L.E} (registration number ${L.REG}), trading as Enivel. Words defined in the Terms of Service have the same meaning here. Section 16 is a short version for your Child.</p>
+<h2 id="k1">1. What a Children’s Account is</h2>
+<p>1.1 A Children’s Account is a limited sign-in that lets your Child use selected parts of Enivel on their own phone or device, under your control. It is linked to your account and to a Child already on your profile.</p>
+<p>1.2 It is optional. Your Child can travel with a Driver whether or not they have a Children’s Account.</p>
+<p>1.3 A Children’s Account is not a separate customer account. Your Child does not, through it, become a party to any contract with Enivel or a Driver, hold a payment method or acquire rights against Enivel. You remain the account holder and are responsible for it.</p>
+<h2 id="k2">2. Who may create one</h2>
+<p>2.1 Only a Child’s parent who holds parental responsibilities and rights, or the Child’s legal guardian, may create a Children’s Account, and only for that Child.</p>
+<p>2.2 You must be signed in to your own account and confirm with your own credentials when you create it. Never let your Child, a Driver or anyone else create a Children’s Account for you or use your credentials to do so.</p>
+<p>2.3 The warranties in clause 2 of the <a href="#" data-doc="parent" data-sec="pa2">Parent and Guardian Terms</a> apply, including your authority under the Children’s Act 38 of 2005 and your duty to tell us about court orders. Where another person shares parental responsibilities and rights, you are responsible for obtaining any agreement the law or a court order requires.</p>
+<p>2.4 Each Child may have only one Children’s Account. The sign-in email address must be one you control or one you have allowed your Child to use.</p>
+<p>2.5 We may ask for reasonable proof of your relationship with the Child and may refuse, suspend or remove a Children’s Account if it cannot be confirmed.</p>
+<h2 id="k3">3. Consent, capacity and who is bound</h2>
+<p>3.1 Under sections 34 and 35 of the Protection of Personal Information Act 4 of 2013 (“POPIA”) we may process a Child’s personal information with the prior consent of a competent person. By creating a Children’s Account you confirm that you are a competent person for the Child and give that consent for the purposes in section 7. We record who gave consent, when, and the version of these terms.</p>
+<p>3.2 A person under 18 is a minor (section 17 of the Children’s Act 38 of 2005). Under the common law a minor cannot conclude a binding contract without the assistance of a guardian, and a guardian may assist or represent a Child in contractual and other legal matters (section 18(3) of the Children’s Act).</p>
+<p>3.3 Your Child does not accept, and is never asked to accept, the Terms of Service or any Policy. <b>You accept them, on your own behalf and as the Child’s guardian in respect of the Children’s Account, and your acceptance binds you. To the extent the law allows, you are responsible to Enivel for your Child’s use of the Children’s Account as if it were your own use.</b></p>
+<p>3.4 You may withdraw consent at any time by removing the Children’s Account (section 12). Withdrawal does not affect processing that took place before it, or records we must keep (section 13).</p>
+<p>3.5 We encourage you to explain these terms to your Child in a way that suits their age and to consider their views, as section 10 of the Children’s Act recognises.</p>
+<h2 id="k4">4. What a Child can and cannot do</h2>
+<p>4.1 Depending on the permissions you allow, a Child may: see their rides and their Driver’s name and vehicle; tap “ready” or “running late”; tell the Driver they are not riding today; chat with their Driver; follow the ride on the map while on board; choose how the app looks; sign in with Face ID or fingerprint; receive phone pop-ups; and use the Emergency Button.</p>
+<p>4.2 A Child may not, and a Children’s Account is designed not to let a Child: pay or see payment details; make, change, cancel or accept a Booking, offer, price or Waiting List place; accept or decline any terms or give any consent; change your account, Children, authorised collectors, pickup points or Handover Codes; or take part in Enivel Pays or the referral programme.</p>
+<p>4.3 “Ready”, “running late” and “not riding today” messages tell the Driver about one trip only. They do not change the Booking, the price or the Payments policy, and they have the same effect as if you had sent them yourself (Parent and Guardian Terms clauses 5 and 8).</p>
+<h2 id="k5">5. Permissions you control</h2>
+<p>5.1 You choose which features your Child can use and can change this at any time in your account. The permissions are: map tracking during the ride; the “ready” and “running late” buttons; chat with the Driver; “not riding today”; the app’s look; Face ID or fingerprint sign-in; and phone pop-ups.</p>
+<p>5.2 Some permissions start switched on and others off. Review every permission when you create the account, before you give your Child the sign-in details, and from time to time as your Child grows.</p>
+<p>5.3 A change takes effect when it is saved and your Child’s device next connects to Enivel. Until then the device may still show the earlier settings.</p>
+<p>5.4 <b>You decide whether each permission suits your Child’s age and maturity. To the extent the law allows, Enivel is not responsible for that choice or for the consequences of a feature being switched on or off.</b></p>
+<p>5.5 Make sure your Child knows where the Emergency Button is and when to use it.</p>
+<h2 id="k6">6. Signing in and security</h2>
+<p>6.1 Your Child signs in with the sign-in details you set up. Choose a strong password, keep the details safe and change the password if it may have been seen or shared. Your Child must not share the sign-in details with anyone, including friends or a Driver.</p>
+<p>6.2 Face ID or fingerprint sign-in uses a passkey kept on your Child’s device. The face or fingerprint is checked by the device itself. Enivel never receives or stores biometric information, only a public key that cannot be used to recreate it. Anyone whose face or fingerprint the device accepts may be able to sign in on that device.</p>
+<p>6.3 Tell us immediately at ${L.EMAIL} if you think someone else has used the Children’s Account. You can sign your Child out or remove the account at any time.</p>
+<p>6.4 Your Child’s device, its screen lock, operating system, browser and any parental controls are your responsibility.</p>
+<h2 id="k7">7. Information we process</h2>
+<table class="lt"><tr><th>Information</th><th>Why we use it</th></tr>
+<tr><td>Child’s name and sign-in email address</td><td>To create the account, link it to you and show your Child their rides</td></tr>
+<tr><td>App activity: sign-ins, devices used, permission changes and taps such as ready, running late and not riding today</td><td>To run the features, show you what happened and keep the account secure</td></tr>
+<tr><td>Ride checks: pickups, drop-offs, handovers and status updates linked to the Child</td><td>Trip records, as in the Privacy Policy</td></tr>
+<tr><td>Chat messages with the Driver</td><td>Arranging the transport; safety review</td></tr>
+<tr><td>Emergency Button events: the time, the Child’s location when the button was pressed and for up to 30 minutes afterwards, any message, and who saw and acted on the alert</td><td>To alert you and Enivel’s safety team, and to investigate</td></tr>
+<tr><td>Settings: permissions, look and pop-up choices; a passkey public key if Face ID or fingerprint is on</td><td>To apply your choices and to sign your Child in</td></tr></table>
+<p>7.2 We collect your Child’s location only when your Child presses the Emergency Button, and then for no more than 30 minutes. We do not ask for your Child’s ID number, photograph, contacts, school reports or biometric information. We do not show advertising to Children, and we never sell Children’s information or use it for marketing, profiling, Enivel Pays, the public wall or share cards.</p>
+<p>7.3 Our lawful basis is your consent as a competent person under section 35(1)(a) of POPIA and, for safety records, that the processing is necessary for the establishment, exercise or defence of a right or obligation in law (section 35(1)(b)). The <a href="#" data-doc="privacy" data-sec="p17">Privacy Policy</a> applies in full.</p>
+<h2 id="k8">8. Who can see your Child’s information</h2>
+<ul><li>You, through your account.</li><li>Your Child’s Driver: the Child’s first name, ready, running-late and not-riding messages and chat messages, only while your Child has an active Booking with that Driver. <b>The Driver never sees Emergency Button alerts or your Child’s location.</b></li><li>Enivel’s safety team and authorised administrators, only for safety, support, security, fraud prevention and legal purposes. Their access is restricted and recorded in the audit log.</li><li>The police, emergency services, courts and child-protection authorities, only as section 8.2 of the Privacy Policy describes.</li></ul>
+<h2 id="k9">9. The Emergency Button</h2>
+<p>9.1 When your Child presses the Emergency Button, the app first asks them to confirm. Your Child may add a short message (for example “car broke down, please pick me up”) or choose “Skip and send”. The alert then sends your Child’s location, the time and any message to your account and to Enivel’s safety team, notifies you, and keeps sharing your Child’s location for up to 30 minutes.</p>
+<p>9.2 The alert is deliberately not shared with the Driver, so that it stays private if your Child feels unsafe in or near the vehicle.</p>
+<p>9.3 <b>The Emergency Button is not an emergency service and does not replace calling 10111 (police), 10177 (ambulance) or 112 from a cellphone. Enivel cannot dispatch police, ambulances or security, and our safety team may not be available at all hours.</b></p>
+<p>9.4 <b>Enivel does not guarantee that an alert will be sent, delivered, seen or answered, or any response time. Alerts depend on your Child’s phone, battery, location permission, GPS and network and on your phone’s notification settings. A location may be inaccurate by tens or hundreds of metres, or missing. To the extent the law allows, Enivel is not liable for any loss caused by an alert that is delayed, inaccurate or not delivered.</b></p>
+<p>9.5 When you receive an alert, try to reach your Child at once. If you cannot, or you believe your Child is in danger, call 10111 or 112 immediately and give them the location shown. Do not wait for Enivel.</p>
+<p>9.6 <b>Misuse.</b> Explain to your Child that the button is for real problems. A Child who presses it in good faith is never treated as having broken any rule, even if it turns out there was no emergency. If the button is pressed deliberately and repeatedly as a prank, we will speak to you first and may then, on notice to you, limit features of the Children’s Account.</p>
+<p>9.7 Section 11 of the <a href="#" data-doc="incidents" data-sec="i11">Incident, Emergency and Accident Response</a> policy applies.</p>
+<h2 id="k10">10. Chat and behaviour</h2>
+<p>10.1 Chat is for the ride only. Your Child must be respectful, and Drivers must keep messages short, professional and about the transport, as the <a href="#" data-doc="safeguarding" data-sec="s11">Child Safeguarding Policy</a> requires.</p>
+<p>10.2 Messages are kept as trip records and may be reviewed by Enivel’s safety team. Tell us immediately about any message that worries you.</p>
+<p>10.3 A Driver must never ask a Child to move a conversation off Enivel, keep a secret, send a photograph, or meet outside the transport arrangement. Teach your Child to tell you if this ever happens, and report it to us and, where a crime may have been committed, to the police.</p>
+<h2 id="k11">11. Your responsibilities</h2>
+<ul><li>Supervise your Child’s use of the account in a way that suits their age and maturity.</li><li>Keep your Child’s details, permissions and sign-in details up to date and safe.</li><li>Teach your Child how and when to use the Emergency Button, and that it does not replace calling for help.</li><li>Remember that you remain responsible for your Child before pickup and after handover. A “ready” tap does not mean that an adult is with your Child.</li><li>Make sure your Child follows the <a href="#" data-doc="conduct">Acceptable Use and Community Rules</a>.</li><li>Pay for your Child’s device and data.</li></ul>
+<h2 id="k12">12. Suspending and removing a Children’s Account</h2>
+<p>12.1 You may sign your Child out, suspend or remove the Children’s Account at any time.</p>
+<p>12.2 Enivel may suspend, restrict or remove a Children’s Account immediately if we reasonably believe that a Child’s safety is at risk, the account was not created by a parent or guardian, the sign-in details were shared or compromised, the account is being misused, the law requires it, or your own account is suspended, banned or closed. Where it is safe and lawful we will tell you why (Terms of Service clause 12.3).</p>
+<p>12.3 Removing a Children’s Account removes your Child’s sign-in. It does not remove the Child from your profile or end any Booking unless you also do that.</p>
+<h2 id="k13">13. How long we keep information</h2>
+<table class="lt"><tr><th>Record</th><th>Kept for</th></tr>
+<tr><td>Sign-in, permissions and settings</td><td>While the account exists, then deleted within 90 days after it is removed or your own account closes</td></tr>
+<tr><td>App activity</td><td>12 months</td></tr>
+<tr><td>Ride checks and chat messages</td><td>3 years after the trip, as other trip records</td></tr>
+<tr><td>Emergency Button alerts, messages and location points</td><td>3 years after the alert, or longer while a claim, investigation or legal hold is pending</td></tr>
+<tr><td>Your consent record</td><td>While the account exists and 3 years after it is removed, as proof of consent</td></tr></table>
+<h2 id="k14">14. Limits of responsibility</h2>
+<p>14.1 <b>A Children’s Account is a convenience and safety aid. It does not supervise your Child and does not change who is responsible for your Child at each stage of a trip (Parent and Guardian Terms clause 13).</b></p>
+<p>14.2 <b>To the extent the law allows, Enivel is not liable for any loss arising from your Child’s use of the account, a permission you chose, a message, alert or location that was delayed, inaccurate or not delivered, or someone else using your Child’s sign-in details.</b></p>
+<p>14.3 Nothing in these terms excludes or limits liability that the law does not allow to be excluded or limited, including as set out in clause 14.5 of the Terms of Service, or any right you have under the Consumer Protection Act 68 of 2008 or POPIA.</p>
+<h2 id="k15">15. When your Child turns 18</h2>
+<p>When your Child turns 18 they become an adult and may no longer use a Children’s Account. We may ask you to remove it and may remove it ourselves on notice. Your Child may then open their own account and accept the Terms of Service themselves.</p>
+<div class="lg10-kid"><h2 id="k16">16. For your Child</h2>
+<ul><li>This app helps you get to school and home safely with your driver.</li><li>Your parent or guardian made your account and chooses what you can use.</li><li>Keep your password secret. Don’t share it with friends or your driver.</li><li>Be kind in chat, and only chat about your ride.</li><li>If anyone asks you to keep a secret, send photos or chat somewhere else, tell your parent.</li><li>If you are in danger, press the emergency button. If you can, also call <b>10111</b> or <b>112</b>, or ask a trusted adult for help.</li><li>Only use the emergency button for real problems. You will never be in trouble for pressing it because you were scared.</li><li>You can talk to Childline for free on <b>116</b>.</li></ul></div>
+<h2 id="k17">17. Questions</h2>
+<p>Questions: ${L.EMAIL}. Privacy and requests about your Child’s information: ${L.PRIV} (Information Officer: ${L.IO}). You may also complain to the Information Regulator (inforegulator.org.za).</p>`});
+
+/* ============================== NEW DOCUMENT: Roadblock Card and Live Check ============================== */
+lg10AddDoc('driver',{id:'roadcard',title:'Roadblock Card and Live Check',sub:'What the driver card and public QR check are, what they are not, and the rules for using them',body:L=>`
+<div class="notice"><b>In short:</b> the card is a handy summary of your Enivel status. It is <b>not</b> a licence, PrDP, operating licence or any official document, and officers do not have to accept it. Always carry your originals. Never show someone else’s card or a screenshot as if it were live.</div>
+<p>These terms apply to every Driver who uses the Roadblock Card and to anyone who opens a Live Check Page. They form part of the Terms of Service and the Driver Agreement and are provided by ${L.E} (registration number ${L.REG}), trading as Enivel.</p>
+<h2 id="rc1">1. What the card and live check are</h2>
+<p>1.1 The Roadblock Card is a screen in the Driver’s app that summarises what Enivel holds about the Driver: the Driver’s name, verification status, the validity status of the documents the Driver uploaded as recorded in Enivel, and vehicle details. On the Driver’s own phone it may also show the Driver’s verification photograph and document photographs, which are never shown on the public Live Check Page.</p>
+<p>1.2 The card has a QR code. Scanning it opens a public Live Check Page that shows the same limited information, read from Enivel at the moment the page is opened.</p>
+<p>1.3 The card helps a Driver show at a roadside stop, a school gate or to a Parent that they are verified on Enivel. It is offered as a convenience.</p>
+<h2 id="rc2">2. What they are not</h2>
+<p><b>2.1 The Roadblock Card and the Live Check Page are not a driving licence, a Professional Driving Permit, an operating licence or permit, a licence disc, a roadworthiness or fitness certificate, an insurance certificate or any other official document. They are not issued or endorsed by any government authority and are not legal proof of anything.</b></p>
+<p><b>2.2 Enivel makes no representation that a traffic officer, metro police officer, inspector or any other official will look at, accept or rely on the card or the Live Check Page.</b></p>
+<p>2.3 The law requires drivers to carry and produce their own documents. For example, the National Road Traffic Act 93 of 1996 and its regulations require a driver to carry their driving licence and, where required, their Professional Driving Permit, and the National Land Transport Act 5 of 2009 requires the operating licence for the service and compliance with its conditions. You must carry the originals, or the copies the law allows, and produce them when lawfully asked. The card never replaces them.</p>
+<p>2.4 “Valid” on the card or page means only that the expiry date recorded in Enivel had not passed when it was shown and that Enivel’s reviewers accepted the document when they checked it (Terms of Service clause 6). It does not confirm that the document has not since been suspended, withdrawn or cancelled, or that you comply with the law.</p>
+<h2 id="rc3">3. Fines, impoundment and delays</h2>
+<p><b>3.1 To the extent the law allows, Enivel is not liable for any fine, penalty, summons, arrest, impoundment of a vehicle (for example under the National Land Transport Act 5 of 2009 or a municipal by-law), storage or release fees, lost trips, delays or any other consequence of a roadside stop, inspection or roadblock, whether or not you showed the card.</b></p>
+<p><b>3.2 You indemnify Enivel against claims arising from your use of the card, as clause 12.2 of the Driver Agreement provides.</b></p>
+<p>3.3 If Children are on board when you are stopped, cooperate with the officer, keep the Children safe and together, and tell their Parents through Enivel as soon as it is safe (<a href="#" data-doc="incidents" data-sec="i12">Incident Response section 12</a>).</p>
+<h2 id="rc4">4. The public Live Check Page and your consent</h2>
+<p>4.1 Anyone who has the QR code or its link can open the Live Check Page without signing in.</p>
+<p>4.2 The page shows only: your name; whether your account is verified and active; for each required document, its validity status (for example valid, expiring, expired or missing), the expiry date recorded in Enivel and, for your police clearance, the issue date; and your vehicle details (make, model, colour, registration number, seats, and licence disc and roadworthy status). It never shows your ID number, address, phone number, photographs, document images or numbers, Children, Parents, routes or location.</p>
+<p>4.3 By creating, showing or sharing your Roadblock Card QR code you consent, under section 11(1)(a) of POPIA, to Enivel showing that limited information to anyone who opens the Live Check Page, including that your card is not valid or not active if section 4.6 applies.</p>
+<p>4.4 You may withdraw that consent at any time by resetting the QR code in the app or asking us at ${L.PRIV} to switch the page off. Withdrawal does not affect anything shown before it.</p>
+<p>4.5 <b>Reset your QR code</b> immediately if a picture of your card is shared without your permission, your phone is lost or stolen, or you stop driving with Enivel. After a reset the old code and link stop working as soon as the reset reaches our servers.</p>
+<p>4.6 If your account is suspended, banned, closed or no longer verified, or a required document is expired or missing, the Live Check Page will show that the card is not valid or not active, and Enivel may switch the page off.</p>
+<p>4.7 We do not ask people who open the page for their details. Our hosting and security providers record technical information, such as IP addresses, in security logs (Privacy Policy section 10).</p>
+<h2 id="rc5">5. Misuse</h2>
+<p><b>5.1 Showing another person’s card, showing a card for a vehicle you are not using, editing a card, or passing off a screenshot, photograph or recording as the live card or the live check is a serious breach and leads to a permanent ban.</b> It may also be fraud and an offence, including cyber fraud or cyber forgery and uttering under the Cybercrimes Act 19 of 2020, and we may report it to the police.</p>
+<p>5.2 Only the Driver named on the card may show it. A relief driver must have their own verified account and card.</p>
+<p>5.3 Anyone who opens a Live Check Page may use it only to confirm a Driver’s Enivel status. Copying, scraping, publishing or using the information for another purpose is not allowed. Report a suspicious card to ${L.EMAIL}.</p>
+<h2 id="rc6">6. Availability</h2>
+<p>The card and the Live Check Page depend on phones, networks and our systems and may be unavailable, for example where there is no signal or during load-shedding. A page that does not load is not evidence that a Driver is or is not verified. Clause 13 of the Terms of Service applies.</p>
+<h2 id="rc7">7. Records</h2>
+<p>We may record when a QR code is created or reset. These records are kept like Driver verification records (Privacy Policy section 10).</p>
+<h2 id="rc8">8. Changes</h2>
+<p>We may change, pause or withdraw the Roadblock Card or the Live Check Page at any time, for example for security reasons or if the law or an authority requires it.</p>`});
+
+/* ============================== NEW DOCUMENT: Enivel Pays Rules ============================== */
+lg10AddDoc('promotions',{id:'enivel-pays',title:'Enivel Pays Rules',sub:'Official rules for the Enivel Pays monthly random giveaway, a promotional competition under section 36 of the CPA',body:L=>`
+<div class="notice"><b>In short:</b> each month Enivel may randomly choose families who have an active monthly booking and pay that month’s transport for their booked children. There is nothing extra to pay or do. Winners are told in the app. Your name only appears on the public wall if you say yes, and only as your first name and surname initial.</div>
+<p>These are the rules (“Rules”) of Enivel Pays, a promotional competition under section 36 of the Consumer Protection Act 68 of 2008 (“CPA”) and regulation 11 of the Consumer Protection Regulations, 2011. They are published before any draw, are available free of charge in the Legal centre at all times, and will be sent free of charge to anyone who asks at ${L.EMAIL}. They form part of the Terms of Service and the Referral, Credit and Giveaway Terms. If these Rules conflict with those terms on a matter concerning Enivel Pays, these Rules apply.</p>
+<h2 id="ep1">1. The promoter</h2>
+<p>1.1 The promoter is ${L.E} (registration number ${L.REG}), trading as Enivel, of ${L.ADDR} (“Enivel”). Contact: ${L.EMAIL} · ${L.PHONE}.</p>
+<p>1.2 Enivel Pays is conducted by Enivel’s authorised administrators. The administrator who runs each draw is recorded (section 12).</p>
+<h2 id="ep2">2. What Enivel Pays is</h2>
+<p>2.1 Enivel Pays is a monthly random draw. Each winning family has one month’s transport fee for their booked Children paid by Enivel (the “Prize”, section 7).</p>
+<p>2.2 It is run in the ordinary course of Enivel’s business to promote the Platform. Winners are chosen by chance only. No skill, vote, extra purchase or other action is needed.</p>
+<p>2.3 Enivel Pays is separate from months that Enivel chooses to pay outside a draw, which are governed by section 11 of the <a href="#" data-doc="payments" data-sec="m11">Payments policy</a>, and from the referral programme.</p>
+<h2 id="ep3">3. When it runs</h2>
+<p>3.1 Enivel Pays starts on ${LG10_EFFECTIVE} and runs month by month until Enivel ends it under section 15. Each calendar month, in South African time, is a separate promotion period (a “Draw Month”), and each draw is held for one Draw Month.</p>
+<p>3.2 Enivel holds each draw at a time of its choosing during the Draw Month or in the month before it. Entries for a draw close at the moment that draw is made. The date and time of every draw is recorded.</p>
+<p>3.3 Before each draw Enivel decides how many Prizes it will award (at least one). Enivel may decide not to hold a draw in a Draw Month, and no one has a right to a draw being held. Every draw that is held, and the number of Prizes it awarded, is recorded and shown as a total on the public wall (section 11).</p>
+<h2 id="ep4">4. Who is entered</h2>
+<p>4.1 You are entered automatically in a draw if, when it is made: (a) you are a Parent aged 18 or older with an Enivel account in good standing, that is not suspended, banned or under investigation for fraud or a safety matter; (b) you have at least one active, paid monthly Booking for a Child, meaning a monthly Booking (not a once-off trip) that is running and for which a Transport Price is payable through the Platform; and (c) the Transport Price for the Draw Month for at least one of those Bookings is still unpaid, so that there is something for the Prize to pay.</p>
+<p>4.1A A Parent who has already paid every Booking in full for the Draw Month is not entered in that month’s draw, because there is nothing left for a Prize to cover, and is entered again in later months on the same basis. Paying on time never counts against you in any other way.</p>
+<p>4.2 Each eligible Parent account has one entry per draw, however many Children or Bookings it has. Entries cannot be bought, transferred or increased. Enivel may treat accounts that book for the same Child as one entry so that every family has a fair chance.</p>
+<p>4.3 You may ask not to be entered by writing to ${L.EMAIL} or by using an opt-out setting where the Platform offers one. Opting out has no effect on your Bookings or any other benefit.</p>
+<h2 id="ep5">5. No cost to take part</h2>
+<p>5.1 No consideration is required to take part. You are not asked to pay anything, buy anything extra, share anything or give any information to be entered or to receive a Prize.</p>
+<p>5.2 Entry is linked to an ordinary Booking. The Transport Price and Platform Fee you pay are the ordinary prices for the transport. They are not increased because of Enivel Pays, and nothing is charged for the chance to win. Drivers may not increase their prices because of Enivel Pays (section 13).</p>
+<p>5.3 Enivel does not charge for these Rules, for entry or for delivering a Prize. You pay only your own ordinary data costs to use the Platform.</p>
+<h2 id="ep6">6. Who cannot win</h2>
+<p>6.1 As the Consumer Protection Regulations require, a Prize may not be awarded to: (a) a director, member, partner, employee, agent or consultant of Enivel or of any person who directly or indirectly controls or is controlled by Enivel; (b) a supplier of goods or services in connection with Enivel Pays, including any marketing service provider; or (c) the spouse, life partner, business partner or immediate family member of a person in (a) or (b).</p>
+<p>6.2 Drivers cannot win as Drivers. A Driver’s own Driver account is never entered, and no Prize is awarded for a Booking on a Route operated by the person who would win it or by a business they work for.</p>
+<p>6.3 Accounts operated by Enivel itself, including administrator accounts and any account used by an administrator in Parent or Transport mode, are never entered.</p>
+<p>6.4 If a winner turns out to be excluded or not eligible, the Prize is withdrawn (and recovered if already paid) and Enivel makes a new random draw for it in the same way, which is also recorded.</p>
+<h2 id="ep7">7. The Prize</h2>
+<p>7.1 Each Prize is Enivel paying the Transport Price and the 2% Platform Fee for one calendar month (the “Prize Month”) for each of the winner’s active monthly Bookings that is still unpaid for that month when the draw is made. The Prize Month is the month for which the draw is held, as stated in the winner’s notification.</p>
+<p>7.2 The value of a Prize is the total of those amounts as shown in the Platform at the time of the draw, so it depends on the family’s Bookings. Enivel pays the Driver directly; no money is paid to the winner.</p>
+<p>7.3 Bookings the winner had already paid for the Prize Month are not covered and are not refunded because of the Prize. If a payment for a covered Booking is made by mistake after the draw, tell us and we will refund it under the Payments policy.</p>
+<p>7.4 <b>There is no cash alternative. A Prize cannot be exchanged for cash or anything else, transferred to another person or Booking, sold or carried over to another month. It covers only the Transport Price and Platform Fee, not other charges such as a disclosed waiting or return fee.</b></p>
+<p>7.5 If a Booking ends or is cancelled before or during the Prize Month, the Prize for that Child covers only the part of the month in which transport is provided, and the rest lapses. Any refund that would be due for that month under the Payments policy is due to Enivel as the payer.</p>
+<p>7.6 A Prize is delivered free of charge. Winning does not change your Booking, your Driver’s obligations or the price of any other month.</p>
+<h2 id="ep8">8. How the draw works</h2>
+<p>8.1 At the time of the draw the Platform builds a list of all eligible entries (section 4), after removing excluded persons (section 6).</p>
+<p>8.2 Winners are selected from that list by a random selection process run by the Platform, in which every entry has an equal chance. No person chooses or influences who wins.</p>
+<p>8.3 Each draw is started by an authorised Enivel administrator. The time of the draw, the number of eligible entries, the result and the administrator who ran it are recorded in Enivel’s audit log and kept as section 12 sets out.</p>
+<p>8.4 Enivel may check a winner’s eligibility after the draw, and section 6.4 applies if a winner is not eligible.</p>
+<p>8.5 If a technical failure affects a draw, Enivel may cancel that draw and run it again in the same way, and records why.</p>
+<p>8.6 The result of a draw made in accordance with these Rules is final, subject to your rights under the CPA and section 16.</p>
+<h2 id="ep9">9. How winners are told</h2>
+<p>9.1 Winners are told in the app by a notification and receive a certificate in their account, normally within 2 Business Days after the draw. You do not need to claim the Prize; it is applied automatically to the Prize Month.</p>
+<p>9.2 <b>Enivel will never ask a winner for card or bank details, passwords, one-time PINs or any payment to receive a Prize.</b> A message that does is not from Enivel. Report it to ${L.EMAIL}.</p>
+<p>9.3 If a notification does not reach your phone, your Prize is not affected. It is shown in your account.</p>
+<p>9.4 You may decline a Prize by telling us within 7 days of the notification. A declined Prize may be drawn again.</p>
+<h2 id="ep10">10. Certificates and share cards</h2>
+<p>10.1 Each winner receives an in-app certificate and may create a share card.</p>
+<p>10.2 Sharing is entirely your choice. Nothing is posted anywhere unless you post it yourself.</p>
+<p>10.3 Enivel’s name, logo and card designs belong to Enivel (Terms of Service clause 19). Enivel gives you a free, non-exclusive, non-transferable and revocable licence to share your own certificate or share card, unchanged, on your personal social media and in messages, for non-commercial purposes. You may not alter it, use it in advertising, combine it with other branding, or suggest that Enivel endorses you, a Driver, a school or any product. Enivel may withdraw this licence and ask you to remove a card that is misused.</p>
+<p>10.4 We recommend that you do not add your Child’s name, photograph, school, address or route to anything you share. Once you share something publicly others may copy it, and Enivel cannot control or remove copies made by others.</p>
+<p>10.5 Making a fake certificate or share card, or changing the amount, date or name on one, breaches these Rules and may be fraud.</p>
+<h2 id="ep11">11. The public wall</h2>
+<p>11.1 Enivel may publish, in the Platform and on its own social media channels (for example TikTok, Instagram and Facebook), the total number of Children whose transport Enivel paid in a month, for example “Enivel paid for 12 kids this month”. Totals do not identify anyone.</p>
+<p>11.2 A winner’s name appears on the public wall or in Enivel’s posts only if the winner opts in, and then only as their first name and the initial of their surname (for example “Thandi M.”). We never publish a winner’s full surname, contact details, address, the amount paid for a particular family, or any information about a Child.</p>
+<p>11.3 Opting in is voluntary and is your consent under section 11(1)(a) of POPIA. You may withdraw it at any time in the app or at ${L.PRIV}, as section 11(2)(b) of POPIA allows. We will remove your name from the public wall promptly and from Enivel’s own social media posts within 5 Business Days. Withdrawal does not affect earlier lawful processing, and we cannot remove copies that others have made.</p>
+<p>11.4 Saying no, or withdrawing later, never affects your Prize or your chances in future draws.</p>
+<p>11.5 Results are announced to winners in the app (section 9) and as totals on the public wall. Any entrant may ask us whether a draw was held in a month and how many Prizes it awarded.</p>
+<h2 id="ep12">12. Records</h2>
+<p>12.1 As regulation 11 of the Consumer Protection Regulations requires, Enivel keeps, for at least three years after each draw: these Rules as they applied; Enivel’s details as promoter; the names of the administrators who conducted the draw; the list of eligible entries; how and when each winner was selected; each winner’s name and, where Enivel holds it, identity number; each Prize and its value; the date each Prize was delivered; how the results were announced; and copies of the material used to promote Enivel Pays, with where and when it was published.</p>
+<p>12.2 These records are kept securely under the Privacy Policy and are given to the National Consumer Commission or another authority on lawful request.</p>
+<h2 id="ep13">13. Abuse and fairness</h2>
+<p>13.1 Section 5 of the <a href="#" data-doc="promotions" data-sec="g5">Referral, Credit and Giveaway Terms</a> applies. In particular, it is abuse to create Bookings or accounts only to be entered, to collude with a Driver, or for a Driver to raise a price or create a Booking to profit from a Prize.</p>
+<p>13.2 If a Driver changes a Transport Price after a draw, the Prize covers only the price that applied when the draw was made.</p>
+<p>13.3 Where we reasonably suspect abuse we may disqualify an entry, withdraw or recover a Prize and act under clause 12 of the Terms of Service, after giving you a chance to respond unless that would prejudice an investigation.</p>
+<h2 id="ep14">14. Tax</h2>
+<p><b>A Prize is a gift from Enivel. Enivel does not give tax advice, and any tax or other consequence of a Prize for you is your responsibility.</b> The Driver’s income is not changed (Driver Agreement clause 10.4).</p>
+<h2 id="ep15">15. Changes and ending Enivel Pays</h2>
+<p>15.1 Enivel may end Enivel Pays at any time on notice in the Platform, and may suspend it immediately where needed to stop abuse, for security reasons or to comply with the law. Draws already made are honoured.</p>
+<p>15.2 Enivel may update these Rules for future Draw Months by publishing a new version in the Legal centre before that month starts. The Rules will not be changed during a Draw Month to entrants’ prejudice, except where the law requires.</p>
+<h2 id="ep16">16. Liability, complaints and law</h2>
+<p>16.1 <b>To the extent the law allows, Enivel’s total liability in connection with Enivel Pays is limited to the value of the Prize concerned, and Enivel is not liable for a notification that is delayed or not delivered, or for what others do with anything you share.</b> This is subject to clause 14.5 of the Terms of Service and does not limit any right you have under the CPA.</p>
+<p>16.2 Questions and complaints: ${L.EMAIL}. The <a href="#" data-doc="disputes">Complaints and Disputes</a> policy applies. You may also complain to the National Consumer Commission or the Consumer Goods and Services Ombud.</p>
+<p>16.3 South African law governs these Rules.</p>`});
+
+/* ============================== Important terms (CPA s49) ============================== */
+lg10Patch('key-terms',[
+ {at:'<ol class="kt">',find:'</ol>',html:L=>[
+  `<b>Children’s Accounts are the Parent’s responsibility.</b> <b>Only a parent or legal guardian can create one, with their own sign-in. A Child cannot contract or accept terms: your acceptance binds you and covers your Child’s use. You choose the permissions and you remain responsible for how your Child uses the account. To the extent the law allows, Enivel is not liable for loss caused by what a Child does, sees or sends through it.</b> (<a href="#" data-doc="kids">Children’s Accounts</a>)`,
+  `<b>The emergency button is not an emergency service.</b> <b>It sends your Child’s location and any message to you and to Enivel’s safety team, but delivery, accuracy and response times are not guaranteed and Enivel cannot send help.</b> The Driver is not told. In danger, call 10111 or 112 first. (<a href="#" data-doc="incidents" data-sec="i11">Incident Response 11</a>)`,
+  `<b>Approach alerts, arrival times, live status and running-late notices are estimates.</b> <b>They depend on GPS, networks and phone settings and may be late, early, wrong or missing. To the extent the law allows, Enivel is not liable for a missed, late or wrong alert. You remain responsible for supervising your Child until pickup and after handover.</b> (<a href="#" data-doc="location" data-sec="l11">Location notice 11 to 12</a>)`,
+  `<b>Phone pop-ups may not arrive.</b> <b>Your phone’s operating system, battery saver, permissions and network decide whether they are delivered, and delivery is not guaranteed.</b> (<a href="#" data-doc="location" data-sec="l13">Location notice 13</a>)`,
+  `<b>Drivers alone must keep their documents valid.</b> <b>Expiry reminders are a courtesy and may fail. Keeping licences, permits, clearances, insurance and roadworthiness valid, and carrying the originals, is the Driver’s sole responsibility.</b> Enivel may hide or pause listings when documents expire. (<a href="#" data-doc="driver" data-sec="d18">Driver Agreement 18</a>)`,
+  `<b>The roadblock card and live check are not official documents.</b> <b>They are not a licence, PrDP, operating licence or legal proof of anything, officers do not have to accept them, and Enivel is not liable for fines, impoundment or delays.</b> Showing someone else’s card or a screenshot as live leads to a ban. (<a href="#" data-doc="roadcard">Roadblock Card and Live Check</a>)`,
+  `<b>Pre-trip vehicle checks are the Driver’s own declaration.</b> <b>They are not a roadworthiness inspection, Enivel does not check the vehicle, and they shift no responsibility to Enivel.</b> False declarations lead to a ban. (<a href="#" data-doc="driver" data-sec="d20">Driver Agreement 20</a>)`,
+  `<b>Notes to the Driver are not for emergencies or medical instructions.</b> <b>A Driver is a transport operator, not a caregiver or medical provider, and may not read a note in time.</b> (<a href="#" data-doc="parent" data-sec="pa18">Parent Terms 18</a>)`,
+  `<b>The weekly safety report is information only.</b> <b>It is built from app records that may be incomplete and is not a safety rating, audit or guarantee.</b> (<a href="#" data-doc="parent" data-sec="pa19">Parent Terms 19</a>)`,
+  `<b>Months paid by Enivel and Enivel Pays prizes are gifts.</b> <b>They have no cash value, cannot be transferred or exchanged, create no right to future payments, and any tax or other consequence is yours.</b> Card payments happen on PayFast’s secure page; Enivel never stores card details and you never get access to the payer’s card or details. (<a href="#" data-doc="payments" data-sec="m11">Payments 11</a> · <a href="#" data-doc="enivel-pays">Enivel Pays Rules</a>)`,
+  `<b>Planning tools give estimates only.</b> <b>Smart match, seat maps, calendar exports, earnings forecasts and help answers may be wrong and are not advice.</b> A public route page may be out of date; only the details shown when you book count. (<a href="#" data-doc="terms" data-sec="t32">Terms 32</a>)`,
+  `<b>Safety and administrator records are evidence.</b> Emergency alerts, safety centre notes and the administrator audit log are kept for the periods in the Privacy Policy and may be given to the police, courts or regulators where the law allows. (<a href="#" data-doc="privacy" data-sec="p21">Privacy 21</a>)`
+ ].map(t=>`<li class="lg10-ins">${LG10_NEW}${t}</li>`).join('')},
+ {end:L=>`<p>New documents in this version: <a href="#" data-doc="kids">Children’s Accounts</a> · <a href="#" data-doc="roadcard">Roadblock Card and Live Check</a> · <a href="#" data-doc="enivel-pays">Enivel Pays Rules</a>.</p>`}
+]);
+
+/* ============================== Terms of Service ============================== */
+lg10Patch('terms',[
+ {rep:['Children may not hold accounts.',L=>'Children may not hold accounts of their own, except a Children’s Account that a Parent creates and controls under the <a href="#" data-doc="kids">Children’s Accounts</a> terms (clause 25).']},
+ {at:'nothing in any Policy reduces a right you have under the Consumer Protection Act or POPIA.</p>',pos:'after',html:L=>`<p class="lg10-ins">The <a href="#" data-doc="kids">Children’s Accounts</a> terms, the <a href="#" data-doc="roadcard">Roadblock Card and Live Check</a> terms and the <a href="#" data-doc="enivel-pays">Enivel Pays Rules</a> also form part of these Terms and are included in the “Policies”.</p>`},
+ {at:'<h2 id="t3">',html:L=>`<p class="lg10-ins">2.5 In addition, in these Terms and the Policies:</p><ul class="lg10-ins">
+<li><b>Approach Alert</b>: a notice to a Parent that the Driver’s phone has reported a position within the distance the Parent chose (1 km unless changed) of the Child’s pickup point.</li>
+<li><b>Children’s Account</b>: a limited sign-in for a Child, created and controlled by the Child’s Parent under the Children’s Accounts terms.</li>
+<li><b>Emergency Button</b>: the button in a Children’s Account that sends the Child’s location and an optional message to the Parent and to Enivel’s safety team.</li>
+<li><b>Enivel Pays</b>: the random monthly giveaway run under the Enivel Pays Rules.</li>
+<li><b>Live Check Page</b>: the public web page that a Roadblock Card QR code opens.</li>
+<li><b>Pre-trip Check</b>: a Driver’s own declaration in the Platform about the condition of a vehicle before a trip.</li>
+<li><b>Roadblock Card</b>: the in-app card that summarises a Driver’s Enivel verification and document status.</li>
+<li><b>Sponsored Month</b>: a month of a Parent’s Transport Price and Platform Fee that Enivel chooses to pay.</li></ul>`},
+ {end:L=>`
+<h2 id="t25">25. Children’s Accounts</h2>
+<p>25.1 A Parent may create a Children’s Account for their own Child, confirming with the Parent’s own credentials when it is created. Only the Child’s parent or legal guardian may do so. The <a href="#" data-doc="kids">Children’s Accounts</a> terms apply.</p>
+<p>25.2 A Child is not a party to these Terms. A minor does not have full capacity to contract (section 17 of the Children’s Act 38 of 2005 and the common law). The Parent accepts these Terms on their own behalf and, as guardian, in respect of the Child’s use of the Children’s Account, and the Parent’s acceptance binds the Parent.</p>
+<p>25.3 A Children’s Account cannot be used to pay, to make, change or cancel a Booking, or to accept terms. As between the Parent and Enivel, anything done through a Children’s Account is treated as done with the Parent’s authority, unless it was caused by Enivel’s breach or a failure of our security.</p>
+<p><b>25.4 The Parent is responsible for the Child’s use of the Children’s Account and for the permissions the Parent chooses. To the extent the law allows, Enivel is not liable for loss arising from the Child’s use of the account, from a permission the Parent switched on or off, or from the Child’s sign-in details being shared.</b></p>
+<p>25.5 The Parent or Enivel may suspend or remove a Children’s Account at any time, as the Children’s Accounts terms set out.</p>
+<h2 id="t26">26. Alerts, estimates and phone pop-ups</h2>
+<p>26.1 Approach Alerts (1 km by default, or the distance the Parent chooses), estimated arrival times, live trip status and running-late notices are worked out from the Driver’s reported phone location, information Users enter and simple calculations.</p>
+<p><b>26.2 They are estimates given on a best-effort basis. They depend on GPS, mobile networks, electricity supply, phone settings and third parties, and may be late, early, inaccurate, repeated or not sent at all. To the extent the law allows, Enivel is not liable for any loss caused by a missed, late, early or wrong alert, estimate, status or notice.</b></p>
+<p><b>26.3 The Parent remains responsible for supervising the Child until pickup and after handover, and must not wait for an alert before getting the Child ready or keeping the Child safe.</b></p>
+<p><b>26.4 Phone pop-ups (push notifications) are delivered by the phone’s operating system, the browser and third-party push services. Their delivery is not guaranteed and may be prevented by battery saver, do-not-disturb, permissions, cleared browser data, network problems or the operating system.</b></p>
+<p>26.5 The details are in sections 11 to 18 of the <a href="#" data-doc="location" data-sec="l11">Location notice</a>.</p>
+<h2 id="t27">27. Driver documents, the Roadblock Card and Pre-trip Checks</h2>
+<p>27.1 The Platform may show Drivers when their documents expire and send reminders. <b>Reminders are a courtesy only. Keeping every licence, permit, clearance, certificate and policy valid, and carrying the originals the law requires, is the Driver’s sole responsibility.</b> Enivel may hide or pause a Driver’s Routes and listings while a required document is expired or missing.</p>
+<p><b>27.2 The Roadblock Card and the Live Check Page are not a driving licence, Professional Driving Permit, operating licence or any other official document and are not legal proof of anything. Enivel makes no representation that a traffic officer, metro police officer or other official will accept them. To the extent the law allows, Enivel is not liable for any fine, penalty, impoundment, delay or other consequence of a roadside stop.</b> The <a href="#" data-doc="roadcard">Roadblock Card and Live Check</a> terms apply.</p>
+<p><b>27.3 A Pre-trip Check is the Driver’s own declaration. It is not a roadworthiness test or inspection, Enivel does not verify it, and it does not transfer any responsibility for the vehicle to Enivel.</b> A false declaration may lead to a permanent ban.</p>
+<h2 id="t28">28. The Emergency Button and safety records</h2>
+<p>28.1 The Emergency Button sends the Child’s location, and any message the Child adds, to the Parent’s account and to Enivel’s safety team, and keeps sharing the Child’s location for up to 30 minutes. It is deliberately not shared with the Driver.</p>
+<p><b>28.2 The Emergency Button is not an emergency service and does not replace calling 10111, 10177 or 112. Enivel does not guarantee that an alert will be sent, delivered, seen or answered within any time, and cannot dispatch police, ambulances or security.</b></p>
+<p>28.3 Enivel keeps a safety centre and an administrator audit log. Their entries are Platform records under clause 18 and are kept as the <a href="#" data-doc="privacy" data-sec="p21">Privacy Policy</a> sets out.</p>
+<h2 id="t29">29. Notes to the Driver and the weekly safety report</h2>
+<p>29.1 A Parent may leave notes for the Driver. <b>Notes are not for emergencies or for medical or care instructions. A Driver is a transport operator, not a caregiver, nurse or medical provider, and may not read a note before a trip.</b> In an emergency, call 10111, 10177 or 112 first.</p>
+<p>29.2 The weekly safety report summarises records in the Platform. <b>It is for information only. It is not a safety rating, audit, certificate or guarantee about any Driver, vehicle or trip, and it may be incomplete if records were not made or did not sync.</b></p>
+<h2 id="t30">30. Fees paid by Enivel and Enivel Pays</h2>
+<p>30.1 Enivel may, at its sole discretion, pay a Parent’s Transport Price and Platform Fee for a month (a Sponsored Month), or award one through Enivel Pays under the <a href="#" data-doc="enivel-pays">Enivel Pays Rules</a>. Section 11 of the <a href="#" data-doc="payments" data-sec="m11">Payments policy</a> and the Referral, Credit and Giveaway Terms apply.</p>
+<p><b>30.2 A Sponsored Month or Enivel Pays prize is a gift. It has no cash value, cannot be transferred, sold or exchanged, creates no right to any future payment, and any tax or other consequence is the recipient’s responsibility.</b></p>
+<p>30.3 Card payments are made on PayFast’s own secure payment page. Enivel never receives or stores full card details, and a Parent whose month is paid never receives access to the payer’s card, bank or personal details.</p>
+<h2 id="t31">31. This version and when it applies</h2>
+<p>31.1 This version (${LG10_VERSION}) takes effect on ${LG10_EFFECTIVE}. Clauses that govern only a new feature apply to you from the first time you use that feature. Any other material change that is not in your favour applies 14 days after we first notified you of this version, as clause 21.2 provides, unless you accept it earlier.</p>
+<p>31.2 We record when you accept this version (clause 1.6). If you do not accept it, clause 21.4 applies.</p>
+<p>31.3 If anything added in this version conflicts with a right you have under the CPA, POPIA or other law that cannot be excluded, that right prevails (clause 14.5).</p>
+<h2 id="t32">32. Sharing, public route pages and planning tools</h2>
+<p>32.1 <b>Share links, QR codes, posters and invites.</b> Users may share links to Enivel, their referral code or a Route. Sharing is your own choice and must follow the Acceptable Use rules and clause 1.4 of the Referral, Credit and Giveaway Terms (no spam, no misleading claims). A Driver who prints or displays a poster is responsible for its accuracy and for where it is displayed, including compliance with municipal by-laws on signs and advertising.</p>
+<p>32.2 <b>Public route pages.</b> An active Route of a verified Driver may be shown on a public page that anyone with its link can open, without signing in. It shows the Route’s name, schools, pickup areas, times, price, seats available, the Driver’s first name, verification badge, rating and number of trips, and the vehicle’s make, model and seats. It never shows the Driver’s surname, phone number, documents or location, or any information about Parents or Children. By listing an active Route the Driver consents to this. A public page may be out of date; only the details shown when you book form part of a Booking.</p>
+<p>32.3 <b>Planning tools.</b> Smart match suggestions, seat maps, calendar exports, earnings forecasts, help answers and similar tools are aids only. <b>They may be incomplete or wrong, are not advice, and do not transfer any responsibility to Enivel.</b> A seat map is an illustration, not a legal seating plan: the Driver decides safe seating under the Vehicle Standards. Help answers are general information; if they differ from these Terms or the Policies, these Terms and the Policies apply. A calendar file you download is kept on your device and is your responsibility.</p>
+<p>32.4 <b>Lost and found.</b> Enivel only passes messages between Users about lost items. <b>Enivel does not hold, collect or insure lost property and, to the extent the law allows, is not liable for items lost, left in a vehicle or not returned.</b> A Driver who finds an item should keep it safe for a reasonable time and arrange its return with the Parent through Enivel.</p>`}
+],'t25');
+
+/* ============================== Parent and Guardian Terms ============================== */
+lg10Patch('parent',[
+ {rep:['subject to the records we must keep (Privacy Policy section 9)','subject to the records we must keep (Privacy Policy section 10)']},
+ {end:L=>`
+<h2 id="pa16">16. Children’s Accounts</h2>
+<p>16.1 You may create a Children’s Account for your Child under the <a href="#" data-doc="kids">Children’s Accounts</a> terms. Only you, as parent or legal guardian, may do so, with your own credentials.</p>
+<p><b>16.2 You remain responsible for your Child’s use of the account and for the permissions you choose. Your Child cannot pay, book or accept terms; your acceptance binds you.</b></p>
+<p>16.3 A “ready”, “running late” or “not riding today” message sent by your Child counts as your message to the Driver.</p>
+<h2 id="pa17">17. Approach alerts, arrival estimates and running-late notices</h2>
+<p>17.1 You can receive an Approach Alert when the Driver’s phone reports that it is within 1 km of your Child’s pinned pickup point, or within another distance you choose. The distance is measured in a straight line, not along roads.</p>
+<p><b>17.2 Approach Alerts, arrival estimates, live status and running-late notices are best-effort estimates. They may be late, early, wrong or not sent. To the extent the law allows, Enivel is not liable for a missed, late or wrong alert.</b></p>
+<p><b>17.3 You remain responsible for supervising your Child until pickup and after handover. Do not send your Child out to wait alone because an alert arrived, and have your Child ready at the agreed time even if no alert arrives (clause 5).</b></p>
+<p>17.4 A running-late notice from a Driver does not change the agreed times or the Driver’s duty to be punctual. Tell us if lateness becomes a pattern.</p>
+<h2 id="pa18">18. Notes to the Driver</h2>
+<p>18.1 You may leave notes for the Driver about practical matters for the trip, for example which gate to use or that a sibling is travelling.</p>
+<p><b>18.2 Notes are not for emergencies or for medical or care instructions. The Driver is a transport operator, not a caregiver, nurse or medical provider, and may not read a note before a trip.</b> In an emergency, call 10111, 10177 or 112 and then the Driver.</p>
+<p>18.3 Information your Child needs for safety on the trip, such as a severe allergy, belongs in the Child’s profile under clause 3.2. The Driver is not expected to give medical care or medicine. Arrange that with the school or a caregiver.</p>
+<p>18.4 Keep notes factual and respectful, and do not include other people’s personal information. Notes are shown to the Driver and verified assistants for your Child’s trips and may be seen by authorised Enivel administrators.</p>
+<h2 id="pa19">19. Weekly safety report</h2>
+<p>19.1 Enivel may give you a weekly summary of your Child’s trips, such as pickups, drop-offs, handovers, timing and checks.</p>
+<p><b>19.2 The report is information only. It is built from app records that may be incomplete, and it is not a safety rating, audit, certificate or guarantee about any Driver, vehicle or trip.</b> Tell us if anything in it looks wrong.</p>
+<h2 id="pa20">20. Months paid by Enivel and Enivel Pays</h2>
+<p>20.1 Enivel may choose to pay a month of your transport (section 11 of the <a href="#" data-doc="payments" data-sec="m11">Payments policy</a>) or you may win a month through <a href="#" data-doc="enivel-pays">Enivel Pays</a>. You are told in the app, where the payment is shown as paid by Enivel.</p>
+<p>20.2 The payment is made on PayFast’s secure page. You never receive access to the payer’s card, bank or personal details, and Enivel will never ask you for your card details, password or one-time PIN to receive a paid month.</p>
+<p><b>20.3 A paid month is a gift. It has no cash value, cannot be transferred or exchanged, creates no right to future payments, and any tax or other consequence is yours.</b></p>
+<h2 id="pa21">21. Checking a Driver’s card</h2>
+<p>You may scan a Driver’s Roadblock Card QR code to see their live Enivel status. <b>The card is not an official document and does not replace your own checks under clause 4</b> (<a href="#" data-doc="roadcard">Roadblock Card and Live Check</a>).</p>`}
+],'pa16');
+
+/* ============================== Driver Agreement ============================== */
+lg10Patch('driver',[
+ {end:L=>`
+<h2 id="d18">18. Document validity tracker and reminders</h2>
+<p>18.1 The Platform may show the expiry dates of your documents and send you reminders before they expire.</p>
+<p><b>18.2 Keeping your driving licence, Professional Driving Permit, operating licence or permit, police clearance, licence disc, roadworthiness or fitness certificate and insurance valid, and carrying the originals the law requires, is your sole responsibility. Reminders are a courtesy only. They are based on the dates recorded in Enivel, which may be wrong, and they may arrive late or not at all.</b></p>
+<p>18.3 Renew documents in good time and upload the renewed document as soon as you have it.</p>
+<p>18.4 When a required document expires or is missing, Enivel may hide or pause your Routes and listings, stop new Bookings, show the status on your Roadblock Card and Live Check Page, and tell affected Parents, until a valid replacement has been accepted. The Payments policy applies to any trips that cannot run.</p>
+<p>18.5 This does not change your duty under clause 3.3 to tell Enivel within 24 hours if a document expires or is suspended or withdrawn.</p>
+<h2 id="d19">19. Roadblock Card and Live Check</h2>
+<p>19.1 You may use the Roadblock Card and its public Live Check Page under the <a href="#" data-doc="roadcard">Roadblock Card and Live Check</a> terms, which form part of this agreement.</p>
+<p><b>19.2 The card is not an official document or legal proof of anything, and officers do not have to accept it. Enivel is not liable for fines, impoundment or delays at a roadside stop. Showing someone else’s card, or passing off a screenshot as live, leads to a permanent ban.</b></p>
+<p>19.3 By using the card you consent to your name, verification status, document-validity status and expiry dates, and vehicle details being shown on the Live Check Page. You may reset the QR code at any time.</p>
+<h2 id="d20">20. Pre-trip vehicle checks</h2>
+<p>20.1 The Platform may ask you to complete a Pre-trip Check before a trip, for example of tyres, lights, brakes, seat belts and the first-aid kit.</p>
+<p><b>20.2 A Pre-trip Check is your own declaration. It is not a roadworthiness test or inspection, Enivel does not check your vehicle, and it does not transfer any responsibility for the vehicle to Enivel.</b> It does not replace the licensing, roadworthiness, fitness, inspection and maintenance duties in the Vehicle Standards and the law.</p>
+<p>20.3 If a check shows a defect that could affect safety, do not carry Children until it is fixed. Tell the Parents through Enivel and arrange alternatives under the Payments policy.</p>
+<p><b>20.4 A false Pre-trip Check, including ticking items you did not check, leads to a permanent ban.</b></p>
+<p>20.5 Pre-trip Check results can be seen by signed-in Enivel users, such as Parents. Do not write personal information in check notes.</p>
+<h2 id="d21">21. Parent notes</h2>
+<p>21.1 Read Parents’ notes before trips where practical, and follow reasonable, lawful notes about the transport.</p>
+<p>21.2 You are not a caregiver or medical provider and are not expected to give medical care or medicine. In an emergency, call 10177 or 112 and follow the <a href="#" data-doc="incidents">Incident Response</a> policy.</p>
+<h2 id="d22">22. Children’s Accounts and the Emergency Button</h2>
+<p>22.1 A Child with a Children’s Account may message you and tap ready, running late or not riding today, if their Parent allows it. Treat these as messages from the Parent, and confirm with the Parent if anything is unclear.</p>
+<p>22.2 Keep every message to a Child short, professional and about the trip. Never ask a Child to move a conversation off Enivel, keep a secret, send a photograph or meet outside the transport arrangement. The <a href="#" data-doc="safeguarding" data-sec="s11">Child Safeguarding Policy</a> applies.</p>
+<p>22.3 Emergency Button alerts and a Child’s location are not shared with you. Enivel, the Parent or the police may contact you after an alert, and you must cooperate fully.</p>
+<p>22.4 You must never discourage a Child from using the Emergency Button or ask to see or use a Child’s phone or account.</p>
+<h2 id="d23">23. Approach alerts and running-late notices</h2>
+<p>23.1 Approach Alerts and arrival estimates use your phone’s location during a trip. Keep location sharing on for the whole trip (clause 6.1).</p>
+<p>23.2 Send running-late notices honestly and as early as possible. A notice does not excuse lateness or change the agreed times.</p>
+<h2 id="d24">24. Months paid by Enivel and Enivel Pays</h2>
+<p>24.1 When Enivel pays a Parent’s month, you receive the Transport Price as if the Parent had paid it (clause 10.4).</p>
+<p>24.2 You cannot be entered in Enivel Pays as a Driver, and no Prize is awarded for a Booking on your own Route. You must not raise prices, create Bookings or collude with anyone to benefit from Enivel Pays or a Sponsored Month. If you change a price after a draw, the Prize covers only the price that applied at the draw.</p>
+<h2 id="d25">25. Public route pages, posters and planning tools</h2>
+<p>25.1 While a Route is active and you are verified, it may be shown on a public route page as clause 32.2 of the Terms of Service describes. By listing the Route you consent to this. Pause or remove the Route to stop the page. You must keep Route details, times, prices and seat numbers accurate.</p>
+<p>25.2 You are responsible for any poster or share card you print, display or post, including its accuracy and compliance with municipal by-laws on signs and advertising. Do not alter Enivel’s name or logo or present a poster as an official notice.</p>
+<p><b>25.3 Earnings forecasts, monthly goals and seat maps are estimates and illustrations only. They are not financial, tax or legal advice and do not replace your own records or the capacity limits in clause 4.</b></p>`}
+],'d18');
+
+/* ============================== Vehicle Standards ============================== */
+lg10Patch('vehicles',[{end:L=>`
+<h2 id="v9">9. Pre-trip checks</h2>
+<p>9.1 Pre-trip Checks in the Platform help Drivers follow section 5. <b>They are the Driver’s own declaration, not a roadworthiness test, inspection or certificate, and Enivel does not verify them.</b></p>
+<p>9.2 They do not replace any licensing, roadworthiness or fitness certificate, inspection or servicing that the National Road Traffic Act 93 of 1996, the operating licence or these Standards require.</p>
+<p>9.3 A vehicle with a defect that could affect safety must not carry Children until it is repaired.</p>`}],'v9');
+
+/* ============================== Privacy Policy ============================== */
+lg10Patch('privacy',[
+ {at:'<h3>Drivers, relief drivers and assistants</h3>',html:L=>`<h3>Children with a Children’s Account</h3><ul class="lg10-ins"><li>Name and sign-in email address.</li><li>App activity: sign-ins, devices, permission changes and taps such as ready, running late and not riding today.</li><li>Ride checks linked to the Child, and chat messages with the Driver.</li><li>Emergency Button events: the time, the Child’s location when the button was pressed and for up to 30 minutes afterwards, and any message.</li><li>A passkey public key if Face ID or fingerprint sign-in is switched on (never the face or fingerprint itself).</li></ul>`},
+ {at:'<h3>Everyone</h3>',html:L=>`<h3>Drivers: new records</h3><ul class="lg10-ins"><li>Document expiry dates and reminder history.</li><li>Pre-trip Check declarations and notes.</li><li>Roadblock Card QR code identifiers and when they were created or reset.</li></ul>`},
+ {at:'<h3>Everyone</h3>',find:'</ul>',html:L=>[
+  'Enivel Pays entries, draw results, certificates and your choices about the public wall.',
+  'Records of months paid by Enivel: who benefited, the amounts and dates (never the payer’s card details).',
+  'Approach-alert distance, phone pop-up and other notification settings, and notes you leave for a Driver.',
+  'Records of administrator actions about your account in Enivel’s audit log, and safety centre records.',
+  'Passkey public keys if you use Face ID or fingerprint sign-in.'].map(LG10_I).join('')},
+ {at:'<h2 id="p5">',find:'</table>',fb:false,html:L=>[
+  ['Children’s Accounts: creating the sign-in, applying permissions, showing rides','Consent of the Parent as competent person (POPIA s35(1)(a)); contract with the Parent'],
+  ['Emergency Button alerts and location sharing for up to 30 minutes','Consent of the Parent (s35(1)(a)); protecting the legitimate interests of the Child; legal obligation where it applies'],
+  ['Approach Alerts, arrival estimates, live status, running-late notices and phone pop-ups','Contract; legitimate interest'],
+  ['Driver document expiry tracking, reminders and pausing listings','Legitimate interest in Children’s safety; contract; legal obligation'],
+  ['Roadblock Card and public Live Check Page','Consent of the Driver; legitimate interest'],
+  ['Pre-trip Checks shown to signed-in Users','Contract; legitimate interest in Children’s safety'],
+  ['Parent notes to the Driver','Contract; consent for any special personal information (section 4.2)'],
+  ['Weekly safety report','Contract; legitimate interest'],
+  ['Enivel Pays draws, records and certificates','Legal obligation (CPA s36 and regulation 11); legitimate interest'],
+  ['Public wall names and share cards','Consent (opt-in), which may be withdrawn at any time'],
+  ['Months paid by Enivel','Contract; legal obligation (financial records)'],
+  ['Administrator audit log and safety centre','Legitimate interest in accountability, Children’s safety and defending legal claims; legal obligation'],
+  ['Public route pages, share links, posters and invites','Consent of the Driver for public route pages; legitimate interest in promoting the Platform'],
+  ['Smart match, seat maps, calendar exports, earnings forecasts and lost and found messages','Contract; legitimate interest']
+ ].map(([a,b])=>LG10_R(a,b)).join('')},
+ {at:'<h2 id="p7">',html:L=>`<p class="lg10-ins">6.5 When a Parent creates a Children’s Account, the Parent gives consent under section 35(1)(a) of POPIA for the processing described in the <a href="#" data-doc="kids">Children’s Accounts</a> terms. We record who gave consent, when, and the version.</p>
+<p class="lg10-ins">6.6 We collect a Child’s location only when the Child presses the Emergency Button, and then for no more than 30 minutes (section 18).</p>
+<p class="lg10-ins">6.7 A Child cannot give consent or exercise POPIA rights through a Children’s Account. The Parent does so on the Child’s behalf (section 14).</p>
+<p class="lg10-ins">6.8 We never use a Child’s information for Enivel Pays, the public wall, share cards or marketing.</p>`},
+ {at:'<h2 id="p7">',find:'</ul>',html:L=>[
+  'A Parent sees their Child’s Children’s Account activity and Emergency Button alerts, including the Child’s location while sharing is active.',
+  '<b>A Driver never sees Emergency Button alerts or a Child’s location.</b>',
+  'Any signed-in User can see a Driver’s Pre-trip Check results.',
+  'Anyone with a Driver’s Roadblock Card QR code or link can see the limited information on the Live Check Page (section 19).',
+  'The public wall shows totals and, only with consent, a winner’s first name and surname initial.',
+  'The administrator audit log and safety centre are visible only to authorised administrators.',
+  'Anyone with the link to a public route page can see that Route’s details and the Driver’s first name, rating and vehicle, but never the Driver’s surname, phone number, documents or location, or anything about Parents or Children.',
+  'Seat maps show Parents only their own Child’s seat and how many seats are free or taken, never other Children’s names.'].map(LG10_I).join('')},
+ {at:'<h2 id="p10">',find:'</table>',fb:false,html:L=>[
+  ['Children’s Account sign-in, permissions and settings','While the account exists, then deleted within 90 days after it is removed or the Parent’s account closes'],
+  ['Children’s Account app activity','12 months'],
+  ['Emergency Button alerts, messages and location points','3 years after the alert, or longer while a claim, investigation or legal hold is pending'],
+  ['Consent records for Children’s Accounts and the public wall','While the consent applies and 3 years afterwards'],
+  ['Approach-alert and notification settings','Until changed or the account closes'],
+  ['Driver document expiry dates and reminder history','As for Driver verification documents'],
+  ['Pre-trip Checks','3 years after the check'],
+  ['Roadblock Card QR codes','Until reset or the account closes; a reset code stops working immediately'],
+  ['Parent notes to the Driver','Until changed or deleted, or the Child is removed'],
+  ['Weekly safety reports','Built when needed from the records above, which are kept for their own periods'],
+  ['Enivel Pays entry lists, draw records, winner records and proof of delivery','At least 3 years after the draw (regulation 11 of the Consumer Protection Regulations)'],
+  ['Months paid by Enivel','5 years, as financial records'],
+  ['Administrator audit log','3 years after the action (5 years for actions on payments), or longer while a claim, investigation or legal hold is pending'],
+  ['Safety centre records','3 years after the matter is closed, or longer while a claim, investigation or legal hold is pending']
+ ].map(([a,b])=>LG10_R(a,b)).join('')},
+ {end:L=>`
+<h2 id="p17">17. Children’s Accounts</h2>
+<p>17.1 When a Parent creates a Children’s Account, we process the Child’s name, sign-in email address, app activity, ride checks, chat messages, settings and Emergency Button events, as the <a href="#" data-doc="kids">Children’s Accounts</a> terms describe, with the Parent’s consent under section 35(1)(a) of POPIA.</p>
+<p>17.2 We apply our strictest protection to Children’s Accounts: the minimum information, no advertising, no marketing, no profiling, no sale and no publication. The Parent can see the account’s activity, change permissions, ask for a copy, correction or deletion, and remove the account at any time.</p>
+<p>17.3 If we learn that a Children’s Account was created without the consent of a competent person, we will suspend it and delete the information we do not need to keep.</p>
+<h2 id="p18">18. Emergency Button location</h2>
+<p>18.1 When a Child presses the Emergency Button and confirms, the Child’s device sends its location, the time and any message the Child adds, and keeps sending updated locations for up to 30 minutes unless it stops earlier (for example if the phone is switched off, loses signal or the app is closed).</p>
+<p>18.2 The location and message are shown to the Child’s Parent and to Enivel’s safety team. They are never shown to the Driver. Enivel may give them to the police, emergency services or a child-protection authority where we believe a Child may be in danger or the law requires it (section 8.2).</p>
+<p>18.3 A Child’s location is collected only for this purpose and at no other time. If location permission is not allowed on the device, the alert is sent without a location.</p>
+<h2 id="p19">19. Public information: Live Check Page, public wall and share cards</h2>
+<p>19.1 <b>Live Check Page.</b> With the Driver’s consent, anyone who opens a Driver’s Roadblock Card QR code or link can see the Driver’s name, whether the Driver is verified and active, the validity status and recorded expiry dates of the Driver’s documents, and vehicle details. It never shows ID numbers, photographs, document images, phone numbers, addresses, Children, routes or location. The Driver can withdraw consent by resetting the QR code (<a href="#" data-doc="roadcard">Roadblock Card and Live Check</a>).</p>
+<p>19.2 <b>Public wall.</b> We publish totals, such as how many Children’s transport Enivel paid this month. A winner’s first name and surname initial are shown only if the winner opts in, and consent can be withdrawn at any time (<a href="#" data-doc="enivel-pays" data-sec="ep11">Enivel Pays Rules 11</a>).</p>
+<p>19.3 <b>Share cards.</b> A share card contains only what is shown on it. You decide whether to share it and are responsible for what you post.</p>
+<h2 id="p20">20. Payments made by Enivel</h2>
+<p>20.1 When Enivel pays a Parent’s month, the payment is made through PayFast on PayFast’s own secure payment page. PayFast processes the card details as its own responsible party under its own terms and privacy policy. Enivel receives only confirmation of the payment, such as the amount, date, reference and status, and never full card details.</p>
+<p>20.2 The Parent whose month is paid sees that it was paid by Enivel. The Parent receives no information about the payer’s card, bank account or personal details.</p>
+<p>20.3 We keep a record of the Parent, Children, Bookings, amounts and dates as financial records (section 10).</p>
+<h2 id="p21">21. Administrator audit log and safety centre</h2>
+<p>21.1 Significant actions by Enivel administrators, for example approving, rejecting or banning an account, paying a month, running an Enivel Pays draw, changing settings or acting on a safety alert, are recorded in an audit log with the administrator, the action, the record affected and the time.</p>
+<p>21.2 The safety centre brings together SOS alerts, Emergency Button alerts, reports and the actions taken on them.</p>
+<p>21.3 Both are visible only to authorised administrators. They are kept to protect Children, to hold administrators accountable for how they use their access, to investigate and resolve disputes, to establish or defend legal claims, and to respond to lawful requests from the police, courts and regulators, for the periods in section 10.</p>
+<p>21.4 You may ask for audit log entries about your own account under section 23 of POPIA or our PAIA manual, subject to the privacy of others and the grounds for refusal in PAIA.</p>
+<h2 id="p22">22. Face ID and fingerprint sign-in</h2>
+<p>22.1 Face ID or fingerprint sign-in uses a passkey created by your device. Your face or fingerprint is checked only by your device. Enivel never receives, stores or has access to biometric information; we store only a public key and a device label so that we can recognise the passkey.</p>
+<p>22.2 Switching it off on a device removes that passkey from your Enivel account. Anyone whose face or fingerprint your device accepts may be able to sign in on that device.</p>
+<h2 id="p23">23. Sharing and planning tools</h2>
+<p>23.1 Public route pages show only the Route and Driver details listed in clause 32.2 of the <a href="#" data-doc="terms" data-sec="t32">Terms of Service</a>. A Driver can stop a page by pausing or removing the Route.</p>
+<p>23.2 Share links and invites may carry your referral code so that a new User’s sign-up can be credited. We do not track who opens a link beyond what is needed to credit a referral and to keep the Platform secure.</p>
+<p>23.3 Calendar files you download may include your Child’s first name and ride times. They are stored on your device and in any calendar app you import them into, under that provider’s terms, and you are responsible for keeping them private.</p>
+<p>23.4 Smart match, seat maps and earnings forecasts are calculated from information already in the Platform. They do not use special personal information and are not used to make decisions about you.</p>`}
+],'p17');
+
+/* ============================== Information Security ============================== */
+lg10Patch('security',[{end:L=>`
+<h2 id="x7">7. Administrator audit log</h2>
+<p>7.1 Significant administrator actions are recorded in an audit log that only authorised administrators can see, as section 21 of the <a href="#" data-doc="privacy" data-sec="p21">Privacy Policy</a> describes. We restrict who can change or delete entries.</p>
+<p>7.2 We review the audit log when investigating complaints, security incidents and safety matters.</p>
+<h2 id="x8">8. Children’s Account security</h2>
+<p>8.1 A Children’s Account has its own sign-in, set up by the Parent with the Parent’s credentials, and can be signed out or removed by the Parent at any time.</p>
+<p>8.2 Parents must keep their Child’s sign-in details secret and change them if they may have been shared. Face ID and fingerprint sign-in use passkeys; biometric information never leaves the device.</p>
+<h2 id="x9">9. Live Check codes</h2>
+<p>9.1 Roadblock Card QR codes use identifiers that are designed to be hard to guess and show only limited information. A Driver can reset a code at any time, after which the old code stops working.</p>
+<p>9.2 Report a lost phone or a misused card immediately to ${L.EMAIL}.</p>
+<h2 id="x10">10. Card payments</h2>
+<p>Card details for payments made by Enivel are entered only on PayFast’s secure payment page and are never received or stored by Enivel. Enivel staff will never ask you for card details, passwords or one-time PINs.</p>`}],'x7');
+
+/* ============================== Child Safeguarding ============================== */
+lg10Patch('safeguarding',[{end:L=>`
+<h2 id="s11">11. Children’s Accounts and contact with Children</h2>
+<p>11.1 Children’s Accounts are created and controlled by Parents (<a href="#" data-doc="kids">Children’s Accounts</a>). All the standards in this policy apply to every contact between a Driver and a Child through Enivel.</p>
+<p>11.2 A Driver’s messages to a Child must be short, professional, visible and about the trip. A Driver must never ask a Child to move a conversation off Enivel, keep a secret, send a photograph, share their location or meet outside the transport arrangement. Any such request is treated as a safeguarding concern.</p>
+<p>11.3 Enivel’s safety team may review messages between Drivers and Children where a concern is raised.</p>
+<h2 id="s12">12. The Emergency Button</h2>
+<p>12.1 A Child with a Children’s Account can press the Emergency Button to send their location and an optional message to their Parent and to Enivel’s safety team, which keeps sharing the location for up to 30 minutes. It is never shared with the Driver.</p>
+<p>12.2 When we see an alert we try to contact the Parent and, where we believe the Child may be in danger, may contact the police or emergency services and give them the Child’s location.</p>
+<p><b>12.3 The Emergency Button is not an emergency service, and Enivel does not guarantee delivery of an alert or any response time.</b> In an emergency, call 10111 or 112 first.</p>
+<p>12.4 A Child is never blamed or penalised for pressing the button in good faith.</p>
+<h2 id="s13">13. Parent notes and the Driver’s role</h2>
+<p>Parents’ notes help the Driver with practical matters. They are not for emergencies or medical instructions. A Driver is not a caregiver or medical provider (<a href="#" data-doc="parent" data-sec="pa18">Parent Terms 18</a>).</p>
+<h2 id="s14">14. Safety centre and records</h2>
+<p>14.1 Enivel’s safety centre brings together SOS alerts, Emergency Button alerts, reports and the actions taken. Access is restricted to authorised administrators and recorded in the audit log.</p>
+<p>14.2 These records are kept for the periods in the Privacy Policy and shared with the South African Police Service, the Department of Social Development or a designated child protection organisation where the law requires or allows it, as section 7 sets out.</p>`}],'s11');
+
+/* ============================== Incident Response ============================== */
+lg10Patch('incidents',[{end:L=>`
+<h2 id="i11">11. The Emergency Button in a Children’s Account</h2>
+<p>11.1 A Child with a Children’s Account can press the Emergency Button, confirm, and then either add a short message or choose “Skip and send”. The alert sends the Child’s location, the time and any message to the Parent’s account and to Enivel’s safety team, notifies the Parent, and keeps sharing the Child’s location for up to 30 minutes. It is deliberately not shared with the Driver.</p>
+<p><b>11.2 The Emergency Button is not an emergency service and is not a substitute for calling 10111, 10177 or 112. Delivery, location accuracy and response times are not guaranteed. Enivel cannot dispatch police, ambulances or security, and our safety team may not see an alert immediately, particularly outside support hours.</b></p>
+<p>11.3 <b>Parents:</b> when you receive an alert, try to reach your Child at once. If you cannot, or believe your Child is in danger, call 10111 or 112 immediately and give the location shown. Do not wait for Enivel.</p>
+<p>11.4 <b>Enivel:</b> when the safety team sees an alert, we will try to contact the Parent and, where we believe a Child may be in danger, may contact the police or emergency services and share the Child’s location and message with them. We preserve the alert and related records (section 5).</p>
+<p>11.5 Pressing the button in good faith is never a breach, even if there was no emergency. Deliberate, repeated pranks are handled with the Parent first, as the <a href="#" data-doc="kids" data-sec="k9">Children’s Accounts</a> terms describe.</p>
+<h2 id="i12">12. Roadside stops and roadblocks</h2>
+<p>12.1 Stop safely when instructed, cooperate with the officer and produce your own driving licence, Professional Driving Permit, operating licence and other documents the law requires. The Roadblock Card does not replace them (<a href="#" data-doc="roadcard">Roadblock Card and Live Check</a>).</p>
+<p>12.2 Keep the Children safe and together in the vehicle unless an officer directs otherwise, and tell their Parents through Enivel as soon as it is safe, including any delay.</p>
+<p>12.3 If a vehicle is impounded or cannot continue, arrange safe onward transport or collection with the Parents, never leave a Child unattended, and report it to Enivel through the Platform immediately.</p>
+<p><b>12.4 To the extent the law allows, Enivel is not liable for fines, impoundment, delays or other consequences of a roadside stop (Roadblock Card and Live Check terms section 3).</b></p>
+<h2 id="i13">13. Breakdowns and defects found in a pre-trip check</h2>
+<p>13.1 If a Pre-trip Check shows a defect that could affect safety, do not carry Children until it is repaired. Tell the Parents through Enivel as early as possible.</p>
+<p>13.2 If the vehicle breaks down on a trip, move the Children to safety away from traffic, switch on hazard lights, tell the Parents through Enivel (a running-late notice is not enough on its own), and arrange safe onward transport or collection with them.</p>`}],'i11');
+
+/* ============================== Payments ============================== */
+lg10Patch('payments',[{end:L=>`
+<h2 id="m11">11. Transport fees paid by Enivel</h2>
+<p>11.1 Enivel may, at its sole discretion and without any obligation, choose to pay a Parent’s monthly Transport Price and Platform Fee for one or more Children and months (a “Sponsored Month”). No one is entitled to be chosen, and choosing one Parent creates no right for anyone else.</p>
+<p>11.2 Enivel pays with its own card or account through PayFast, on PayFast’s own secure payment page. Enivel never receives or stores card details. The Parent does not receive, and has no access to, the payer’s card, bank or personal details, and the Parent’s own payment method is not charged for that month.</p>
+<p>11.3 The Parent is told in the app that the month’s transport fee has been paid, shown as paid by Enivel admin. The Driver receives the Transport Price as usual (Driver Agreement clause 10.4).</p>
+<p>11.4 A Sponsored Month covers only Bookings that are still unpaid for that month when Enivel pays. It does not refund amounts the Parent already paid. If the Parent pays a covered Booking by mistake afterwards, the Parent may ask for a refund under section 5.</p>
+<p><b>11.5 A Sponsored Month is a gift. It has no cash value, cannot be transferred, sold or exchanged, does not extend a Booking or fix a price, and creates no right to future payments. If the Booking ends during a Sponsored Month, the unused part is not paid out. Any tax or other consequence is the recipient’s responsibility.</b></p>
+<p>11.6 Enivel may cancel a Sponsored Month before it starts, or recover it, if it was made in error or obtained by fraud or abuse (<a href="#" data-doc="promotions" data-sec="g5">Referral, Credit and Giveaway Terms 5</a>).</p>
+<p>11.7 Enivel will never ask anyone for card details, passwords or one-time PINs to receive a Sponsored Month. A message that does is a scam; report it to ${L.EMAIL}.</p>
+<h2 id="m12">12. Enivel Pays prizes</h2>
+<p>Months won in the Enivel Pays draw are paid under the <a href="#" data-doc="enivel-pays">Enivel Pays Rules</a>. Section 11 applies to them as well, except where those Rules say otherwise.</p>`}],'m11');
+
+/* ============================== Referral, Credit and Giveaway Terms ============================== */
+lg10Patch('promotions',[
+ {at:'<h2 id="g4">',html:L=>`<p class="lg10-ins">3.5 Enivel Pays, the random monthly giveaway, is a promotional competition run under the separate <a href="#" data-doc="enivel-pays">Enivel Pays Rules</a>, which apply to it in addition to these terms. Months that Enivel chooses to pay outside Enivel Pays are governed by section 11 of the <a href="#" data-doc="payments" data-sec="m11">Payments policy</a>.</p>`},
+ {end:L=>`
+<h2 id="g9">9. Sharing, the public wall and scams</h2>
+<p>9.1 Certificates, share cards and the public wall for Enivel Pays are governed by sections 10 and 11 of the <a href="#" data-doc="enivel-pays" data-sec="ep10">Enivel Pays Rules</a>. Names are shown only with opt-in consent and only as first name and surname initial.</p>
+<p>9.2 Enivel will never ask for card details, passwords, one-time PINs or any payment to award credit, a Giveaway, a Sponsored Month or a Prize.</p>`}
+],'g9');
+
+/* ============================== Acceptable Use ============================== */
+lg10Patch('conduct',[{end:L=>`
+<h2 id="c8">8. Rules for the new features</h2><p>Nobody may:</p><ul>
+<li>Show or use another person’s Roadblock Card, edit a card, or pass off a screenshot, photograph or recording as the live card or live check.</li>
+<li>Make a false Pre-trip Check or tick items that were not checked.</li>
+<li>Press the Emergency Button, or get a Child to press it, as a prank or to cause trouble. A Child who presses it in good faith never breaks this rule.</li>
+<li>Share a Child’s sign-in details, use a Children’s Account to pay or book, or pretend to be a Child.</li>
+<li>Contact a Child through Enivel about anything other than the trip.</li>
+<li>Manipulate Enivel Pays or Sponsored Months, for example with fake Bookings, price changes or collusion.</li>
+<li>Make fake certificates or share cards, or claim falsely that Enivel paid for something.</li>
+<li>Pretend to be an Enivel administrator or ask anyone for card details, passwords or one-time PINs in Enivel’s name.</li>
+<li>Copy, scrape or publish information from Live Check Pages.</li></ul>
+<p>These breaches are serious, may be crimes (including under the Cybercrimes Act 19 of 2020) and may lead to a permanent ban and a report to the police.</p>`}],'c8');
+
+/* ============================== Location notice ============================== */
+lg10Patch('location',[
+ {rep:['Location is not collected from Parents or Children.','Location is not collected from Parents or Children, except a Child’s location when the Child presses the Emergency Button in a Children’s Account (section 15).']},
+ {end:L=>`
+<h2 id="l11">11. Approach Alerts</h2><p>11.1 A Parent receives an Approach Alert when the Driver’s phone reports a position within the chosen distance of the Child’s pinned pickup point. The default is 1 km; the Parent can choose another distance in the app.</p><p>11.2 The distance is measured in a straight line from the position the Driver’s phone reports, not along roads. Depending on the road layout, traffic and the order of stops, the Driver may take much more or much less time to arrive than the distance suggests.</p><p>11.3 An alert can only be sent if the Driver has started the trip, the Driver’s phone is sharing its location and is connected, and the pickup point is pinned on the map. It is normally sent once per trip and may not be sent if the Driver passes quickly or the phone reports its position only now and then, for example to save battery.</p><p><b>11.4 Approach Alerts are best-effort estimates. They may be late, early, inaccurate or not sent at all, and to the extent the law allows Enivel is not liable for a missed, late or wrong alert.</b></p>
+<h2 id="l12">12. Arrival estimates, live status and running-late notices</h2><p>12.1 Arrival times, progress, live status (such as on the way, outside or picked up) and running-late notices are worked out from the Driver’s reported location, the Route times, records made in the app and simple calculations, or are sent by the Driver or a Child.</p><p><b>12.2 They are estimates and messages, not promises.</b> A Driver’s running-late notice does not change the agreed times or the Driver’s duty to be punctual, and a Child’s “ready” tap does not mean an adult is with the Child.</p>
+<h2 id="l13">13. Phone pop-ups</h2><p>13.1 Phone pop-ups are sent through push services run by your phone’s operating system and browser providers.</p><p><b>13.2 Delivery is not guaranteed.</b> A pop-up may be delayed or never shown if notifications are not allowed, the phone is off, offline, in battery-saving, power-saving or do-not-disturb mode, the operating system limits background activity, browser data was cleared, or a push service is down. On iPhone, pop-ups while Enivel is closed only work if Enivel was added to the Home Screen and notifications were allowed.</p><p>13.3 The notifications list in the app is the record of what was sent. Check it if you expected a pop-up.</p>
+<h2 id="l14">14. The map for Children</h2><p>If the Parent allows map tracking during the ride, a Child signed in to a Children’s Account can follow the ride on the map while on board, using the Driver’s location as in section 1. This does not track the Child’s own phone.</p>
+<h2 id="l15">15. Emergency Button location</h2><p>When a Child presses the Emergency Button and confirms, the Child’s phone sends its location to the Parent and to Enivel’s safety team and keeps sharing it for up to 30 minutes. It is not shared with the Driver. GPS and network location can be inaccurate by tens or hundreds of metres, or unavailable. See section 18 of the <a href="#" data-doc="privacy" data-sec="p18">Privacy Policy</a>.</p>
+<h2 id="l16">16. Driver document reminders</h2><p>Reminders are worked out from the expiry dates recorded in Enivel. A wrong date leads to a wrong reminder, and reminders may arrive late or not at all. Keeping documents valid is the Driver’s sole responsibility (<a href="#" data-doc="driver" data-sec="d18">Driver Agreement 18</a>).</p>
+<h2 id="l17">17. Weekly safety report and summaries</h2><p>Weekly reports and other summaries are built from records in the Platform. They may be incomplete if a record was not made, a phone was offline or data did not sync. They are information only.</p>
+<h2 id="l18">18. Your responsibility for new features</h2><p><b>Section 10 applies to every feature in sections 11 to 17. The Parent remains responsible for supervising the Child until pickup and after handover, and the Driver remains responsible for punctuality, documents, the vehicle and safe driving.</b></p>`}
+],'l11');
+
+/* ============================== Cookies and Device Storage ============================== */
+lg10Patch('storage',[
+ {at:'<table',find:'</table>',fb:false,html:L=>`<tr class="lg10-ins"><td>Children’s Account session</td><td>Keeps a Child signed in on their own device</td><td>Until signed out, removed by the Parent, or expired</td></tr><tr class="lg10-ins"><td>Face ID or fingerprint marker</td><td>Remembers that passkey sign-in was set up on this device (the passkey itself is held by the device, not by Enivel)</td><td>Until switched off or cleared</td></tr><tr class="lg10-ins"><td>Text size</td><td>Remembers the text size you chose on this device</td><td>Until changed or cleared</td></tr>`},
+ {end:L=>`<p>Emergency Button sharing and phone pop-ups need the location and notification permissions you allow on the device. You can change them in your phone’s settings at any time; if you switch them off, those features stop working on that device.</p>`}
+]);
+
+/* ============================== Complaints and Disputes ============================== */
+lg10Patch('disputes',[{end:L=>`
+<h2 id="r8">8. Children’s Accounts and Enivel Pays</h2><p>8.1 A Parent may complain on behalf of their Child about anything to do with a Children’s Account. Safety concerns are handled immediately under the Child Safeguarding Policy. A Child can also talk to Childline on 116.</p><p>8.2 Complaints about Enivel Pays follow section 1. Consumers may also approach the National Consumer Commission or the Consumer Goods and Services Ombud, and we will give the National Consumer Commission the draw records on request (<a href="#" data-doc="enivel-pays" data-sec="ep12">Enivel Pays Rules 12</a>).</p>`}],'r8');
+
+/* ============================== PAIA manual ============================== */
+lg10Patch('paia',[{at:'<h2 id="a5">',find:'</table>',fb:false,html:L=>[
+ ['Children’s Accounts','Consent records, permissions, app activity, Emergency Button alerts and location records'],
+ ['Promotions','Enivel Pays rules, entry lists, draw records, winner records, public wall consents, records of months paid by Enivel'],
+ ['Administration','Administrator audit log, safety centre records, document expiry and reminder records, Pre-trip Check records, Roadblock Card QR records']
+].map(([a,b])=>LG10_R(a,b)).join('')}]);
+
+/* ============================== version: acceptance records, gate and views ============================== */
+acceptedNow=function(){return {version:LG10_VERSION,at:Date.now(),ua:navigator.userAgent.slice(0,120)}};
+const LG10_NEWS=[
+ {ic:'kids',t:'Children’s accounts',d:'kids',who:'parent'},
+ {ic:'bell',t:'Emergency button',d:'incidents',s:'i11',who:'parent'},
+ {ic:'pin',t:'Alerts & pop-ups',d:'location',s:'l11',who:'all'},
+ {ic:'gift',t:'Enivel Pays',d:'enivel-pays',who:'parent'},
+ {ic:'money',t:'Paid months',d:'payments',s:'m11',who:'parent'},
+ {ic:'chat',t:'Notes & reports',d:'parent',s:'pa18',who:'parent'},
+ {ic:'shield',t:'Roadblock card',d:'roadcard',who:'driver'},
+ {ic:'check',t:'Pre-trip checks',d:'driver',s:'d20',who:'driver'},
+ {ic:'list',t:'Document reminders',d:'driver',s:'d18',who:'driver'},
+ {ic:'lock',t:'Safety records',d:'privacy',s:'p21',who:'all'}];
+function lg10Chips(role){return `<div class="lg10-chips">${LG10_NEWS.filter(x=>!role||x.who==='all'||x.who===role).map(x=>`<a href="#" class="lg10-chip" data-doc="${x.d}"${x.s?` data-sec="${x.s}"`:''}><span class="lg10-ic">${ICON[x.ic]||ICON.check}</span><span>${h(x.t)}</span></a>`).join('')}</div>`}
+function legalWhatsNew(role){const n=LEGAL_DOCS.filter(d=>d.lg10==='new').length;return `<section class="card lg10-wn" aria-label="What’s new in this version"><div class="lg10-wh"><span class="lg10-ic">${ICON.bolt}</span><div class="grow"><b>What’s new</b><div class="tiny muted">${n} new documents · ${LEGAL_DOCS.filter(d=>d.lg10==='updated').length} updated · tap to read</div></div></div>${lg10Chips(role)}</section>`}
+function lg10Ver(s){return String(s).split('Version '+LG10_PREV).join('Version '+LG10_VERSION).split('effective '+TERMS_EFFECTIVE).join('effective '+LG10_EFFECTIVE)}
+const _lg10Legal=VIEWS.legal;
+VIEWS.legal=()=>{let s=lg10Ver(_lg10Legal());
+  const i=s.indexOf('<div class="grid g2">');if(i>=0)s=s.slice(0,i)+legalWhatsNew(null)+s.slice(i);
+  s=s.replace(/(legalDoc:'([a-z-]+)'\}\)"><b>)/g,(m,a,id)=>{const d=legalDoc(id);return d&&d.lg10==='new'?a.replace('<b>',`<span class="lg10-tag">New</span><b>`):a});
+  setTimeout(()=>{const m=$('main');if(m)legalLinks(m)},40);return s};
+const _lg10Doc=VIEWS.doc;
+VIEWS.doc=()=>{let s=lg10Ver(_lg10Doc());const d=legalDoc(S.legalDoc)||legalDoc('terms');
+  if(d&&d.lg10){const sub=`<p class="muted">${h(d.sub)} · effective ${LG10_EFFECTIVE}</p>`;const chip=d.lg10==='new'?`<p><span class="lg10-tag">New in version ${LG10_VERSION}</span></p>`:d.lg10New?`<button class="lg10-jump" onclick="document.getElementById('${d.lg10New}')?.scrollIntoView({behavior:'smooth',block:'start'})">${ICON.bolt}<span>New in this version · jump to it</span></button>`:'';if(chip&&s.includes(sub))s=s.replace(sub,()=>sub+chip)}
+  return s};
+/* terms gate: same contract as the base (ids tg-ok / tg-go / tg-no) with what's new; kids never accept terms */
+function lg10Gate(){const u=me();if(!u||S.admin||u.role==='admin'||u.demo||S.demo)return;if(lg10IsKid(u))return;if(u.termsAccepted?.version===LG10_VERSION||$('.overlay'))return;
+  const drv=u.role==='driver';
+  modal(`<div class="lg10-gate"><div class="lg10-wh"><span class="lg10-ic">${ICON.shield}</span><div class="grow"><h3>We’ve updated our terms</h3><div class="tiny muted">Version ${LG10_VERSION} · effective ${LG10_EFFECTIVE}</div></div></div>
+  <p class="small" style="margin:12px 0 0"><b>What’s new</b></p>${lg10Chips(drv?'driver':'parent')}
+  <p class="muted small" style="margin:14px 0 8px">Please read the important points:</p><div class="card soft small" style="max-height:34vh;overflow:auto">${legalDoc('key-terms').body(LX())}</div>
+  <label class="small" style="display:flex;gap:8px;margin-top:12px;line-height:1.45"><input type="checkbox" id="tg-ok"> <span>I accept the <a href="#" data-doc="terms">Terms</a>, <a href="#" data-doc="privacy">Privacy Policy</a>, <a href="#" data-doc="safeguarding">Child Safeguarding Policy</a>${drv?`, <a href="#" data-doc="driver">Driver Agreement</a> and <a href="#" data-doc="roadcard">Roadblock Card terms</a>`:`, <a href="#" data-doc="parent">Parent Terms</a> and <a href="#" data-doc="kids">Children’s Accounts</a> terms`}.</span></label>
+  <div class="row" style="margin-top:12px;flex-wrap:wrap"><button class="btn" id="tg-go">Accept and continue</button><button class="btn ghost" id="tg-no">Log out</button></div></div>`,m=>{legalLinks(m);
+    $('#tg-go',m).onclick=async()=>{if(!$('#tg-ok',m).checked){if(typeof buzz==='function')buzz();return toast('Tick the box to accept')}const b=$('#tg-go',m);b.disabled=true;
+      try{const cur=me();const hist=(Array.isArray(cur.termsHistory)?cur.termsHistory:[]).slice(-11);if(cur.termsAccepted?.version)hist.push({version:cur.termsAccepted.version,at:cur.termsAccepted.at||null});
+        await Store.patch('users',cur.id,{termsAccepted:acceptedNow(),termsHistory:hist});closeModal();toast('Thanks. Terms accepted.')}catch(e){b.disabled=false;toast('Could not save. Check your connection and try again.')}};
+    $('#tg-no',m).onclick=()=>{closeModal();logout()}})}
+termsGate=lg10Gate;
+/* local sign-ups: the base records acceptance before the phone code is entered (no user yet), so it never saved.
+   Remember the ticked sign-up box and record it once that same new account exists. */
+if(typeof register==='function'){const _lg10Register=register;register=async function(form){try{S.lg10Tick={rec:acceptedNow(),email:String(form?.email||'').trim().toLowerCase()}}catch(e){}return _lg10Register.apply(this,arguments)}}
+const _lg10Render=render;render=function(){const r=_lg10Render.apply(this,arguments);try{const k=S.lg10Tick;if(k&&S.session){const u=me();if(u&&!S.admin){if(!u.termsAccepted&&k.email&&u.email===k.email)Store.patch('users',u.id,{termsAccepted:k.rec});S.lg10Tick=null}}}catch(e){console.warn('terms record',e)}return r};
+/* the child consent the base records on "Add child" carries the version in force */
+if(typeof addKid==='function'){const _lg10AddKid=addKid;addKid=function(id){const r=_lg10AddKid.apply(this,arguments);const m=$('.modal');const b=m&&$('#k-save',m);
+  if(b&&typeof b.onclick==='function'){const o=b.onclick;b.onclick=async e=>{const t0=Date.now()-1000;await o.call(b,e);try{const u=me();if(!u)return;for(const k of Store.all('kids').filter(x=>x.parentId===u.id&&x.consent&&x.consent.version!==LG10_VERSION&&(x.consent.at||0)>=t0))await Store.patch('kids',k.id,{consent:{...k.consent,version:LG10_VERSION}})}catch(err){console.warn('consent version',err)}}}
+  return r}}
+/* admin: show how many accounts accepted this version */
+const _lg10AMore=VIEWS['a-more'];VIEWS['a-more']=()=>{let s=_lg10AMore();const a='Shown in every policy. Use your registered company details.</p>';
+  if(s.includes(a)){const us=Store.all('users').filter(u=>u.role==='parent'||u.role==='driver');const ok=us.filter(u=>u.termsAccepted?.version===LG10_VERSION).length;
+    s=s.replace(a,()=>a+`<p class="tiny muted" id="lg10-acc" style="margin-top:4px">Terms ${LG10_VERSION} · ${ok} of ${us.length} account${us.length===1?'':'s'} accepted · <a href="#" onclick="event.preventDefault();go('legal')">Legal centre</a></p>`)}
+  return s};
+</script>

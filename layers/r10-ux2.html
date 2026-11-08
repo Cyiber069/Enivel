@@ -1,0 +1,113 @@
+<style>
+/* ===================== Round 10 ux2: email ghost, biometric by device, log out at the end, pop-up row, admin verified, police step, calendar empty state, referral line ===================== */
+.eg-ghost{position:absolute;pointer-events:none;white-space:pre;overflow:hidden;display:flex;align-items:center;box-sizing:border-box;color:var(--fg3);z-index:2;background:transparent}
+.eg-ghost .t{visibility:hidden}
+.eg-ghost .s{opacity:.9}
+.eg-chip{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;margin-top:2px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg2);color:var(--fg);font:inherit;font-size:.82rem!important;font-weight:600;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eg-chip:active{transform:scale(.97)}
+.ux-logout{display:flex;width:100%;margin-top:22px;background:transparent!important;color:#d6382b!important;border:1.5px solid #d6382b!important;border-radius:16px;min-height:50px;font-weight:700}
+.ux-logout:hover{background:rgba(214,56,43,.08)!important}
+.ux-poprow{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--fg2);padding:4px 2px;flex-wrap:wrap}
+.ux-poprow .grow{flex:1;min-width:0}
+.ux-pop-ic{width:20px;height:20px;flex:none;display:inline-flex;color:var(--live)}
+.ux-poprow svg,.ux-pop-ic svg,.countdown svg,.tp-pcard svg{width:20px!important;height:20px!important;max-width:20px;max-height:20px;flex:none}
+.ux-poprow a{color:var(--fg3);font-weight:600;text-decoration:underline;white-space:nowrap}
+.ux-police{display:inline-flex;align-items:center;gap:8px;background:#dc2626;color:#fff;border-radius:12px;padding:8px 12px;font-weight:800;letter-spacing:.02em;margin:0 0 10px;font-size:.9rem}
+.ux-police-note{font-size:1rem;font-weight:600;padding:10px 14px;border-radius:12px;background:rgba(220,38,38,.08);border-left:4px solid #dc2626;margin:0 0 12px;word-break:break-word}
+.ux-yn{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.ux-yn .btn{min-height:68px;font-size:1.35rem;font-weight:800;border-radius:18px}
+.ux-yes{background:#dc2626!important;border-color:#dc2626!important;color:#fff!important}
+.ux-no{border:2px solid var(--line)!important}
+.ux-calempty{text-align:center;padding:10px 0 4px}
+.ux-calempty p{margin:10px 0 14px;color:var(--fg2)}
+</style>
+<script>
+/* ---------- 1. email ghost suggestion ---------- */
+const UX2_DOMS=['gmail.com','outlook.com','icloud.com','yahoo.com','hotmail.com','live.com','webmail.co.za','mweb.co.za','telkomsa.net','vodamail.co.za'];
+const UX2_SEL='input[type="email"],input[autocomplete^="username"]';
+const ux2Touch=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(matchMedia&&matchMedia('(pointer:coarse)').matches);
+function ux2EmailSug(v){v=String(v||'').trim();if(!v||/\s/.test(v))return null;const at=v.indexOf('@');
+  if(at<0){if(!/^[a-z0-9._%+-]+$/i.test(v))return null;return {full:v+'@gmail.com',rest:'@gmail.com',auto:true}}
+  if(v.indexOf('@',at+1)>=0||at===0)return null;const dom=v.slice(at+1).toLowerCase();if(!dom)return {full:v+'gmail.com',rest:'gmail.com',auto:false};
+  const m=UX2_DOMS.find(d=>d.startsWith(dom));if(!m||m===dom)return null;return {full:v.slice(0,at+1)+m,rest:m.slice(dom.length),auto:false}}
+function ux2EgEls(el){const p=el.parentElement;if(!p)return {};return {ghost:p.querySelector(':scope > .eg-ghost[data-for="'+el.id+'"]'),chip:p.querySelector(':scope > .eg-chip[data-for="'+el.id+'"]')}}
+function ux2EgClear(el){const {ghost,chip}=ux2EgEls(el);ghost&&ghost.remove();chip&&chip.remove()}
+function ux2EgAccept(el){const s=ux2EmailSug(el.value);if(!s)return false;el.value=s.full;el.dispatchEvent(new Event('input',{bubbles:true}));try{el.setSelectionRange(el.value.length,el.value.length)}catch(e){}ux2EgClear(el);return true}
+function ux2EgShow(el){if(!el||!el.isConnected||document.activeElement!==el)return ux2EgClear(el);const s=ux2EmailSug(el.value);if(!s)return ux2EgClear(el);
+  const p=el.parentElement;if(!p)return;if(!el.id)el.id='eg'+uid();if(getComputedStyle(p).position==='static')p.style.position='relative';
+  let {ghost,chip}=ux2EgEls(el);const cs=getComputedStyle(el);
+  if(!ghost){ghost=document.createElement('span');ghost.className='eg-ghost';ghost.setAttribute('aria-hidden','true');ghost.dataset.for=el.id;el.after(ghost)}
+  Object.assign(ghost.style,{left:el.offsetLeft+'px',top:el.offsetTop+'px',width:el.offsetWidth+'px',height:el.offsetHeight+'px',paddingLeft:cs.paddingLeft,paddingRight:cs.paddingRight,paddingTop:cs.paddingTop,paddingBottom:cs.paddingBottom,
+    borderStyle:'solid',borderColor:'transparent',borderTopWidth:cs.borderTopWidth,borderBottomWidth:cs.borderBottomWidth,borderLeftWidth:cs.borderLeftWidth,borderRightWidth:cs.borderRightWidth,
+    fontFamily:cs.fontFamily,fontSize:cs.fontSize,fontWeight:cs.fontWeight,fontStyle:cs.fontStyle,letterSpacing:cs.letterSpacing,lineHeight:cs.lineHeight,textIndent:cs.textIndent,textAlign:cs.textAlign,borderRadius:cs.borderRadius});
+  ghost.innerHTML=`<span class="t">${h(el.value)}</span><span class="s">${h(s.rest)}</span>`;
+  if(ux2Touch){if(!chip){chip=document.createElement('button');chip.type='button';chip.className='eg-chip';chip.dataset.for=el.id;chip.addEventListener('pointerdown',e=>{e.preventDefault();ux2EgAccept(el);el.focus()});chip.addEventListener('click',e=>{e.preventDefault();ux2EgAccept(el);el.focus()});ghost.after(chip)}
+    chip.textContent='Use '+s.full}else if(chip)chip.remove()}
+document.addEventListener('focusin',e=>{const el=e.target;if(el&&el.matches&&el.matches(UX2_SEL))setTimeout(()=>ux2EgShow(el),0)});
+document.addEventListener('input',e=>{const el=e.target;if(el&&el.matches&&el.matches(UX2_SEL))ux2EgShow(el)});
+document.addEventListener('keydown',e=>{const el=e.target;if(!el||!el.matches||!el.matches(UX2_SEL))return;
+  if(e.key==='Tab'&&!e.shiftKey){if(ux2EmailSug(el.value))ux2EgAccept(el)}
+  else if(e.key==='ArrowRight'){let end=true;try{end=el.selectionStart==null||el.selectionStart===el.value.length}catch(x){}if(end&&ux2EgAccept(el))e.preventDefault()}});
+document.addEventListener('focusout',e=>{const el=e.target;if(!el||!el.matches||!el.matches(UX2_SEL))return;const s=ux2EmailSug(el.value);if(s&&s.auto){el.value=s.full;el.dispatchEvent(new Event('input',{bubbles:true}))}ux2EgClear(el)});
+window.addEventListener('resize',()=>{const el=document.activeElement;if(el&&el.matches&&el.matches(UX2_SEL))ux2EgShow(el)});
+
+/* ---------- 2. biometric wording and icon per device; hidden where the device has none ---------- */
+function ux2Platform(){const ua=navigator.userAgent||'';if(/iPad|iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1))return 'ios';if(/Android/i.test(ua))return 'android';if(/Windows/i.test(ua))return 'windows';if(/Macintosh|Mac OS X/i.test(ua))return 'mac';return 'other'}
+ICON.hello='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 10v1M16 10v1"/><path d="M8.5 15a4.5 4.5 0 0 0 7 0"/></svg>';
+bioLabel=function(){const p=ux2Platform();return p==='ios'?'Face ID / Touch ID':p==='android'?'Fingerprint':p==='windows'?'Windows Hello':p==='mac'?'Touch ID':'Face ID or fingerprint'};
+bioIcon=function(){const p=ux2Platform();return p==='ios'?ICON.face:p==='windows'?ICON.hello:ICON.finger};
+const _ux2FaceCard=faceCard;faceCard=function(){if(!bioAvail)return '';return _ux2FaceCard.apply(this,arguments)};
+bioReady().then(v=>{if(v&&me()&&/-more$/.test(S.route||'')&&!$('.overlay'))render()});
+
+/* ---------- 3. one red Log out at the very end of every Settings page ---------- */
+function ux2LogoutAsk(){confirmBox('Log out of Enivel?','You can log back in any time with your email and password.',()=>logout())}
+const UX2_MORE=['p-more','d-more','a-more','k-more'];
+const _ux2RenderLogout=render;render=function(){const r=_ux2RenderLogout.apply(this,arguments);try{if(UX2_MORE.includes(S.route)&&me()){const m=$('#app main');if(m){m.querySelectorAll('button[onclick="logout()"]').forEach(b=>b.remove());m.querySelectorAll('.ux-logout').forEach(b=>b.remove());
+  const b=document.createElement('button');b.type='button';b.className='btn ux-logout';b.setAttribute('onclick','ux2LogoutAsk()');b.innerHTML=((typeof KC_ICON!=='undefined'&&KC_ICON.out)||ICON.out||'')+' Log out';m.appendChild(b)}}}catch(e){}return r};
+
+/* ---------- 4. driver home: compact pop-ups row (no oversized tick) ---------- */
+ICON.checkCircle='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.3 2.3L15.5 10"/></svg>';
+countdownCard=(function(orig){return function(){let html=orig.apply(this,arguments);if(!html)return html;
+  return html.replace(/<div class="tiny muted" style="display:flex;align-items:center;gap:6px">[\s\S]*?Phone pop-ups on, even when Enivel is closed\.[\s\S]*?<\/div>/,
+    `<div class="ux-poprow"><span class="ux-pop-ic">${ICON.checkCircle}</span><span class="grow">Pop-ups on · you'll get pickup reminders even when Enivel is closed</span><a href="#" onclick="event.preventDefault();disablePush()">Turn off</a></div>`)}})(countdownCard);
+
+/* ---------- 5. the admin's own profile counts as verified in every mode ---------- */
+const _ux2NeedsPid=needsParentId;needsParentId=function(u){if(S.admin&&u&&me()&&u.id===me().id)return false;return _ux2NeedsPid.apply(this,arguments)};
+function ux2AdminVerify(){if(!S.admin||S.adminApp!=='parent')return;const u=me();if(!u||S._ux2AdminPatched===u.id)return;if(u.idStatus==='approved'&&u.phoneVerified&&u.adminVerified)return;S._ux2AdminPatched=u.id;
+  Store.patch('users',u.id,{idStatus:'approved',phoneVerified:true,adminVerified:true}).catch(()=>{})}
+const _ux2RenderAdmin=render;render=function(){const r=_ux2RenderAdmin.apply(this,arguments);try{ux2AdminVerify()}catch(e){}return r};
+const _ux2SecCard=securityCard;securityCard=function(){let html=_ux2SecCard.apply(this,arguments);
+  if(S.admin)html=html.replace(/<div class="item small"><div class="grow">Phone [\s\S]*?(?:Verify<\/button>|✓<\/span>)<\/div>/,'');
+  return html.replace('You both get R50 credit when a friend joins.','Share your code. When a friend signs up with it, you both get R50 Enivel credit on your next payment.')};
+
+/* ---------- 6. kid emergency: after the location is sent, ask about the police ---------- */
+function ux2PoliceAsk(id){const e=Store.get('events',id);if(!e||e.status!=='open')return;const k=myKidProfile();if(!k)return;buzz(20);
+  modal(`<div class="sos-sheet"><h3 style="color:#dc2626">Notify the police too?</h3><p class="small" style="margin:6px 0 4px">Your location is on its way to <b>${h(sosParentName(k))}</b>. Do you want the police as well?</p>
+   <div class="ux-yn"><button class="btn ux-yes" id="ux-pol-yes">YES</button><button class="btn ghost ux-no" id="ux-pol-no">NO</button></div>
+   <div class="field" style="margin-top:14px"><label for="ux-pol-txt">Tell them what's wrong (optional)</label><textarea id="ux-pol-txt" maxlength="280" placeholder="e.g. A stranger is following me"></textarea></div></div>`,m=>{
+   $('#ux-pol-yes',m).onclick=()=>ux2PoliceYes(id,($('#ux-pol-txt',m).value||'').trim());$('#ux-pol-no',m).onclick=()=>ux2PoliceNo(id)})}
+async function ux2PoliceYes(id,note){const e=Store.get('events',id);const k=myKidProfile();if(!e||!k)return closeModal();const b=$('#ux-pol-yes');if(b)b.disabled=true;buzz([60,40,60]);
+  try{S.silent=true;await Store.patch('events',id,{police:true,policeNote:note||'',policeAt:Date.now()})}catch(x){}finally{S.silent=false}
+  const txt=`🚨 ${k.name} asked for the POLICE${note?': "'+note+'"':''}`;
+  try{await notify(k.parentId,txt,'kid-sos','p-emergency')}catch(x){}try{await notify('admin',txt,'kid-sos','a-safety')}catch(x){}
+  modal(`<div class="sos-sheet"><h3 style="color:#dc2626">Call the police now</h3><p style="margin:8px 0 14px;font-weight:600;font-size:1.05rem">We've told your parent you want the police. Call 10111 now if you can.</p>
+   <a class="btn wide sos-go" href="tel:10111">Call 10111</a><a class="btn wide ghost" style="margin-top:8px" href="tel:112">Call 112</a>
+   <button class="btn ghost wide" style="margin-top:8px" onclick="closeModal()">Close</button></div>`);render()}
+async function ux2PoliceNo(id){closeModal();const k=myKidProfile();try{S.silent=true;await Store.patch('events',id,{police:false})}catch(x){}finally{S.silent=false}toast('OK — still sharing your location with '+(k?sosParentName(k):'your parent'));render()}
+const _ux2SosSend=sosSend;sosSend=async function(msg){const r=await _ux2SosSend.apply(this,arguments);
+  try{const u=me();const st=u&&ls.get('enivel_sos_'+u.id);const e=st&&Store.get('events',st.id);if(e&&e.status==='open'&&e.police===undefined&&Date.now()-e.ts<120000)setTimeout(()=>ux2PoliceAsk(e.id),150)}catch(x){}return r};
+const _ux2SosKid=sosKidCard;sosKidCard=function(){let html=_ux2SosKid.apply(this,arguments);const e=typeof sosMine==='function'&&sosMine();
+  if(e&&e.police)html=html.replace('<p class="small" style="margin:6px 0">','<p class="small" style="margin:6px 0"><b style="color:#dc2626">You asked for the police ✓</b> ');return html};
+const _ux2PEmerg=VIEWS['p-emergency'];VIEWS['p-emergency']=function(){let html=_ux2PEmerg.apply(this,arguments);try{const list=sosOpenForParent();const e=(S.sosId&&Store.get('events',S.sosId))||list[0];
+  if(e&&e.police){const k=Store.get('kids',e.kidId);html=html.replace(/(<div class="sos-msg">[\s\S]*?<\/div>)/,`$1<div class="ux-police">🚔 ASKED FOR POLICE</div>${e.policeNote?`<div class="ux-police-note">“${h(e.policeNote)}”</div>`:''}<p class="small" style="margin:0 0 10px"><b>${h(kcFirst(k?.name)||'Your child')} wants the police.</b> Call 10111 now and go to their location.</p>`)}}catch(x){}return html};
+const _ux2SosBanner=sosBanner;sosBanner=function(){let html=_ux2SosBanner.apply(this,arguments);try{if(html){const e=sosOpenForParent().find(x=>x.status==='open');if(e&&e.police)html=html.replace('PRESSED EMERGENCY</b>','PRESSED EMERGENCY · ASKED FOR POLICE</b>')}}catch(x){}return html};
+
+/* ---------- 7. calendar: empty state ---------- */
+const _ux2CalModal=exCalModal;exCalModal=function(){const u=me();if(!u)return;let rides=[];try{rides=exRides()}catch(e){}if(rides.length)return _ux2CalModal.apply(this,arguments);const drv=exRole()==='driver';
+  modal(`<div class="row" style="gap:12px;flex-wrap:nowrap"><span class="ex-ic cool">${EX_IC.cal}</span><div><h3>Rides in your calendar</h3><p class="tiny muted">Next 4 weeks · South African time</p></div></div>
+   <div class="ux-calempty">${empty(drv?'No booked rides yet. When a parent books a seat on one of your routes, the rides appear here.':'No booked rides yet. Book a child onto a route and your rides appear here.','pin')}
+   ${drv?`<button class="btn wide" onclick="closeModal();go('d-routes')">My routes</button>`:`<button class="btn wide" id="ux-cal-find" onclick="closeModal();go('p-find')">Find transport</button>`}</div>`)};
+
+/* ---------- 8. referral line on the invite page too ---------- */
+const _ux2Invite=VIEWS['invite'];VIEWS['invite']=function(){let html=_ux2Invite.apply(this,arguments);return html.replace(/(<button class="gw-code"[\s\S]*?<\/button>)/,'$1<p class="tiny muted" style="margin-top:8px">Share your code. When a friend signs up with it, you both get R50 Enivel credit on your next payment.</p>')};
+</script>

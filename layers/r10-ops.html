@@ -1,0 +1,320 @@
+<style>
+/* ===== Round 10 · ops: pre-trip vehicle check, note to driver, weekly safety report ===== */
+.ops-grow{flex:1;min-width:0}
+.leaflet-container{isolation:isolate}
+.ops-wrap{flex-wrap:wrap}.ops-wrap>.ops-note{flex:1 0 100%;margin-top:4px}
+.ops-vc{background:color-mix(in srgb,var(--live) 14%,transparent);border-color:color-mix(in srgb,var(--live) 55%,transparent);color:var(--live);white-space:normal;line-height:1.3}
+.ops-vc svg{width:14px;height:14px;flex-shrink:0}
+.ops-kidx{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:12px}
+.ops-mynote{display:flex;gap:6px;align-items:flex-start;font-size:.8rem;color:var(--fg2);background:color-mix(in srgb,var(--acc3) 12%,var(--bg));border-radius:10px;padding:6px 10px;overflow-wrap:anywhere;max-width:100%}
+.ops-note{display:flex;gap:10px;align-items:flex-start;margin-top:8px;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,var(--acc3) 14%,var(--bg));border:1px solid color-mix(in srgb,var(--acc3) 55%,transparent);color:var(--fg);font-size:.88rem;line-height:1.35;overflow-wrap:anywhere;animation:opsIn .35s ease both}
+.ops-note b{display:block;font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;color:color-mix(in srgb,var(--acc3) 70%,var(--fg))}
+.ops-note .i{font-size:1.15rem;line-height:1.1}
+.ops-note.ink{background:color-mix(in srgb,var(--acc3) 24%,transparent);border-color:var(--acc3);color:inherit}
+.ops-note.ink b{color:inherit;opacity:.75}
+.ops-note.tm{background:rgba(245,158,11,.16);border-color:#f59e0b;color:#fff;font-size:1.05rem;padding:12px 14px;margin-top:6px}
+.ops-note.tm b{color:#fbbf24}
+.ops-ic{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:color-mix(in srgb,var(--acc) 14%,var(--bg));color:var(--acc);flex-shrink:0}
+.ops-ic svg{width:22px;height:22px}
+.ops-ic.ok{background:color-mix(in srgb,var(--live) 15%,var(--bg));color:var(--live)}
+.ops-ic.bad{background:color-mix(in srgb,var(--bad) 14%,var(--bg));color:var(--bad)}
+.ops-chk{position:relative;overflow:hidden}
+.ops-chk::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--grad)}
+.ops-chk.all-ok::before{background:var(--live)}
+.ops-chk.has-bad::before{background:var(--bad)}
+.ops-streak{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:999px;font-weight:700;font-size:.78rem;white-space:nowrap;background:color-mix(in srgb,#ff7a18 15%,var(--bg));color:color-mix(in srgb,#ff7a18 78%,var(--fg));border:1px solid color-mix(in srgb,#ff7a18 35%,transparent)}
+.ops-streak.big{font-size:.95rem;padding:8px 14px}
+.ops-vlist{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.ops-vrow{display:flex;align-items:center;gap:12px;padding:10px 10px 10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.ops-vrow.ok{border-color:color-mix(in srgb,var(--live) 45%,var(--line))}
+.ops-vrow.bad{border-color:color-mix(in srgb,var(--bad) 55%,var(--line));background:color-mix(in srgb,var(--bad) 6%,var(--bg))}
+.ops-vrow b{overflow-wrap:anywhere}
+.ops-vrow.bad .st{color:var(--bad);font-weight:700}
+.ops-vrow.ok .st{color:var(--live);font-weight:700}
+.ops-vdot{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--bg2);flex-shrink:0;color:var(--fg3)}
+.ops-vdot svg{width:15px;height:15px}
+.ops-vrow.ok .ops-vdot{background:var(--live);color:#fff}
+.ops-vrow.bad .ops-vdot{background:var(--bad);color:#fff}
+.ops-prog{display:flex;align-items:center;gap:10px;margin:14px 0 4px}
+.ops-prog .bar{flex:1;min-width:40px}
+.ops-prog .bar i{background:var(--grad);transition:width .3s ease}
+.ops-items{display:flex;flex-direction:column;gap:8px;margin:10px 0 14px}
+.ops-ci{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 10px;border-radius:16px;background:var(--bg2);border:1px solid transparent;transition:background .2s,border-color .2s}
+.ops-ci .ops-ic{width:36px;height:36px;border-radius:11px}
+.ops-ci .ops-ic svg{width:19px;height:19px}
+.ops-ci.yes{border-color:color-mix(in srgb,var(--live) 50%,transparent);background:color-mix(in srgb,var(--live) 8%,var(--bg2))}
+.ops-ci.no{border-color:color-mix(in srgb,var(--bad) 55%,transparent);background:color-mix(in srgb,var(--bad) 8%,var(--bg2))}
+.ops-ci b{font-size:.92rem;display:block;line-height:1.25}
+.ops-adv{display:none;color:var(--bad);font-weight:600;line-height:1.3;margin-top:2px}
+.ops-ci.no .ops-adv{display:block}.ops-ci.no .ops-sub{display:none}
+.ops-yn{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);background:var(--bg);display:grid;place-items:center;cursor:pointer;flex-shrink:0;color:var(--fg3);padding:0;transition:transform .12s,background .2s,border-color .2s}
+.ops-yn svg{width:20px;height:20px}
+.ops-yn:active{transform:scale(.9)}
+.ops-yn.y.on{background:var(--live);border-color:var(--live);color:#fff;animation:opsPop .25s}
+.ops-yn.n.on{background:var(--bad);border-color:var(--bad);color:#fff;animation:opsPop .25s}
+.ops-ph{max-width:200px}
+.ops-done{text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;padding:6px 0 2px}
+.ops-done .row{justify-content:center}
+.ops-big{width:78px;height:78px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:2.2rem;font-weight:800;animation:opsPop .5s cubic-bezier(.2,1.4,.4,1) both;margin-bottom:4px}
+.ops-big svg{width:38px;height:38px}
+.ops-big.ok{background:var(--live);box-shadow:0 0 0 10px color-mix(in srgb,var(--live) 18%,transparent)}
+.ops-big.bad{background:var(--bad);box-shadow:0 0 0 10px color-mix(in srgb,var(--bad) 16%,transparent)}
+.ops-big.warn{background:var(--warn);box-shadow:0 0 0 10px color-mix(in srgb,var(--warn) 18%,transparent)}
+.ops-done .list{width:100%;text-align:left}
+.ops-chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 10px}
+.ops-chip{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:8px 14px;min-height:44px;font:inherit;font-weight:600;font-size:.85rem;cursor:pointer;transition:background .15s,border-color .15s,transform .1s}
+.ops-chip:active{transform:scale(.96)}
+.ops-chip.on{background:color-mix(in srgb,var(--acc3) 18%,var(--bg));border-color:var(--acc3)}
+.ops-banner{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;margin-bottom:14px;border:1px solid color-mix(in srgb,var(--warn) 55%,transparent);background:color-mix(in srgb,var(--warn) 10%,var(--bg));animation:opsIn .35s ease both}
+.ops-banner .ops-ic{background:color-mix(in srgb,var(--warn) 20%,var(--bg));color:color-mix(in srgb,var(--warn) 80%,var(--fg))}
+.ops-banner.bad{border-color:color-mix(in srgb,var(--bad) 55%,transparent);background:color-mix(in srgb,var(--bad) 8%,var(--bg))}
+.ops-banner.bad .ops-ic{background:color-mix(in srgb,var(--bad) 16%,var(--bg));color:var(--bad)}
+.ops-rep-cta{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:16px 18px;border-radius:var(--r);border:1px solid var(--line);background:linear-gradient(135deg,color-mix(in srgb,var(--live) 11%,var(--bg)),color-mix(in srgb,var(--acc2) 10%,var(--bg)));cursor:pointer;color:var(--fg);font:inherit;min-height:44px;transition:transform .2s}
+.ops-rep-cta:active{transform:scale(.99)}
+.ops-rep-cta .go{font-size:1.5rem;color:var(--fg3);line-height:1}
+.ops-mchk{white-space:normal;line-height:1.3}
+.ops-mchk svg{width:13px;height:13px;flex-shrink:0}
+.ops-report{display:flex;flex-direction:column;gap:14px}
+.ops-report .row.between{flex-wrap:nowrap}
+.ops-hero{border-radius:22px;padding:16px 18px;background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 15%,var(--bg)),color-mix(in srgb,var(--acc2) 13%,var(--bg)));border:1px solid var(--line)}
+.ops-wk{display:flex;align-items:center;gap:10px}
+.ops-wk .btn{width:44px;padding:0;font-size:1.3rem}
+.ops-wk .mid{flex:1;min-width:0;text-align:center}
+.ops-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}
+.ops-tiles>div{background:var(--bg2);border-radius:14px;padding:10px 6px;text-align:center;min-width:0}
+.ops-tiles .num{font-size:1.25rem}
+.ops-tiles span{display:block;font-size:.68rem;color:var(--fg3);font-weight:600;margin-top:5px;line-height:1.2}
+.ops-days{display:flex;flex-direction:column;margin-top:12px}
+.ops-day{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.ops-day:last-child{border-bottom:0}
+.ops-day.dh{padding:4px 0;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fg3)}
+.ops-dl{width:38px;flex-shrink:0;text-align:center;line-height:1.1}
+.ops-dl b{display:block;font-size:.72rem;color:var(--fg3);font-weight:700}
+.ops-dl span{font-size:1.05rem;font-weight:700;font-family:var(--display)}
+.ops-day .evs{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:6px}
+.ops-t{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;font-size:.75rem;font-weight:600;background:var(--bg2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ops-t.ok{background:color-mix(in srgb,var(--live) 13%,transparent);color:color-mix(in srgb,var(--live) 72%,var(--fg))}
+.ops-t.late{background:color-mix(in srgb,var(--warn) 17%,transparent);color:color-mix(in srgb,var(--warn) 62%,var(--fg))}
+.ops-t.abs{background:color-mix(in srgb,var(--info) 13%,transparent);color:color-mix(in srgb,var(--info) 75%,var(--fg))}
+.ops-dck{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;font-size:.8rem;color:var(--fg3)}
+.ops-dck.ok{background:color-mix(in srgb,var(--live) 16%,transparent);color:var(--live)}
+.ops-dck.no{background:color-mix(in srgb,var(--warn) 14%,transparent);color:color-mix(in srgb,var(--warn) 70%,var(--fg))}
+.ops-dck svg{width:14px;height:14px}
+.ops-rep{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--bad) 7%,var(--bg2));font-size:.85rem;margin-top:8px;overflow-wrap:anywhere}
+.ops-foot{line-height:1.5}
+@keyframes opsPop{0%{transform:scale(.6)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes opsIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media(max-width:360px){.ops-ci .ops-ic{display:none}.ops-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.ops-note,.ops-big,.ops-yn.on,.ops-banner{animation:none!important}}
+@media print{
+  :root:not(#ops-p){--bg:#fff;--bg2:#f3f3f1;--bg3:#e7e7e4;--fg:#000;--fg2:#333;--fg3:#666;--line:#dcdcd8;--ink:#000;--ink-fg:#fff;color-scheme:light}
+  body.ops-print>*:not(#app),body:has(.ops-report)>*:not(#app){display:none!important}
+  body.ops-print #app>*:not(.shell),body:has(.ops-report) #app>*:not(.shell){display:none!important}
+  body.ops-print .shell>*:not(main),body:has(.ops-report) .shell>*:not(main){display:none!important}
+  body.ops-print main>*:not(.ops-report),body:has(.ops-report) main>*:not(.ops-report){display:none!important}
+  body:has(.ops-report) main,body.ops-print main{padding:0!important;max-width:none!important;animation:none!important}
+  body:has(.ops-report),body.ops-print{background:#fff!important;color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body:has(.ops-report)::before{display:none}
+  .ops-noprint{display:none!important}
+  .ops-report .card,.ops-hero{break-inside:avoid;box-shadow:none!important}
+  .ops-report *{animation:none!important;transition:none!important}
+}
+</style>
+<script>
+/* ===== Round 10 · ops: pre-trip vehicle check · note to driver · weekly safety report =====
+   Data:
+   - checks/{id}: {driverId, vehicleId, plate, day:'YYYY-MM-DD', items:{tyres,lights,brakes,belts,locks,firstaid,extinguisher,clean:bool},
+                   allOk, okAt (first time it passed that day), notes, photo?, ts}. One doc per driver+vehicle+day (a redo updates it).
+   - bookings.notes: {'YYYY-MM-DD': text (max 140)} written by the parent; only today/future keys are kept.
+   Public helpers: opsOk(check), opsDayCheck(driverId,vehicleId,day), opsCheckBadge(booking), opsStreak(driverId), opsMonthStats(driverId),
+   opsNoteToday(booking), opsNoteBox(booking,variant), opsCheckModal(vehicleId), opsNoteModal(bookingId), opsKidWeek(kid,days), VIEWS['p-report'] */
+if(!S.data.checks)S.data.checks={};
+const OPS_ITEMS=[
+ ['tyres','Tyres','Pressure and tread','<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3v5.5M12 15.5V21M3 12h5.5M15.5 12H21"/>','Check pressure and tread. Swap a damaged tyre first.'],
+ ['lights','Lights & indicators','Head, brake and hazard lights','<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z"/>','Replace blown bulbs before you drive.'],
+ ['brakes','Brakes','Firm pedal, handbrake holds','<path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"/><path d="M8 12h8"/>','Do not drive. Get the brakes checked first.'],
+ ['belts','Every seatbelt works','Clicks in and locks','<circle cx="12" cy="5" r="2.5"/><path d="M7 21v-7a5 5 0 0 1 10 0v7M8.5 10.5 16 20"/>','No child rides without a working belt. Fix it or block that seat.'],
+ ['locks','Child locks','Back doors lock from inside','<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>','Fix the lock, or seat no child by that door.'],
+ ['firstaid','First-aid kit','Stocked and in reach','<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5h6v2M12 10.5v6M9 13.5h6"/>','Restock or replace the kit.'],
+ ['extinguisher','Fire extinguisher','Charged and in date','<path d="M9 9h6v12H9z"/><path d="M12 9V6M10 4h5l2-1.5M10 4v2"/>','Get it recharged or replaced.'],
+ ['clean','Clean, no new damage','Inside and out','<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>','Clean up, and add a photo of any new damage.']];
+const OPS_CHIPS=['Carrying a big project','Has sport kit','Early finish today','Someone else collects: ','Feeling unwell'];
+const OPS_GRACE=10;
+const opsSvg=p=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const OPS_REPORT_IC=opsSvg('<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h4"/>');
+
+/* ---------- checks: reading ---------- */
+function opsChecks(f){return Store.all('checks').filter(c=>c&&c.driverId&&c.day&&(!f||f(c)))}
+function opsOk(c){return !!c&&c.allOk===true&&OPS_ITEMS.every(([k])=>c.items&&c.items[k]===true)}
+function opsDayCheck(driverId,vehicleId,day){day=day||localKey();const xs=opsChecks(c=>c.driverId===driverId&&c.day===day&&(!vehicleId||c.vehicleId===vehicleId)).sort((a,b)=>(b.ts||0)-(a.ts||0));return xs[0]||null}
+function opsFailed(c){return OPS_ITEMS.filter(([k])=>!(c&&c.items&&c.items[k]===true))}
+function opsAddDays(day,n){const d=new Date(day+'T12:00:00');d.setDate(d.getDate()+n);return localKey(d)}
+function opsSchoolDay(day,driverId){const w=new Date(day+'T12:00:00').getDay();if(w===0||w===6)return false;if(typeof SA_HOLIDAYS==='object'&&SA_HOLIDAYS&&SA_HOLIDAYS[day])return false;const u=driverId&&Store.get('users',driverId);return !((u&&u.offDays)||[]).includes(day)}
+function opsOkDays(driverId){const s=new Set();opsChecks(c=>c.driverId===driverId).forEach(c=>{if(opsOk(c))s.add(c.day)});return s}
+/* days in a row with a passed check. A weekday with no trip and no check (not driving) does not break it; a trip day without a check does. */
+function opsStreak(driverId){const ok=opsOkDays(driverId);if(!ok.size)return 0;const drove=new Set(Store.all('events').filter(e=>e.driverId===driverId&&(e.type==='pickup'||e.type==='dropoff')).map(e=>localKey(new Date(e.ts))));let day=localKey(),n=ok.has(day)?1:0;
+  for(let i=0;i<200;i++){day=opsAddDays(day,-1);if(ok.has(day)){n++;continue}if(!opsSchoolDay(day,driverId))continue;if(drove.has(day))break}return n}
+/* passed checks on school days this month (today counts once it is checked) */
+function opsMonthStats(driverId){const ok=opsOkDays(driverId);const today=localKey();const u=Store.get('users',driverId);let day=today.slice(0,7)+'-01';const joined=u&&u.createdAt?localKey(new Date(u.createdAt)):day;if(joined>day)day=joined;let days=0,done=0;
+  for(let i=0;i<32&&day<=today;i++){if(opsSchoolDay(day,driverId)&&(day<today||ok.has(day))){days++;if(ok.has(day))done++}day=opsAddDays(day,1)}return {done,days}}
+/* the green parent badge: only when today's check for the booking's vehicle passed */
+function opsCheckBadge(b){if(!b)return '';const r=routeOf(b.routeId);const c=opsDayCheck(b.driverId,r&&r.vehicleId);if(!opsOk(c))return '';return `<span class="pill ops-vc">${ICON.shield} Vehicle checked today ${fmtT(c.okAt||c.ts)} ✓</span>`}
+function opsDriverVehicles(u){const vs=Store.all('vehicles').filter(v=>v.driverId===u.id).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));const used=new Set(Store.all('routes').filter(r=>r.driverId===u.id&&r.active!==false&&r.vehicleId).map(r=>r.vehicleId));const act=vs.filter(v=>used.has(v.id));return act.length?act:vs}
+
+/* ---------- writes: on the live site go straight to the server so a refusal is reported, not hidden ---------- */
+async function opsPut(c,id,doc){if(!S.data[c])S.data[c]={};doc={...doc,id};
+  if(S.cloud&&typeof sb!=='undefined'&&sb){const {error}=await sb.rpc('put_doc',{p_coll:c,p_id:id,p_data:doc});if(error)throw new Error(error.message||'Not saved');S.data[c][id]=doc;try{schedulePull()}catch(e){}render();return doc}
+  return Store.put(c,id,doc)}
+async function opsPrunePhotos(driverId){try{const cut=opsAddDays(localKey(),-14);for(const c of opsChecks(x=>x.driverId===driverId&&x.photo&&x.day<cut).slice(0,5)){const {photo,...rest}=c;await opsPut('checks',c.id,rest).catch(()=>{})}}catch(e){}}
+
+/* ---------- driver: check card on d-home ---------- */
+function opsCheckCard(){const u=me();if(!u)return '';const vs=opsDriverVehicles(u);if(!vs.length)return '';const st=opsStreak(u.id);const ms=opsMonthStats(u.id);let okN=0,badN=0;
+  const rows=vs.map(v=>{const c=opsDayCheck(u.id,v.id);const ok=opsOk(c);if(c&&ok)okN++;if(c&&!ok)badN++;
+    return `<div class="ops-vrow ${c?(ok?'ok':'bad'):''}"><span class="ops-vdot">${c?(ok?ICON.check:ICON.x):ICON.car}</span><div class="ops-grow"><b>${h(v.make)} ${h(v.model)}</b><div class="tiny muted">${h(v.plate||'')}${c?` · <span class="st">${ok?'Checked '+fmtT(c.okAt||c.ts):'Fix before driving'}</span>`:''}</div></div>${c?`<button class="btn sm ghost" data-ops-check="${h(v.id)}">${ok?'Redo':'Re-check'}</button>`:`<button class="btn sm" data-ops-check="${h(v.id)}">Check now</button>`}</div>`}).join('');
+  return `<div class="card ops-chk ${badN?'has-bad':okN===vs.length?'all-ok':''}"><div class="row between" style="flex-wrap:nowrap;align-items:flex-start"><div class="row" style="gap:12px;flex-wrap:nowrap;min-width:0"><span class="ops-ic ${badN?'bad':okN===vs.length?'ok':''}">${ICON.shield}</span><div style="min-width:0"><h3>Vehicle check</h3><div class="tiny muted">${badN?'Fix before driving':okN===vs.length?'Done for today. Safe trips!':'Before your first trip'}</div></div></div>${st?`<span class="ops-streak" title="Days in a row">🔥 ${st} day${st===1?'':'s'}</span>`:''}</div>
+  <div class="ops-vlist">${rows}</div><div class="tiny muted" style="margin-top:10px">Checks this month: <b>${ms.done}</b> of ${ms.days} school day${ms.days===1?'':'s'}</div></div>`}
+
+/* ---------- driver: the checklist ---------- */
+function opsCheckModal(vehicleId){const u=me();if(!u)return;const all=Store.all('vehicles').filter(v=>v.driverId===u.id).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));const v=all.find(x=>x.id===vehicleId)||opsDriverVehicles(u)[0];if(!v)return toast('Add a vehicle first');
+  const prev=opsDayCheck(u.id,v.id);const ans={};if(prev)OPS_ITEMS.forEach(([k])=>{if(typeof prev.items?.[k]==='boolean')ans[k]=prev.items[k]});
+  const row=([k,l,s,p,adv])=>`<div class="ops-ci ${ans[k]===true?'yes':ans[k]===false?'no':''}" data-k="${k}"><span class="ops-ic">${opsSvg(p)}</span><div class="ops-grow"><b>${l}</b><div class="tiny muted ops-sub">${s}</div><div class="tiny ops-adv">${adv}</div></div><button type="button" class="ops-yn y ${ans[k]===true?'on':''}" data-a="1" aria-label="${l}: OK" aria-pressed="${ans[k]===true}">${ICON.check}</button><button type="button" class="ops-yn n ${ans[k]===false?'on':''}" data-a="0" aria-label="${l}: problem" aria-pressed="${ans[k]===false}">${ICON.x}</button></div>`;
+  modal(`<div class="ops-ck"><div class="row between" style="flex-wrap:nowrap;align-items:flex-start"><div style="min-width:0"><span class="eyebrow">Pre-trip check · ${new Date().toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})}</span><h3>${h(v.make)} ${h(v.model)}</h3><div class="tiny muted">${h(v.plate||'')}</div></div><button class="ib" id="ops-x" aria-label="Close">${ICON.x}</button></div>
+    ${all.length>1?`<div class="seg" style="margin-top:12px">${all.map(x=>`<button type="button" class="${x.id===v.id?'on':''}" data-ops-v="${h(x.id)}">${h(x.plate||x.model||'Vehicle')}</button>`).join('')}</div>`:''}
+    <div class="ops-prog"><div class="bar"><i id="ops-pb" style="width:0%"></i></div><span class="tiny muted" id="ops-pc">0 of ${OPS_ITEMS.length}</span><button type="button" class="btn sm ghost" id="ops-all">All good ${ICON.check}</button></div>
+    <div class="ops-items">${OPS_ITEMS.map(row).join('')}</div>
+    <div class="field"><label for="ops-notes">Notes (optional)</label><textarea id="ops-notes" rows="2" maxlength="200" placeholder="e.g. Left back tyre a bit low">${h(prev?.notes||'')}</textarea></div>
+    <div class="field" style="margin-top:10px"><label>Photo (optional)</label><div class="ops-ph">${photoBox('ops-photo','Vehicle photo',prev?.photo)}</div></div>
+    <button class="btn wide" id="ops-save" style="margin-top:14px" disabled>Save check</button></div>`,m=>{
+    bindPhotos(m);
+    const sync=()=>{const n=OPS_ITEMS.filter(([k])=>typeof ans[k]==='boolean').length;$('#ops-pb',m).style.width=Math.round(n/OPS_ITEMS.length*100)+'%';$('#ops-pc',m).textContent=`${n} of ${OPS_ITEMS.length}`;const s=$('#ops-save',m);s.disabled=n<OPS_ITEMS.length;s.textContent=n<OPS_ITEMS.length?'Answer every item':OPS_ITEMS.some(([k])=>ans[k]===false)?'Save · needs fixing':'Save check';
+      m.querySelectorAll('.ops-ci').forEach(r=>{const k=r.dataset.k;r.classList.toggle('yes',ans[k]===true);r.classList.toggle('no',ans[k]===false);r.querySelectorAll('.ops-yn').forEach(b=>{const on=(b.dataset.a==='1')===ans[k]&&typeof ans[k]==='boolean';b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on))})})};
+    m.querySelectorAll('.ops-ci .ops-yn').forEach(b=>b.onclick=()=>{ans[b.closest('.ops-ci').dataset.k]=b.dataset.a==='1';buzz(8);sync()});
+    $('#ops-all',m).onclick=()=>{OPS_ITEMS.forEach(([k])=>ans[k]=true);buzz(15);sync()};
+    $('#ops-x',m).onclick=closeModal;
+    m.querySelectorAll('[data-ops-v]').forEach(b=>b.onclick=()=>opsCheckModal(b.dataset.opsV));
+    sync();
+    $('#ops-save',m).onclick=async()=>{const btn=$('#ops-save',m);if(OPS_ITEMS.some(([k])=>typeof ans[k]!=='boolean'))return;btn.disabled=true;btn.textContent='Saving…';
+      const items={};OPS_ITEMS.forEach(([k])=>items[k]=ans[k]===true);const allOk=OPS_ITEMS.every(([k])=>ans[k]===true);const now=Date.now();
+      const photo=$('#ops-photo',m)?.dataset.url||prev?.photo||'';
+      const doc={driverId:u.id,vehicleId:v.id,plate:v.plate||'',day:localKey(),items,allOk,okAt:allOk?(opsOk(prev)?(prev.okAt||prev.ts):now):null,notes:val(m,'ops-notes').trim().slice(0,200),ts:now};if(photo)doc.photo=photo;
+      try{await opsPut('checks',prev?.id||uid(),doc)}catch(e){btn.disabled=false;btn.textContent='Save check';return toast('Not saved: '+e.message)}
+      buzz(allOk?[20,40,20]:[80,60,80]);opsPrunePhotos(u.id);opsCheckDone(v,doc)}})}
+function opsCheckDone(v,doc){const st=opsStreak(me().id);const failed=opsFailed(doc);
+  modal(doc.allOk?`<div class="ops-done"><div class="ops-big ok">${ICON.check}</div><h3>All good. Safe trips!</h3><p class="muted small">Parents now see “Vehicle checked today ${fmtT(doc.okAt||doc.ts)} ✓”.</p>${st?`<span class="ops-streak big">🔥 ${st} day${st===1?'':'s'} in a row</span>`:''}<button class="btn wide" id="ops-ok" style="margin-top:8px">Done</button></div>`
+    :`<div class="ops-done"><div class="ops-big bad">!</div><h3>Fix before driving</h3><p class="muted small">Parents won't see a ✓ today until a check passes.</p><div class="list">${failed.map(([k,l,s,p,adv])=>`<div class="item"><span class="ops-ic bad">${opsSvg(p)}</span><div class="ops-grow"><b>${l}</b><div class="tiny muted">${adv}</div></div></div>`).join('')}</div><div class="row" style="width:100%;flex-wrap:nowrap"><button class="btn ops-grow" data-ops-check="${h(v.id)}">Fixed? Check again</button><button class="btn ghost" id="ops-ok">Close</button></div></div>`,
+    m=>{$('#ops-ok',m).onclick=closeModal})}
+/* starting a trip without today's check: a friendly nudge, the trip still starts */
+function opsNudge(r){const c=opsDayCheck(me().id,r.vehicleId);const bad=!!c&&!opsOk(c);
+  document.querySelector('.toast')?.remove();modal(`<div class="ops-done"><span class="eyebrow">Trip started ✓</span><div class="ops-big ${bad?'bad':'warn'}">${bad?'!':ICON.shield}</div><h3>${bad?'Fix before driving':'Quick vehicle check?'}</h3><p class="muted small">${bad?'Problem: '+h(opsFailed(c).map(x=>x[1]).join(', ')):'Takes 30 seconds. Parents see a ✓ when it passes.'}</p><div class="row" style="width:100%;flex-wrap:nowrap"><button class="btn ops-grow" data-ops-check="${h(r.vehicleId||'')}">${bad?'Check again':'Check now'}</button><button class="btn ghost" id="ops-later">Later</button></div></div>`,m=>{$('#ops-later',m).onclick=closeModal})}
+const _opsStartTrip=startTrip;
+startTrip=async function(routeId,...rest){const out=await _opsStartTrip.call(this,routeId,...rest);try{const r=routeOf(routeId);const u=me();if(r&&u&&r.driverId===u.id&&!opsOk(opsDayCheck(u.id,r.vehicleId))){buzz([30,60,30]);setTimeout(()=>{if(!document.querySelector('.overlay'))opsNudge(r)},350)}}catch(e){console.warn('ops nudge',e)}return out};
+
+/* ---------- note to driver ---------- */
+function opsNoteToday(b){const t=b&&b.notes&&b.notes[localKey()];return typeof t==='string'&&t.trim()?t.trim().slice(0,140):''}
+function opsNoteBox(b,variant){const t=opsNoteToday(b);if(!t)return '';return `<div class="ops-note ${variant||''}"><span class="i">📝</span><div class="ops-grow"><b>Note from ${h(String(userName(b.parentId)||'parent').split(' ')[0])}</b><div>${h(t)}</div></div></div>`}
+function opsDayLabel(day){const t=localKey();if(day===t)return 'Today';if(day===opsAddDays(t,1))return 'Tomorrow';return new Date(day+'T12:00:00').toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})}
+function opsNextDays(){const t=localKey();let n=opsAddDays(t,1);for(let i=0;i<7&&!opsSchoolDay(n);i++)n=opsAddDays(n,1);return [t,n]}
+function opsNoteModal(bookingId){const b=Store.get('bookings',bookingId);const u=me();if(!b||!u)return toast('Booking not found');const k=Store.get('kids',b.kidId);const days=opsNextDays();let day=days[0];const drv=String(userName(b.driverId)||'your driver').split(' ')[0];
+  modal(`<div class="row between" style="flex-wrap:nowrap;align-items:flex-start"><div style="min-width:0"><span class="eyebrow">Note to driver</span><h3>${h(k?.name||'Your child')}</h3><div class="tiny muted">${h(drv)} sees it on the trip</div></div><button class="ib" id="opn-x" aria-label="Close">${ICON.x}</button></div>
+    <div class="seg" style="margin-top:14px">${days.map((d,i)=>`<button type="button" data-d="${d}" class="${i?'':'on'}">${opsDayLabel(d)}</button>`).join('')}</div>
+    <div class="ops-chips">${OPS_CHIPS.map((c,i)=>`<button type="button" class="ops-chip" data-i="${i}">${h(c.replace(/:\s*$/,''))}</button>`).join('')}</div>
+    <div class="field"><textarea id="opn-t" rows="3" maxlength="140" placeholder="Anything ${h(drv)} should know"></textarea><div class="row between"><span class="hint">Short and clear</span><span class="hint" id="opn-c">0/140</span></div></div>
+    <div class="row" style="margin-top:12px;flex-wrap:nowrap"><button class="btn ops-grow" id="opn-save">Send to ${h(drv)}</button><button class="btn ghost" id="opn-del" hidden>Remove</button></div>`,m=>{
+    const ta=$('#opn-t',m);const phrase=i=>{const c=OPS_CHIPS[i];return day!==localKey()&&/today$/.test(c)?c.replace(/ today$/,''):c};
+    const sync=()=>{if(ta.value.length>140)ta.value=ta.value.slice(0,140);$('#opn-c',m).textContent=ta.value.length+'/140';m.querySelectorAll('.ops-chip').forEach(c=>{const p=phrase(+c.dataset.i).replace(/:\s*$/,'');c.classList.toggle('on',ta.value.toLowerCase().includes(p.toLowerCase()))})};
+    const load=()=>{const cur=Store.get('bookings',bookingId)||b;ta.value=(cur.notes&&typeof cur.notes[day]==='string')?cur.notes[day]:'';$('#opn-del',m).hidden=!ta.value;sync()};
+    m.querySelectorAll('.seg [data-d]').forEach(x=>x.onclick=()=>{day=x.dataset.d;m.querySelectorAll('.seg [data-d]').forEach(y=>y.classList.toggle('on',y===x));load()});
+    m.querySelectorAll('.ops-chip').forEach(c=>c.onclick=()=>{const p=phrase(+c.dataset.i);const bare=p.replace(/:\s*$/,'');let t=ta.value;const at=t.toLowerCase().indexOf(bare.toLowerCase());
+      if(at>=0){let end=at+bare.length;if(/:\s*$/.test(p)){const dot=t.indexOf('.',end);end=dot<0?t.length:dot}t=(t.slice(0,at)+t.slice(end)).replace(/^[\s.]+/,'').replace(/\s*\.\s*\./g,'.').replace(/\s{2,}/g,' ').trim()}
+      else t=(t.trim()?t.trim().replace(/[.\s]*$/,'')+'. ':'')+p;
+      ta.value=t.slice(0,140);sync();buzz(8);if(/:\s*$/.test(p)&&at<0){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}});
+    ta.oninput=sync;$('#opn-x',m).onclick=closeModal;
+    const save=async text=>{const btn=$('#opn-save',m);btn.disabled=true;try{if(S.cloud&&typeof cloudPull==='function')await cloudPull(false)}catch(e){}
+      const cur=Store.get('bookings',bookingId)||b;const today=localKey();const notes={};Object.entries(cur.notes||{}).forEach(([d,v])=>{if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&d>=today&&typeof v==='string'&&v.trim())notes[d]=v.trim().slice(0,140)});
+      if(text)notes[day]=text;else delete notes[day];
+      try{await opsPut('bookings',bookingId,{...cur,notes})}catch(e){btn.disabled=false;return toast('Not saved: '+e.message)}
+      if(text)await notify(cur.driverId,`📝 Note for ${k?.name||'your passenger'} (${day===localKey()?'today':day===opsAddDays(localKey(),1)?'tomorrow':opsDayLabel(day)}): ${text}`,'note','d-home');
+      closeModal();buzz();toast(text?`Sent to ${drv}`:'Note removed')};
+    $('#opn-save',m).onclick=()=>{const text=ta.value.replace(/\s+/g,' ').trim().slice(0,140);if(!text)return toast('Write a note or tap a chip');if(/collects:?$/i.test(text))return toast('Add who collects');save(text)};
+    $('#opn-del',m).onclick=()=>save('');
+    load()})}
+function opsDriverNotesCard(){const u=me();if(!u)return '';const bs=Store.all('bookings').filter(b=>b.driverId===u.id&&(b.status==='active'||b.status==='trip')&&opsNoteToday(b));if(!bs.length)return '';
+  return `<div class="card"><div class="row between"><h3>📝 Notes for today</h3><span class="pill warn">${bs.length}</span></div><div class="stack" style="gap:2px;margin-top:2px">${bs.map(b=>{const k=Store.get('kids',b.kidId);return `<div class="ops-note"><span class="avatar sm">${initials(k?.name)}</span><div class="ops-grow"><b>${h(k?.name||'Passenger')} · from ${h(String(userName(b.parentId)||'').split(' ')[0])}</b><div>${h(opsNoteToday(b))}</div></div></div>`}).join('')}</div></div>`}
+
+/* ---------- weekly safety report ---------- */
+function opsWeekDays(off){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(off||0));return [0,1,2,3,4].map(i=>{const x=new Date(d);x.setDate(d.getDate()+i);return localKey(x)})}
+function opsMin(t){const m=/^(\d{1,2}):(\d{2})/.exec(String(t||'').trim());return m?(+m[1])*60+(+m[2]):null}
+/* the agreed time (minutes after midnight) for a pickup/drop-off event, or null when none was agreed */
+function opsAgreed(e,b,r){if(!b)return null;const d=new Date(e.ts);const day=localKey(d);const pm=d.getHours()>=11;
+  if(b.once)return e.type==='pickup'?opsMin(b.time):null;
+  const s=b.schedule&&b.schedule.status==='agreed'?b.schedule:null;const reg=(s&&s.regular)||{};
+  if(!pm)return opsMin(e.type==='pickup'?(reg.homePickup||r?.pickupTime):(reg.schoolDrop||r?.dropoffTime));
+  if(e.type==='pickup'){let t=reg.schoolPickup;if(s&&s.exam&&day>=s.exam.from&&day<=s.exam.to&&(s.exam.days||[]).includes(d.getDay())&&s.exam.schoolPickup)t=s.exam.schoolPickup;return opsMin(t)}
+  return opsMin(reg.homeDrop)}
+function opsKidWeek(k,days){const u=me();const from=new Date(days[0]+'T00:00:00').getTime(),to=new Date(days[days.length-1]+'T23:59:59.999').getTime();const today=localKey();
+  const kb=Store.all('bookings').filter(b=>b.kidId===k.id);const kbIds=new Set(kb.map(b=>b.id));const cur=kb.find(b=>b.status==='active')||kb.sort((a,b)=>(b.startedAt||0)-(a.startedAt||0))[0]||null;
+  const evs=Store.all('events').filter(e=>(e.kidId===k.id)&&e.ts>=from&&e.ts<=to).sort((a,b)=>a.ts-b.ts);
+  const rides=evs.filter(e=>e.type==='pickup'||e.type==='dropoff');let onT=0,withT=0,rideDays=0,chkDays=0;
+  const perDay=days.map(day=>{const re=rides.filter(e=>localKey(new Date(e.ts))===day).map(e=>{const b=Store.get('bookings',e.bookingId);const r=routeOf(e.routeId||b?.routeId);const ag=opsAgreed(e,b,r);const dt=new Date(e.ts);const mins=dt.getHours()*60+dt.getMinutes();const late=ag==null?null:mins-ag;if(ag!=null){withT++;if(late<=OPS_GRACE)onT++}return {e,late,ok:ag==null?null:late<=OPS_GRACE}});
+    let chk=null;if(re.length){rideDays++;const byDrv={};re.forEach(x=>{const dId=x.e.driverId;if(dId&&!byDrv[dId])byDrv[dId]=x.e});chk=Object.values(byDrv).length>0&&Object.values(byDrv).every(e=>{const b=Store.get('bookings',e.bookingId);const r=routeOf(e.routeId||b?.routeId);const c=opsDayCheck(e.driverId,r&&r.vehicleId,day);return opsOk(c)&&(c.okAt||c.ts)<=e.ts});if(chk)chkDays++}
+    const drv=cur&&Store.get('users',cur.driverId);
+    return {day,rides:re,absent:isAbsent(k,day),holiday:(typeof SA_HOLIDAYS==='object'&&SA_HOLIDAYS[day])||'',off:!!(drv&&(drv.offDays||[]).includes(day)),future:day>today,chk}});
+  const first=String(k.name||'').split(' ')[0];
+  const alerts=Store.all('notifications').filter(n=>u&&n.userId===u.id&&n.ts>=from&&n.ts<=to&&(n.type==='approach'||/is about \d+ min from/.test(n.text||''))&&(n.kidId?n.kidId===k.id:(!!first&&String(n.text||'').includes(first)))).length;
+  const reports=Store.all('events').filter(e=>e.ts>=from&&e.ts<=to&&(e.type==='report'||e.type==='sos'||e.type==='emergency'||e.sos)&&(e.kidId===k.id||kbIds.has(e.bookingId))).sort((a,b)=>a.ts-b.ts);
+  return {k,b:cur,rides:rides.length,onT,withT,pct:withT?Math.round(onT/withT*100):null,rideDays,chkDays,alerts,absent:perDay.filter(d=>d.absent).length,reports,perDay}}
+function opsRangeLabel(days){const f=x=>new Date(x+'T12:00:00').toLocaleDateString('en-ZA',{day:'numeric',month:'short'});return f(days[0])+' – '+f(days[days.length-1])}
+function opsReportCta(u){const days=opsWeekDays(0);let rides=0,onT=0,withT=0;kidsOf(u.id).forEach(k=>{const w=opsKidWeek(k,days);rides+=w.rides;onT+=w.onT;withT+=w.withT});
+  return `<button type="button" class="ops-rep-cta" onclick="go('p-report',{opsWeek:0})"><span class="ops-ic ok">${OPS_REPORT_IC}</span><span class="ops-grow"><b>Weekly safety report</b><span class="tiny muted" style="display:block">${rides?`${rides} ride${rides===1?'':'s'}${withT?` · ${Math.round(onT/withT*100)}% on time`:''} this week`:'Your week at a glance'}</span></span><span class="go">›</span></button>`}
+VIEWS['p-report']=()=>{const u=me();if(!u)return VIEWS.login();const off=Math.min(0,Math.max(-12,S.opsWeek|0));const days=opsWeekDays(off);const kids=kidsOf(u.id);
+  const head=pageHead('Weekly safety report',h(u.name),`<button class="btn sm ops-noprint" data-ops-print>${OPS_REPORT_IC} Print</button>`);
+  if(!kids.length)return `<div class="ops-report">${head}<div class="card">${empty('Add a child to see their weekly report.','kids')}<div class="row" style="justify-content:center"><button class="btn sm ops-noprint" onclick="addKid()">Add child</button></div></div></div>`;
+  const ws=kids.map(k=>opsKidWeek(k,days));const rides=ws.reduce((s,w)=>s+w.rides,0);const reps=ws.reduce((s,w)=>s+w.reports.length,0);
+  const hero=`<div class="ops-hero"><div class="ops-wk"><button class="btn sm ghost ops-noprint" data-ops-wk="-1" aria-label="Previous week">‹</button><div class="mid"><span class="eyebrow">${off===0?'This week':off===-1?'Last week':(-off)+' weeks ago'}</span><h3>${opsRangeLabel(days)}</h3></div><button class="btn sm ghost ops-noprint" data-ops-wk="1" aria-label="Next week" ${off>=0?'disabled':''}>›</button></div>
+    <div class="row" style="justify-content:center;margin-top:10px;gap:8px">${rides?`<span class="pill live">${ICON.check} ${rides} ride${rides===1?'':'s'} logged</span>`:'<span class="pill">No rides logged</span>'}${reps?`<span class="pill bad">${reps} report${reps===1?'':'s'}</span>`:rides?'<span class="pill">No incidents reported</span>':''}</div></div>`;
+  const foot=`<p class="tiny muted ops-foot">On time = within ${OPS_GRACE} min of the agreed time. Checked = the driver's vehicle check passed before the first ride that day. Made ${fmtDT(Date.now())} from Enivel trip logs.</p>`;
+  if(!rides&&!reps)return `<div class="ops-report">${head}${hero}<div class="card">${empty('No rides logged this week. Pickups and drop-offs show here once your driver logs them.','car')}</div>${foot}</div>`;
+  const sec=w=>{const k=w.k;const drv=w.b?userName(w.b.driverId):'';const dayRow=d=>{const dt=new Date(d.day+'T12:00:00');
+      const chips=d.rides.length?d.rides.map(x=>`<span class="ops-t ${x.ok===true?'ok':x.ok===false?'late':''}">${x.e.type==='pickup'?'Picked up':'Dropped off'} ${fmtT(x.e.ts)}${x.ok===false?` · +${x.late} min`:''}</span>`).join(''):
+        d.holiday?`<span class="ops-t">Public holiday</span>`:d.absent?`<span class="ops-t abs">Absent</span>`:d.off?`<span class="ops-t">Driver off</span>`:d.future?`<span class="tiny muted">—</span>`:`<span class="tiny muted">No ride logged</span>`;
+      const ck=d.chk===true?`<span class="ops-dck ok" title="Vehicle checked">${ICON.check}</span>`:d.chk===false?`<span class="ops-dck no" title="No vehicle check before the ride">–</span>`:`<span class="ops-dck"></span>`;
+      return `<div class="ops-day"><div class="ops-dl"><b>${dt.toLocaleDateString('en-ZA',{weekday:'short'})}</b><span>${dt.getDate()}</span></div><div class="evs">${chips}${d.rides.length&&d.absent?'<span class="ops-t abs">Marked absent</span>':''}</div>${ck}</div>`};
+    return `<div class="card"><div class="row between" style="flex-wrap:nowrap"><div class="row" style="gap:12px;flex-wrap:nowrap;min-width:0"><span class="avatar">${initials(k.name)}</span><div style="min-width:0"><b>${h(k.name)}</b><div class="tiny muted">${h(k.school||'School not set')}${drv?' · '+h(drv):''}</div></div></div>${w.reports.length?`<span class="pill bad">${w.reports.length} report${w.reports.length===1?'':'s'}</span>`:w.rides?`<span class="pill live">${ICON.shield} Safe week</span>`:''}</div>
+      <div class="ops-tiles"><div><div class="num">${w.rides}</div><span>Rides</span></div><div><div class="num">${w.pct==null?'—':w.pct+'%'}</div><span>On time</span></div><div><div class="num">${w.rideDays?w.chkDays+'/'+w.rideDays:'—'}</div><span>Vehicle checked</span></div><div><div class="num">${w.alerts}</div><span>Approach alerts</span></div></div>
+      <div class="ops-days"><div class="ops-day dh"><span class="ops-dl">Day</span><span class="evs">Pickups & drop-offs</span><span>Check</span></div>${w.perDay.map(dayRow).join('')}</div>
+      <div class="tiny muted" style="margin-top:8px">Absent: ${w.absent?w.absent+' day'+(w.absent===1?'':'s'):'none'} · Reports & SOS: ${w.reports.length||'none'}</div>
+      ${w.reports.map(e=>`<div class="ops-rep"><span class="pill bad">${e.sos||e.type==='sos'||e.type==='emergency'?'SOS':'Report'}</span><div class="ops-grow">${h(String(e.text||'').slice(0,200))}<div class="tiny muted">${fmtDT(e.ts)}</div></div></div>`).join('')}</div>`};
+  return `<div class="ops-report">${head}${hero}${ws.map(sec).join('')}${foot}</div>`};
+function opsPrint(){document.body.classList.add('ops-print');const done=()=>{document.body.classList.remove('ops-print');window.removeEventListener('afterprint',done)};window.addEventListener('afterprint',done);try{window.print()}catch(e){done()}}
+
+/* ---------- wiring into existing screens ---------- */
+function opsFindBtn(root,needle,prefer){const bs=[...root.querySelectorAll('button')].filter(x=>(x.getAttribute('onclick')||'').includes(needle));return (prefer&&bs.find(x=>x.textContent.includes(prefer)))||bs[0]||null}
+MOUNT.opsParent=el=>{try{const main=el.closest('main')||document.getElementById('app');const u=me();if(!main||!u)return;
+  if(S.route==='p-home'){activeBookings(b=>b.parentId===u.id).forEach(b=>{const btn=opsFindBtn(main,`bookingId:'${b.id}'`,'Details');const row=btn&&btn.parentElement;if(!row||row.querySelector('[data-ops-note]'))return;
+      const badge=opsCheckBadge(b);const t=opsNoteToday(b);if(badge||t)row.insertAdjacentHTML('beforebegin',`<div class="ops-kidx">${badge}${t?`<div class="ops-mynote"><span>📝</span><span>${h(t)}</span></div>`:''}</div>`);
+      btn.insertAdjacentHTML('beforebegin',`<button class="btn sm ghost" data-ops-note="${h(b.id)}">📝 Note</button>`)})}
+  else if(S.route==='p-booking'){const b=Store.get('bookings',S.bookingId);if(!b)return;const badge=opsCheckBadge(b);const h3=[...main.querySelectorAll('h3')].find(x=>x.textContent.trim()==='Vehicle');if(h3&&badge&&!main.querySelector('.ops-vc'))h3.insertAdjacentHTML('afterend',`<div style="margin-top:8px">${badge}</div>`);
+    const sbtn=opsFindBtn(main,`scheduleModal('${b.id}')`);if(sbtn&&!main.querySelector('[data-ops-note]')){sbtn.insertAdjacentHTML('beforebegin',`<button class="btn sm ghost" data-ops-note="${h(b.id)}">📝 Note to driver</button>`);const t=opsNoteToday(b);if(t)sbtn.parentElement.insertAdjacentHTML('beforebegin',`<div class="ops-mynote" style="margin-top:12px"><span>📝</span><span>Today: ${h(t)}</span></div>`)}}
+  else if(S.route==='p-track'){const k=Store.get('kids',S.trackKid);const b=k&&bookingOf(k);const badge=opsCheckBadge(b);if(!badge||main.querySelector('.ops-vc'))return;const g=main.querySelector('.grid.g3');if(g)g.insertAdjacentHTML('beforebegin',`<div>${badge}</div>`);else{const st=main.querySelector('.card.soft h3');if(st)st.insertAdjacentHTML('afterend',`<div style="margin-top:10px">${badge}</div>`)}}
+}catch(e){console.warn('ops parent',e)}};
+MOUNT.opsDTrip=el=>{try{const main=el.closest('main');const r=routeOf(S.tripRoute);const u=me();if(!main||!r||!u)return;
+  if(!main.querySelector('.ops-banner')&&r.driverId===u.id){const c=opsDayCheck(u.id,r.vehicleId);if(!opsOk(c)){const bad=!!c;const html=`<div class="ops-banner ${bad?'bad':''}"><span class="ops-ic">${bad?ICON.x:ICON.shield}</span><div class="ops-grow"><b>${bad?'Fix before driving':'No vehicle check today'}</b><div class="tiny muted">${bad?h(opsFailed(c).map(x=>x[1]).join(', ')):'30 seconds. Parents see a ✓.'}</div></div><button class="btn sm" data-ops-check="${h(r.vehicleId||'')}">${bad?'Re-check':'Check'}</button></div>`;const first=main.firstElementChild;if(first&&first!==el)first.insertAdjacentHTML('afterend',html);else main.insertAdjacentHTML('afterbegin',html)}}
+  activeBookings(b=>b.routeId===r.id).forEach(b=>{if(!opsNoteToday(b))return;const btn=opsFindBtn(main,`'${b.id}'`);const item=btn&&btn.closest('.item');if(item&&!item.querySelector('.ops-note')){item.classList.add('ops-wrap');item.insertAdjacentHTML('beforeend',opsNoteBox(b))}});
+  const ns=typeof nextStop==='function'?nextStop(r.id):null;const nsEl=main.querySelector('.nextstop');if(ns&&ns.b&&nsEl&&!nsEl.querySelector('.ops-note')){const box=opsNoteBox(ns.b,'ink');if(box){nsEl.classList.add('ops-wrap');nsEl.insertAdjacentHTML('beforeend',box)}}
+}catch(e){console.warn('ops trip',e)}};
+const _opsPHome=VIEWS['p-home'];VIEWS['p-home']=()=>{let html=_opsPHome();try{const u=me();if(u&&kidsOf(u.id).length){const cta=opsReportCta(u);const mk='<div class="card"><div class="row between"><h3>Alerts</h3>';html=html.includes(mk)?html.replace(mk,cta+mk):html+cta}}catch(e){console.warn('ops home',e)}return html+'<i data-mount="opsParent" hidden></i>'};
+const _opsPBooking=VIEWS['p-booking'];VIEWS['p-booking']=()=>_opsPBooking()+'<i data-mount="opsParent" hidden></i>';
+const _opsPTrack=VIEWS['p-track'];VIEWS['p-track']=()=>_opsPTrack()+'<i data-mount="opsParent" hidden></i>';
+const _opsDTrip=VIEWS['d-trip'];VIEWS['d-trip']=()=>_opsDTrip()+'<i data-mount="opsDTrip" hidden></i>';
+const _opsDHome=VIEWS['d-home'];VIEWS['d-home']=()=>{const html=_opsDHome();try{const u=me();if(!u)return html;const add=opsCheckCard()+opsDriverNotesCard();if(!add)return html;return html.includes('<div class="kpi">')?html.replace('<div class="kpi">',add+'<div class="kpi">'):html+add}catch(e){console.warn('ops d-home',e);return html}};
+const _opsPMore=VIEWS['p-more'];VIEWS['p-more']=()=>{const html=_opsPMore();try{const mk=`onclick="go('p-pay')"><div class="grow">Payments and invoices</div>›</div>`;const item=`<div class="item" style="cursor:pointer" onclick="go('p-report',{opsWeek:0})"><div class="grow">Weekly safety report</div>›</div>`;
+  return html.includes(mk)?html.replace(mk,mk+item):html+`<div class="card" style="margin-top:14px"><div class="list">${item}</div></div>`}catch(e){return html}};
+const _opsNotifs=VIEWS.notifs;VIEWS.notifs=()=>_opsNotifs().replace(/<span class="pill ">Info<\/span>(<div class="grow"><div[^>]*>📝 )/g,'<span class="pill warn">Note</span>$1');
+const _opsReviews=VIEWS.reviews;VIEWS.reviews=()=>{const html=_opsReviews();try{const d=Store.get('users',S.reviewDriver);if(!d||d.role!=='driver')return html;const ms=opsMonthStats(d.id);if(!ms.days)return html;const pill=`<span class="pill ops-mchk">${ICON.shield} Checks this month: ${ms.done} of ${ms.days} school days</span>`;const re=/(<span class="pill">\d+ passengers<\/span>)/;return re.test(html)?html.replace(re,'$1'+pill):html+`<div class="card" style="margin-top:14px">${pill}</div>`}catch(e){return html}};
+if(typeof drawTripMode==='function'){const _opsDrawTM=drawTripMode;drawTripMode=function(...a){const out=_opsDrawTM.apply(this,a);try{const d=document.querySelector('.tripmode');const ns=S.tripModeRoute&&typeof nextStop==='function'?nextStop(S.tripModeRoute):null;if(d&&ns&&ns.b&&!d.querySelector('.ops-note')){const box=opsNoteBox(ns.b,'tm');if(box)(d.querySelector('.next')||d).insertAdjacentHTML('beforeend',box)}}catch(e){console.warn('ops trip mode',e)}return out}}
+document.addEventListener('click',e=>{const t=e.target&&e.target.closest&&e.target.closest('[data-ops-check],[data-ops-note],[data-ops-wk],[data-ops-print]');if(!t||t.disabled)return;
+  if(t.hasAttribute('data-ops-check')){e.preventDefault();opsCheckModal(t.getAttribute('data-ops-check'))}
+  else if(t.hasAttribute('data-ops-note')){e.preventDefault();opsNoteModal(t.getAttribute('data-ops-note'))}
+  else if(t.hasAttribute('data-ops-wk')){S.opsWeek=Math.min(0,Math.max(-12,(S.opsWeek|0)+(+t.getAttribute('data-ops-wk')||0)));render()}
+  else if(t.hasAttribute('data-ops-print'))opsPrint()});
+</script>

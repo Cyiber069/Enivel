@@ -1,0 +1,27 @@
+<style>
+.st-when{display:flex;gap:8px;margin:4px 0 2px}
+.st-when button{flex:1;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font:inherit;font-weight:600;cursor:pointer}
+.st-when button.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,var(--bg));color:var(--acc)}
+</style>
+<script>
+/* ===== 07 Nov: parents can set a second stop again (map pins are locked, so it needs a button),
+   and say whether it is BEFORE school (home → stop → school) or AFTER school (school → stop). ===== */
+function stWhen(){return journey().stopWhen==='after'?'after':'before'}
+/* map order + labels follow the choice */
+{const _stJP=journeyPoints;journeyPoints=function(){const pts=_stJP.apply(this,arguments);const i=pts.findIndex(p=>p.kind==='stop');if(i<0)return pts;const st=pts.splice(i,1)[0];const w=stWhen();
+  st.label='Stop ('+(w==='after'?'after':'before')+' school) · '+(journey().stop||'');const s=pts.findIndex(p=>p.kind==='school');
+  if(w==='after')pts.push(st);else pts.splice(s<0?pts.length:s,0,st);return pts}}
+/* the stop sheet gets the before/after choice */
+{const _stPick=pickPlace;pickPlace=function(kind){_stPick.apply(this,arguments);if(kind!=='stop')return;try{const m=$('.modal');const field=m&&m.querySelector('#pl-v')?.closest('.field');if(!field)return;
+  const h3=m.querySelector('h3');if(h3)h3.textContent='Second stop';S.stWhenPick=stWhen();
+  const box=document.createElement('div');box.className='field';box.innerHTML=`<label>When?</label><div class="st-when"><button type="button" data-w="before">Before school</button><button type="button" data-w="after">After school</button></div><p class="tiny muted" id="st-help"></p>`;
+  field.insertAdjacentElement('afterend',box);const help=box.querySelector('#st-help');
+  const draw=()=>{box.querySelectorAll('[data-w]').forEach(b=>b.classList.toggle('on',b.dataset.w===S.stWhenPick));help.textContent=S.stWhenPick==='after'?'School → this stop (e.g. aftercare, gran, sport).':'Home → this stop → school (e.g. pick up a sibling).'};
+  box.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{S.stWhenPick=b.dataset.w;draw()});draw();
+  const v=m.querySelector('#pl-v');if(v)v.placeholder='Street, suburb or place';}catch(e){console.warn('stop sheet',e)}}}
+{const _stSet=setJourneyPlace;setJourneyPlace=async function(kind,text,el){const r=await _stSet.apply(this,arguments);if(kind==='stop'&&text)await setJourney({stopWhen:S.stWhenPick==='after'?'after':'before'});return r}}
+/* third button under the map */
+{const _stScene=sceneSVG;sceneSVG=function(){let html=_stScene.apply(this,arguments);const j=journey();
+  const btn=`<button class="btn sm ghost" onclick="pickPlace('stop')">${ICON.pin||''} ${j.stopGeo||j.stop?'Change stop ('+(stWhen()==='after'?'after':'before')+' school)':'Add a stop'}</button>`;
+  return html.replace(/(<div class="mf-row">[\s\S]*?)(<\/div>)/,(m0,a,b)=>a+btn+b)}}
+</script>

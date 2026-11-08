@@ -1,0 +1,11 @@
+<script>
+/* ===== Round 10 base: new collections + shared helpers used by the round 10 layers ===== */
+COLS.push('checks','audit');
+/* audit log: every admin action is written to the 'audit' collection (admin-only on the server).
+   Fields: actor, actorName, action, target (a user/route/booking id, never userId/parentId/driverId so it stays private), detail, ts */
+async function auditLog(action,target,detail){try{if(!S.admin)return;const u=me();await Store.put('audit',uid(),{actor:u?.id||'admin',actorName:u?.name||'Admin',action:String(action),target:target||null,detail:detail||'',ts:Date.now()})}catch(e){console.warn('audit',e)}}
+/* the person using the app right now: 'admin' | 'parent' | 'driver' | 'kid' (admin switch included) */
+function viewRole(){const u=me();return S.admin?(S.adminApp==='driver'?'driver':S.adminApp==='kid'?'kid':S.adminApp?'parent':'admin'):u?.role}
+/* small haptic tick on supported phones */
+function buzz(p){try{navigator.vibrate&&navigator.vibrate(p||12)}catch(e){}}
+</script>

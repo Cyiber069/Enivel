@@ -1,0 +1,6 @@
+{
+  "name": "enivel",
+  "private": true,
+  "description": "Build tools only (the app itself is index.html).",
+  "devDependencies": { "html-minifier-terser": "7.2.0" }
+}
