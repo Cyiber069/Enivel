@@ -1,0 +1,50 @@
+<style>
+.ph-box{margin-top:6px;border-radius:12px;padding:9px 11px;background:var(--bg2,rgba(127,127,127,.08));font-size:.8rem;line-height:1.4}
+.ph-box b{font-weight:800}
+.ph-box .ph-use{display:inline-block;margin-top:6px;font-size:.75rem;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;min-height:30px}
+.ph-hi{color:#b06000}
+:root[data-theme="dark"] .ph-hi{color:#fdd663}
+</style>
+<script>
+/* ===== 10 Nov owner: "add typical prices". When a driver sets a monthly price (new/edit route, or an offer
+   on a parent's request) a hint shows:
+   - what other Enivel routes to the same school / in the same area charge (middle half of prices),
+     only when there are at least 3 routes, so one driver's price is never exposed;
+   - a rough running-cost check from the distance: km a day × school days × cost per km for the whole vehicle,
+     and what that is per child with the seats full. Cost per km = settings/pricing.costPerKm (default R3.50,
+     fuel + wear for a minibus) and is shown so drivers know it's an estimate.
+   - a warning if the price is far above or below the typical range. ===== */
+const PH={min:3,schoolKm:3,areaKm:6,days:21,road:1.3};
+function phNorm(s){return String(s||'').toLowerCase().replace(/\b(primary|secondary|high|school|laerskool|hoërskool|hoerskool|the|of|and)\b/g,' ').replace(/[^a-z0-9]+/g,' ').trim()}
+function phCostKm(){const p=Store.get('settings','pricing')||{};const v=+p.costPerKm;return v>0&&v<50?v:3.5}
+function phPct(a,q){const s=[...a].sort((x,y)=>x-y);const i=(s.length-1)*q;const lo=Math.floor(i),hi=Math.ceil(i);return s[lo]+(s[hi]-s[lo])*(i-lo)}
+function phRound(v){return Math.round(v/10)*10}
+/* similar routes: same school (name or within 3 km) first, else same area (name or within 6 km) */
+function phSimilar(ctx){const me_=me();const all=Store.all('routes').filter(r=>r.active!==false&&+r.price>0&&r.driverId!==me_?.id&&(r.type||'shared')===(ctx.type||'shared')&&r.id!==ctx.id);
+  const sN=phNorm(ctx.school),aN=phNorm(ctx.area);const near=(g1,g2,km)=>g1&&g2&&g1.lat!=null&&g2.lat!=null&&distM(g1,g2)!=null&&distM(g1,g2)<=km*1000;
+  const bySchool=all.filter(r=>(sN&&sN.length>2&&phNorm(r.schools).split(' ').join(' ').includes(sN))||near(r.schoolGeo,ctx.schoolGeo,PH.schoolKm));
+  if(bySchool.length>=PH.min)return {list:bySchool,by:'school',label:ctx.school};
+  const byArea=all.filter(r=>(aN&&aN.length>2&&phNorm(r.area).includes(aN))||near(r.areaGeo,ctx.areaGeo,PH.areaKm));
+  if(byArea.length>=PH.min)return {list:byArea,by:'area',label:ctx.area};
+  return {list:[],by:null,label:ctx.school||ctx.area}}
+function phHtml(ctx){const sim=phSimilar(ctx);const price=+ctx.price||0;let out='',lo=null,hi=null;
+  if(sim.list.length){const ps=sim.list.map(r=>+r.price);lo=phRound(phPct(ps,.25));hi=phRound(phPct(ps,.75));if(hi<lo+20){lo=phRound(Math.min(...ps));hi=phRound(Math.max(...ps))}
+    out+=`<div>Typical on Enivel ${sim.by==='school'?'for':'near'} <b>${h(sim.label||'here')}</b>: <b>${money(lo)}–${money(hi)}</b> a month per child <span class="muted">(${sim.list.length} routes)</span></div>`}
+  else out+=`<div class="muted">Not enough Enivel routes ${ctx.school||ctx.area?'near '+h(ctx.school||ctx.area):'here'} yet to show a typical price.</div>`;
+  const g1=ctx.areaGeo,g2=ctx.schoolGeo;
+  if(g1&&g2&&g1.lat!=null&&g2.lat!=null){const oneWay=distM(g1,g2)/1000*PH.road;if(oneWay>0.3&&oneWay<150){const ck=phCostKm();const legs=ctx.afternoon===false?2:4;const day=oneWay*legs;const month=day*PH.days*ck;const seats=Math.max(1,+ctx.seats||0);
+    out+=`<div style="margin-top:6px">Running cost check: about <b>${Math.round(oneWay)} km</b> each way, ~${Math.round(day)} km a day (${legs===4?'morning and afternoon, there and back':'morning only, there and back'}) ≈ <b>${money(phRound(month))}</b> a month for the vehicle at R${ck.toFixed(2)}/km${seats>1?`, about <b>${money(phRound(month/seats))}</b> per child with ${seats} seats full`:''}. Estimate only: fuel, wear and tolls vary.</div>`}}
+  if(price&&lo!=null){if(price>hi*1.3)out+=`<div class="ph-hi" style="margin-top:6px">Your price is well above the usual range here. Parents may pick cheaper routes.</div>`;else if(price<lo*0.7)out+=`<div class="ph-hi" style="margin-top:6px">Your price is well below the usual range. Make sure it covers your costs.</div>`}
+  if(lo!=null&&!price)out+=`<button type="button" class="ph-use" onclick="phUse(${phRound((lo+hi)/2)})">Use ${money(phRound((lo+hi)/2))}</button>`;
+  return out}
+function phUse(v){const i=document.querySelector('.modal #r-price')||document.querySelector('.modal #of-p');if(i){i.value=v;i.dispatchEvent(new Event('input',{bubbles:true}))}}
+function phGeo(el){try{return el&&el.dataset.geo?JSON.parse(el.dataset.geo):null}catch(e){return null}}
+function phAttach(m,priceSel,ctxFn){const inp=m&&m.querySelector(priceSel);if(!inp||inp.dataset.ph)return;inp.dataset.ph='1';const box=document.createElement('div');box.className='ph-box';(inp.closest('.field')||inp.parentElement).insertAdjacentElement('afterend',box);
+  let last='';const paint=()=>{if(!box.isConnected){clearInterval(t);return}const html=phHtml(ctxFn());if(html!==last){box.innerHTML=html;last=html}};const t=setInterval(paint,1000);m.addEventListener('input',paint);m.addEventListener('change',paint);paint()}
+/* new / edit route */
+if(typeof addRoute==='function'){const _phAdd=addRoute;addRoute=function(id){const res=_phAdd.apply(this,arguments);try{const m=document.querySelector('.modal');const r=id?routeOf(id)||{}:{};
+  if(m)phAttach(m,'#r-price',()=>{const g=k=>m.querySelector('#'+k);return {id,type:(g('r-type')?.value)||r.type||'shared',area:g('r-area')?.value||'',school:g('r-sch')?.value||'',areaGeo:phGeo(g('r-area'))||r.areaGeo,schoolGeo:phGeo(g('r-sch'))||r.schoolGeo,seats:+(g('r-seats')?.value||0),afternoon:g('r-aft')?g('r-aft').checked:r.afternoon,price:+(g('r-price')?.value||0)}})}catch(e){console.warn('ph',e)}return res}}
+/* offer on a parent's monthly request (once-off trips are priced per trip, so no monthly hint) */
+if(typeof makeOffer==='function'){const _phOffer=makeOffer;makeOffer=function(reqId){const res=_phOffer.apply(this,arguments);try{const rq=Store.get('requests',reqId);const m=document.querySelector('.modal');
+  if(m&&rq&&rq.type!=='once')phAttach(m,'#of-p',()=>({type:rq.type==='private'?'private':'shared',area:rq.area||'',school:rq.school||'',areaGeo:rq.areaGeo||rq.fromGeo,schoolGeo:rq.schoolGeo||rq.toGeo,seats:0,price:+(m.querySelector('#of-p')?.value||0)}))}catch(e){console.warn('ph offer',e)}return res}}
+</script>

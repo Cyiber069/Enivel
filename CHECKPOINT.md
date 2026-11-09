@@ -189,3 +189,6 @@ Round 11 (in progress): 4 subagents → layers r10-maps2 (Carto light/dark tiles
 - layers/r10-live.html + supabase/r10-live.sql (in setup.sql): each open app pings presence_ping every 30 s (random device id, page, device type; rows deleted after 2 days). Admin Overview "live" label is now "● N live now" (admin not counted); tap for parents/drivers/kids/visitors, pages, devices, today. Privacy policy has a "Live usage count" section.
 - Once-off trip shortcut icon: calendar with one day marked (was a lightning bolt).
 - Owner must rerun setup.sql ("Enivel live visitors ready").
+
+## 10 Nov — typical prices for drivers
+- layers/r10-pricehint.html: on New/Edit route and on offers for monthly requests, a box under the price shows the middle half (25th–75th percentile) of other Enivel routes for the same school (name or within 3 km), else same area (within 6 km); only with 3+ routes. Running-cost check from area→school distance (×1.3 road, 4 legs or 2 if no afternoon trip, 21 school days, settings/pricing.costPerKm default R3.50) and per child with seats full. Warns if price >130% of top or <70% of bottom of range. "Use Rxxx" button. No SQL change.
