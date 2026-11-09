@@ -174,3 +174,11 @@ Round 11 (in progress): 4 subagents → layers r10-maps2 (Carto light/dark tiles
 - CNAME file removed from the repo, so the app now lives at https://cyiber069.github.io/Enivel/ (no redirect).
 - Nothing changed in Supabase, the Worker, PayFast or TomTom.
 - TO RECONNECT: add CNAME file back with "enivel.co.za", owner restores GoDaddy DNS (4 A records 185.199.108-111.153, CNAME www → cyiber069.github.io), removes the domain in Shopify, re-ticks Enforce HTTPS in GitHub Pages once the certificate is back.
+
+## 09 Nov — make drivers start the trip (owner chose 1, 2, 5)
+- layers/r10-starttrip.html + supabase/r10-starttrip.sql (in setup.sql):
+  1. Reminder pop-ups at 30, 10 and 0 min (pickup time: "Pickup time · trip not started"), plan covers 14 days; driver home shows "Turn on trip reminders" card until on; admin Overview lists drivers with passengers whose reminders are off.
+  2. "Picked up" auto-starts the trip; opening the app 45 min before → 30 min after pickup shows full-screen Start trip.
+  5. One-time driver rule (users.startRuleAt) + Driver Agreement section "Starting each trip".
+- Owner must rerun setup.sql for the new pop-up wording (old wording still works without it).
+- Test r13-starttrip 13/13; harness stubs stRuleShow/stGoShow (r10lib, trip-lib).
