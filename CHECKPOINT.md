@@ -182,3 +182,5 @@ Round 11 (in progress): 4 subagents → layers r10-maps2 (Carto light/dark tiles
   5. One-time driver rule (users.startRuleAt) + Driver Agreement section "Starting each trip".
 - Owner must rerun setup.sql for the new pop-up wording (old wording still works without it).
 - Test r13-starttrip 13/13; harness stubs stRuleShow/stGoShow (r10lib, trip-lib).
+
+## 09 Nov — enivel.co.za reconnected to the app (CNAME file back). Owner restores GoDaddy DNS + removes domain from Shopify.
