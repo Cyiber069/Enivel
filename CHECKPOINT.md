@@ -184,3 +184,8 @@ Round 11 (in progress): 4 subagents → layers r10-maps2 (Carto light/dark tiles
 - Test r13-starttrip 13/13; harness stubs stRuleShow/stGoShow (r10lib, trip-lib).
 
 ## 09 Nov — enivel.co.za reconnected to the app (CNAME file back). Owner restores GoDaddy DNS + removes domain from Shopify.
+
+## 10 Nov — live visitors + once-off icon
+- layers/r10-live.html + supabase/r10-live.sql (in setup.sql): each open app pings presence_ping every 30 s (random device id, page, device type; rows deleted after 2 days). Admin Overview "live" label is now "● N live now" (admin not counted); tap for parents/drivers/kids/visitors, pages, devices, today. Privacy policy has a "Live usage count" section.
+- Once-off trip shortcut icon: calendar with one day marked (was a lightning bolt).
+- Owner must rerun setup.sql ("Enivel live visitors ready").

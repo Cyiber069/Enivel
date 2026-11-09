@@ -1,0 +1,52 @@
+<style>
+.lv-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:5px 11px;font-size:.8rem;cursor:pointer;min-height:32px}
+.lv-pill b{font-size:.9rem}
+.lv-dot{width:8px;height:8px;border-radius:50%;background:#1e8e3e;box-shadow:0 0 0 0 rgba(30,142,62,.6);animation:lvp 1.8s infinite}
+.lv-pill.off .lv-dot{background:#9aa0a6;animation:none}
+@keyframes lvp{0%{box-shadow:0 0 0 0 rgba(30,142,62,.55)}70%{box-shadow:0 0 0 8px rgba(30,142,62,0)}100%{box-shadow:0 0 0 0 rgba(30,142,62,0)}}
+.lv-big{font-size:3rem;font-weight:800;line-height:1;margin:6px 0 2px;display:flex;align-items:center;gap:12px}
+.lv-big .lv-dot{width:14px;height:14px}
+.lv-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.lv-grid div{border:1px solid var(--line);border-radius:14px;padding:10px}
+.lv-grid b{display:block;font-size:1.3rem}
+.lv-rows{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:.88rem}
+@media (prefers-reduced-motion:reduce){.lv-dot{animation:none}}
+</style>
+<script>
+/* ===== 10 Nov owner: "like Shopify's Live in the top right: how many people are on Enivel right now".
+   Every open Enivel app (signed in or not) sends a tiny ping every 30 s while it is on screen: an anonymous
+   device id, the page and phone/computer. The admin Overview's "live" label is now a green "● N live now"
+   button; tap it for the breakdown (parents, drivers, kids, visitors, devices, pages, today's total).
+   Admins aren't counted. Server: supabase/r10-live.sql (presence_ping / presence_live). ===== */
+const LV={every:30000,adminEvery:15000,last:0,lastPage:'',data:null,err:'',t:null};
+function lvSid(){try{let s=ls.get('enivel_sid');if(!s||!/^[A-Za-z0-9_-]{8,64}$/.test(s)){const a=new Uint8Array(16);crypto.getRandomValues(a);s=[...a].map(x=>x.toString(16).padStart(2,'0')).join('');ls.set('enivel_sid',s)}return s}catch(e){return null}}
+function lvDevice(){const u=navigator.userAgent||'';if(/iPad|Tablet/i.test(u))return 'tablet';if(/Mobi|Android|iPhone/i.test(u))return 'phone';return 'computer'}
+function lvPage(){try{return (typeof S!=='undefined'&&S.route)||(typeof me==='function'&&me()?'home':'landing')}catch(e){return 'landing'}}
+async function lvPing(force){try{if(typeof sb==='undefined'||!sb||document.visibilityState!=='visible')return;const page=lvPage();const now=Date.now();if(!force&&now-LV.last<LV.every&&page===LV.lastPage)return;if(now-LV.last<4000&&page===LV.lastPage)return;
+  LV.last=now;LV.lastPage=page;const sid=lvSid();if(!sid)return;await sb.rpc('presence_ping',{p_sid:sid,p_page:page,p_device:lvDevice()})}catch(e){}}
+setInterval(()=>lvPing(false),5000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')lvPing(true)});
+{const _lvRender=render;render=function(){const r=_lvRender.apply(this,arguments);try{if(lvPage()!==LV.lastPage)setTimeout(()=>lvPing(false),500)}catch(e){}return r}}
+/* ---- admin ---- */
+async function lvFetch(){try{if(typeof sb==='undefined'||!sb||!S.admin)return;const {data,error}=await sb.rpc('presence_live');if(error){LV.err=/function|does not exist|schema cache/i.test(error.message)?'setup':'error';LV.data=null}else{LV.err='';LV.data=data}lvPaint()}catch(e){LV.err='error'}}
+function lvPillHtml(){const d=LV.data;const n=d?d.now:null;return `<button class="lv-pill ${n==null?'off':''}" onclick="lvOpen()" aria-label="People using Enivel right now"><i class="lv-dot"></i><b class="lv-n">${n==null?'–':n}</b> live now</button>`}
+function lvPaint(){document.querySelectorAll('.lv-pill').forEach(p=>{const n=LV.data?LV.data.now:null;p.classList.toggle('off',n==null);const b=p.querySelector('.lv-n');if(b)b.textContent=n==null?'–':n});const m=document.querySelector('.modal[data-lv]');if(m)m.querySelector('.lv-body').innerHTML=lvBody()}
+const LV_PAGES={landing:'Website (signed out)',login:'Sign in',signup:'Sign up',home:'Home','p-home':'Parent home','p-find':'Find transport','p-kids':'Kids','p-track':'Following a ride','p-pay':'Payments','p-booking':'Booking','p-chat':'Chat','p-more':'Settings','d-home':'Driver home','d-trip':'Driver on a trip','d-routes':'Driver routes','d-billing':'Driver earnings','k-home':'Kid home','help-centre':'Help centre',doc:'Reading a policy'};
+function lvPageName(p){return LV_PAGES[p]||String(p||'Other').replace(/^[a-z]-/,'').replace(/-/g,' ')}
+function lvBody(){const d=LV.data;if(LV.err==='setup')return '<p class="small">Live visitors switch on after you run the latest database script (Supabase SQL editor, setup.sql). It should say “Enivel live visitors ready”.</p>';if(!d)return '<p class="small muted">Loading…</p>';
+  const r=d.byRole||{},dv=d.devices||{};const tile=(l,v)=>`<div><span class="tiny muted">${l}</span><b>${v||0}</b></div>`;
+  return `<div class="lv-big"><i class="lv-dot"></i>${d.now}</div><div class="small muted">${d.now===1?'person is':'people are'} using Enivel right now (last 90 seconds). You and other admins aren't counted.</div>
+   <div class="lv-grid">${tile('Parents',r.parent)}${tile('Drivers',r.driver)}${tile('Kids',r.kid)}${tile('Visitors (not signed in)',r.visitor)}</div>
+   ${(d.pages||[]).length?`<div class="eyebrow" style="margin:6px 0">Where they are</div><div class="lv-rows">${d.pages.map(p=>`<span>${h(lvPageName(p.page))}</span><b>${p.n}</b>`).join('')}</div>`:''}
+   <div class="eyebrow" style="margin:12px 0 6px">Devices now</div><div class="lv-rows"><span>Phones</span><b>${dv.phone||0}</b><span>Computers</span><b>${dv.computer||0}</b>${dv.tablet?`<span>Tablets</span><b>${dv.tablet}</b>`:''}</div>
+   <div class="eyebrow" style="margin:12px 0 6px">Today</div><div class="lv-rows"><span>Devices that opened Enivel</span><b>${d.today||0}</b><span>Signed-in people</span><b>${d.todaySignedIn||0}</b></div>
+   <p class="tiny muted" style="margin-top:12px">Updates every 15 seconds.</p>`}
+function lvOpen(){modal(`<h3>Live now</h3><div class="lv-body">${lvBody()}</div>`);const m=document.querySelector('.modal');if(m)m.dataset.lv='1';lvFetch()}
+if(typeof admTilesHtml==='function'){const _lvTiles=admTilesHtml;admTilesHtml=function(){return _lvTiles.apply(this,arguments).replace('<span class="tiny muted">live</span>',lvPillHtml())}}
+setInterval(()=>{try{if(S.admin&&document.visibilityState==='visible'&&(document.querySelector('.lv-pill')||document.querySelector('.modal[data-lv]')))lvFetch()}catch(e){}},LV.adminEvery);
+{const _lvR2=render;render=function(){const r=_lvR2.apply(this,arguments);try{if(S.admin&&!LV.data&&!LV.err&&!LV.t){LV.t=setTimeout(()=>{LV.t=null;lvFetch()},300)}}catch(e){}return r}}
+/* privacy policy line */
+if(typeof legalDoc==='function'){const d=legalDoc('privacy');if(d&&!d._lv){const b=d.body;d.body=L=>b(L)+`<h3>Live usage count</h3><p>While Enivel is open on your screen, it sends a small signal about every 30 seconds with a random device code (not your name), the screen you are on and whether you use a phone or computer. Enivel uses this only to count how many people are using the service at a time. These signals are deleted after 2 days.</p>`;d._lv=1}}
+/* ---- once-off trip icon: a calendar with one day marked (was a lightning bolt) ---- */
+const LV_ONCE_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><rect x="13" y="13" width="4" height="4" rx="1" fill="currentColor" stroke="none"/></svg>';
+{const _lvPH=VIEWS['p-home'];VIEWS['p-home']=function(){const html=_lvPH.apply(this,arguments);try{return html.split('onclick="onceTrip()"><span class="ic">'+ICON.bolt).join('onclick="onceTrip()"><span class="ic">'+LV_ONCE_ICON)}catch(e){return html}}}
+</script>
