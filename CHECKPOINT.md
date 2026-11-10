@@ -195,3 +195,20 @@ Round 11 (in progress): 4 subagents → layers r10-maps2 (Carto light/dark tiles
 
 ## 10 Nov — sign-in loading animation
 - layers/r10-authload.html: Log in / Create account button turns into a dashed road with a white school minibus (violet windows, yellow stripe) driving, speed lines; app fades in on success; button restores on error. Wraps login() and register(). Respects reduced-motion.
+
+## 10 Nov — homepage review fixes + growth features
+- Fee: app default was still 2% (pricing() in layers/r10-growth2.html) so signed-out visitors and the welcome slides said 2%. Default now 5%, all "2%" copy changed to 5%; stored notes say "Enivel platform fee".
+- layers/r10-land2.html + supabase/r10-land2.sql (folded into setup.sql, "Enivel coverage, waitlist and Check a driver ready"):
+  welcome slides only after Get started; Log in / Sign up (incl. "I'm a kid") on their own page, logout lands there; sales page sections:
+  "Is there a driver for my school?" (coverage_public, school_routes; chips of covered schools) right under the hero, waitlist (school_waitlist table,
+  school_waitlist_join anon, admin page a-waitlist + Overview tile, WhatsApp contact/mark/remove), public "Check a driver" (check_driver by full name or plate;
+  status + expiry dates only; users.publicCheck opt-out in driver Settings), "Talk to a person" (WhatsApp from Legal details phone, Enivel000@gmail.com,
+  founder line, no address), "Recommended by [School]" from settings/endorse (admin More → School endorsements), new-parent "Tell your class WhatsApp group" card
+  with referral link. Privacy + Driver Agreement sections added. Links: ?school= ?check= ?signup=parent|driver ?login=1 ?page=privacy|terms|safety|legal ?lang=af|zu.
+- layers/r10-i18n.html: homepage in EN/AF/ZU (switch above the hero). Translations need a first-language check.
+- SEO: tools/seo.py (run by build.sh) writes title/description/OG/JSON-LD + plain-HTML homepage inside #app, school/<slug>.html for 25 764 DBE schools
+  (live drivers or waitlist via assets/school.js), schools/<prov>.html, sitemap.xml (+ sitemaps/), robots.txt, .nojekyll. Sources in assets-src/.
+- Seat "scan" was fake (1.6 s "Analysing photos…"): now "Seat estimate" from make/model, stated honestly.
+- Removed never-referenced functions: footer, legalLink, legalKidAccountConsent, mapTiles.
+- Bug sweep: every screen for visitor/parent/driver/admin opened with no errors (pg/crawl.mjs). Old tests updated for the new Log in page.
+- Owner: rerun setup.sql; add a phone number in Admin → Legal details for the WhatsApp button; submit sitemap in Google Search Console.

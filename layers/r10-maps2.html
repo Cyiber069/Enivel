@@ -84,7 +84,7 @@ if(typeof L!=='undefined'&&L.tileLayer&&!L.tileLayer._m2){
   Object.assign(wrapped,_tl);wrapped._m2=true;L.tileLayer=wrapped;
   const _lm=L.map;const wm=function(){const m=_lm.apply(L,arguments);try{if(m.attributionControl)m.attributionControl.setPrefix('')}catch(e){}return m};Object.assign(wm,_lm);L.map=wm;
 }
-function mapTiles(map){if(typeof L==='undefined'||!map)return null;const lay=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{});lay.addTo(map);return lay}
+
 function m2Retheme(){const url=m2TileUrl();M2.tiles=M2.tiles.filter(l=>l&&l._map);M2.tiles.forEach(l=>{if(l._url!==url)l.setUrl(url)});try{if(typeof MAPS==='object')for(const k in MAPS)m2Restyle(MAPS[k])}catch(e){}}
 const _m2SetTheme=setTheme;setTheme=function(){const r=_m2SetTheme.apply(this,arguments);try{m2Retheme()}catch(e){}return r};
 try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{try{m2Retheme()}catch(e){}})}catch(e){}

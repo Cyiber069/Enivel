@@ -1,0 +1,150 @@
+<style>
+.l2-sec{margin:28px 0}
+.l2-sec h2{margin:0 0 6px}
+.l2-search{display:flex;gap:8px;margin-top:10px}
+.l2-search input{flex:1;min-width:0}
+.l2-search input,.l2-wl input,.l2-wl select{font:inherit;font-size:16px;color:var(--fg);background:var(--bg2,rgba(127,127,127,.08));border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-height:46px;width:100%;box-sizing:border-box}
+.l2-search input:focus,.l2-wl input:focus,.l2-wl select:focus{outline:2px solid #7c3aed;outline-offset:1px}
+.l2-langrow{display:flex;justify-content:flex-end;margin:-4px 0 10px}
+.l2-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.l2-chip{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:7px 12px;font-size:.82rem;cursor:pointer;min-height:36px}
+.l2-chip b{margin-left:4px}
+.l2-res{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.l2-route{border:1px solid var(--line);border-radius:16px;padding:12px 14px;background:var(--card,var(--bg))}
+.l2-route .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.l2-route .price{font-weight:800;white-space:nowrap}
+.l2-wl{border:2px dashed var(--line);border-radius:16px;padding:14px}
+.l2-wl .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.l2-ok{color:#1e8e3e}.l2-bad{color:#c5221f}
+.l2-chk{border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.l2-chk .rows{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:.86rem;margin-top:8px}
+.l2-contact{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.l2-endorse{display:flex;gap:10px;align-items:center;margin:0 0 14px;padding:10px 14px;border-radius:14px;background:linear-gradient(135deg,rgba(124,58,237,.10),rgba(79,70,229,.06));font-size:.88rem}
+.l2-lang{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.l2-lang button{border:0;background:transparent;color:var(--fg2);padding:6px 10px;font-size:.78rem;cursor:pointer;min-height:32px}
+.l2-lang button.on{background:var(--fg);color:var(--bg)}
+.l2-authtop{display:flex;align-items:center;justify-content:space-between;margin:4px 0 14px}
+.l2-back{background:transparent;border:0;color:var(--fg);font-size:.95rem;cursor:pointer;min-height:44px;padding:0}
+</style>
+<script>
+/* ===== 10 Nov owner review of the homepage:
+   - welcome slides only after "Get started" (not on arrival);
+   - Log in / Sign up live on their own page (incl. "I'm a kid"), not at the bottom of the sales page;
+   - "Is there a driver for my school?" search, schools we cover, waitlist when there's no driver;
+   - public "Check a driver" by full name or number plate;
+   - Talk to a person: WhatsApp (legal phone), Enivel000@gmail.com, founder line, no address;
+   - "Recommended by [School]" when the admin adds an endorsement;
+   - after a parent signs up: share to the class WhatsApp group with their referral link;
+   - admin: Waitlist page (by school) and School endorsements editor; drivers can opt out of Check a driver.
+   Server: supabase/r10-grow3.sql ===== */
+const L2={cov:null,covAt:0,res:null,q:'',chk:null,email:'Enivel000@gmail.com'};
+/* ---- 1. slides only after Get started ---- */
+if(typeof showIntro==='function'){const _l2Intro=showIntro;showIntro=function(force){if(force!==true)return;return _l2Intro.apply(this,arguments)}}
+function l2OpenAuth(){S.authPage=true;render();try{window.scrollTo(0,0)}catch(e){}}
+g2ToForm=function(mode,role){S.authMode=mode||'signup';if(role)S.signupRole=role;
+  if(S.authMode==='signup'&&!me()&&!ls.get('enivel_intro')){showIntro(true);const t=setInterval(()=>{if(!document.querySelector('.intro')){clearInterval(t);l2OpenAuth()}},250);setTimeout(()=>clearInterval(t),120000);if(!document.querySelector('.intro')){clearInterval(t);l2OpenAuth()}return}
+  l2OpenAuth()};
+{const _l2Go=go;go=function(r,extra){if(r==='landing'&&extra&&extra.authMode)S.authPage=true;return _l2Go.apply(this,arguments)}}
+{const _l2R=render;render=function(){try{if(me()){S.authPage=false;if(S.authMode==='signup')S.authMode=null}}catch(e){}return _l2R.apply(this,arguments)}}
+/* after logging out, show the Log in page (people log out to switch accounts or log back in) */
+if(typeof logout==='function'){const _l2Out=logout;logout=async function(){const r=await _l2Out.apply(this,arguments);try{S.authPage=true;S.authMode='login';render()}catch(e){}return r}}
+/* ---- 2. landing: marketing page or the separate sign-in page ---- */
+{const _l2Land=VIEWS.landing;VIEWS.landing=function(){const html=_l2Land.apply(this,arguments);try{if(S.demo||(me()&&!S.g2Preview))return html;
+  const a=html.indexOf('<div id="g2-auth">');const f=html.lastIndexOf('<div class="g2-land"><div class="g2-foot">');if(a<0||f<0||f<a)return html;
+  if(S.authPage||(S.authMode&&S.authMode!=='login')){const mode=S.authMode==='signup'?'Create your account':'Log in';
+    const hd=(html.slice(0,a).match(/<div class="g2-auth-head" id="g2-auth-head">[\s\S]*?<\/div>/)||[''])[0];
+    return `<div class="g2-land"><div class="l2-authtop"><button class="l2-back" onclick="S.authPage=false;S.authMode=null;render();window.scrollTo(0,0)">← Enivel home</button><span class="tiny muted">${h(mode)}</span></div>${hd}</div>`+html.slice(a,f)+l2ContactMini()}
+  let top=html.slice(0,a).replace(/<div class="g2-auth-head" id="g2-auth-head">[\s\S]*?<\/div>/,'');top=l2Endorse(top);top=top.replace('<section class="g2-hero">','<div class="l2-langrow">'+l2LangHtml()+'</div><section class="g2-hero">');
+  const hs=top.indexOf('<section class="g2-hero">');const he=hs>=0?top.indexOf('</section>',hs):-1;
+  if(he>0)top=top.slice(0,he+10)+l2CoverageHtml()+top.slice(he+10);else top=top+l2CoverageHtml();
+  return top+l2CheckHtml()+l2ContactHtml()+html.slice(f)}catch(e){console.warn('l2',e);return html}}}
+{const _l2RT=render;render=function(){const r=_l2RT.apply(this,arguments);try{if(S.route==='landing'&&!me()){document.title=S.authPage||(S.authMode&&S.authMode!=='login')?(S.authMode==='signup'?'Create your account · Enivel':'Log in · Enivel'):'Enivel — Safe school transport with verified drivers';document.getElementById('g2-wa')?.classList.add('up')}}catch(e){}return r}}
+/* ---- coverage + waitlist ---- */
+async function l2LoadCov(){if(L2.covAt&&Date.now()-L2.covAt<300000)return;L2.covAt=Date.now();try{const {data,error}=await sb.rpc('coverage_public');if(!error&&data){L2.cov=data;if(S.route==='landing'&&!S.authPage&&!me())l2Paint()}}catch(e){}}
+function l2Paint(){const c=document.getElementById('l2-cov');if(c)c.outerHTML=l2CoverageHtml();const e=document.querySelector('.l2-endorse');if(!e&&L2.cov?.endorsements?.length&&S.route==='landing')render()}
+function l2CoverageHtml(){setTimeout(l2LoadCov,0);const sch=(L2.cov?.schools||[]).slice(0,24);
+  return `<section class="g2-sec l2-sec" id="l2-cov"><h2>Is there a driver for my school?</h2><p class="sub">Type your child's school. We'll show verified drivers and open seats, or put you on the waitlist.</p>
+   <form class="l2-search" onsubmit="event.preventDefault();l2Find(this.q.value)"><input name="q" id="l2-q" placeholder="School name, e.g. Bapedi Primary" value="${h(L2.q)}" autocomplete="off" aria-label="School name"><button class="btn">Search</button></form>
+   ${sch.length?`<div class="tiny muted" style="margin-top:12px">Schools with Enivel drivers</div><div class="l2-chips">${sch.map(s=>`<button class="l2-chip" onclick="l2Find(${h(JSON.stringify(s.school))})">${h(s.school)}<b>${s.routes}</b></button>`).join('')}</div>`:''}
+   <div class="l2-res" id="l2-res">${l2ResHtml()}</div></section>`}
+async function l2Find(q){q=String(q||'').trim();L2.q=q;const box=document.getElementById('l2-res');if(q.length<3){if(box)box.innerHTML='<p class="small muted">Type at least 3 letters of the school name.</p>';return}
+  if(box)box.innerHTML='<p class="small muted">Searching…</p>';const inp=document.getElementById('l2-q');if(inp)inp.value=q;
+  try{const {data,error}=await sb.rpc('school_routes',{p_school:q});L2.res={q,routes:error?null:(data||[]),err:!!error}}catch(e){L2.res={q,routes:null,err:true}}
+  const b=document.getElementById('l2-res');if(b){b.innerHTML=l2ResHtml();b.scrollIntoView({behavior:'smooth',block:'nearest'})}}
+function l2ResHtml(){const r=L2.res;if(!r)return '';if(r.err)return `<p class="small">Search isn't available right now. Please try again in a minute.</p>`;
+  const pct=pricing().feePct;const rows=r.routes.map(x=>{const fee=x.price?Math.round(x.price*pct)/100:0;return `<div class="l2-route"><div class="top"><div><b>${h(x.title||'Route')}</b><div class="tiny muted">${h(x.driverFirst||'Driver')} · verified${x.vehicle?` · ${h([x.vehicle.make,x.vehicle.model].filter(Boolean).join(' '))}`:''}${x.rating?` · ★ ${x.rating}`:''}</div></div><div class="price">${x.price?money(x.price+fee):''}<div class="tiny muted" style="font-weight:400">a month incl. fee</div></div></div>
+    <div class="small" style="margin-top:6px">${h(x.areas||'')}${x.pickupTime?` · pickup from ${h(x.pickupTime)}`:''} · ${x.free==null?'':x.free>0?`<span class="l2-ok"><b>${x.free}</b> open seat${x.free>1?'s':''}</span>`:'<span class="l2-bad">full</span>'}</div>
+    <button class="btn sm" style="margin-top:10px" onclick="g2ToForm('signup','parent')">${x.free===0?'Join this route\'s waitlist':'Book a seat'}</button></div>`}).join('');
+  const none=!r.routes.length;
+  return (none?`<p class="small"><b>No Enivel driver for “${h(r.q)}” yet.</b> Join the waitlist and we'll WhatsApp you as soon as a verified driver starts there. The more parents wait at a school, the faster we find a driver.</p>`:rows+`<p class="tiny muted">Can't find a route that fits? Join the waitlist for ${h(r.q)} too.</p>`)+l2WlForm(r.q)}
+function l2WlForm(school){return `<form class="l2-wl" id="l2-wl" onsubmit="event.preventDefault();l2Join(this)"><b>Join the waitlist for ${h(school)}</b>
+  <div class="row2" style="margin-top:10px"><input name="name" placeholder="Your name" autocomplete="name" required aria-label="Your name"><input name="phone" placeholder="WhatsApp number" inputmode="tel" autocomplete="tel" required aria-label="WhatsApp number"></div>
+  <div class="row2" style="margin-top:8px"><input name="area" placeholder="Your suburb / area" aria-label="Suburb or area"><select name="kids" aria-label="Number of children">${[1,2,3,4].map(n=>`<option value="${n}">${n} child${n>1?'ren':''}</option>`).join('')}</select></div>
+  <input type="hidden" name="school" value="${h(school)}"><button class="btn wide" style="margin-top:10px">Join the waitlist</button>
+  <p class="tiny muted" style="margin-top:6px">We only use your number to tell you about transport for this school. See our <a href="#" onclick="event.preventDefault();go('privacy')">Privacy Policy</a>.</p></form>`}
+async function l2Join(f){const b=f.querySelector('button');b.disabled=true;try{const {data,error}=await sb.rpc('school_waitlist_join',{p_name:f.name.value,p_phone:f.phone.value,p_school:f.school.value,p_area:f.area.value,p_kids:+f.kids.value,p_lang:L2lang()});
+  if(error||!data?.ok){b.disabled=false;const why={phone:'Please enter a South African cell number, e.g. 082 123 4567.',name:'Please enter your name.',school:'Please check the school name.',limit:'You have joined a few waitlists today already.',busy:'Lots of sign-ups right now, please try again soon.'}[data?.error]||'Could not join right now. Please try again.';return toast(why)}
+  const share=`Need school transport for ${f.school.value}? I've joined the Enivel waitlist for verified drivers. Join too so a driver starts sooner: ${location.origin}/?school=${encodeURIComponent(f.school.value)}`;
+  f.outerHTML=`<div class="l2-wl"><b class="l2-ok">You're on the waitlist.</b><p class="small" style="margin:6px 0 0">${data.waiting>1?`<b>${data.waiting}</b> parents are now waiting for ${h(f.school.value)}. `:''}We'll WhatsApp you when a verified driver starts. Share it with other parents at the school to speed it up:</p><a class="btn sm" style="margin-top:10px" href="https://wa.me/?text=${encodeURIComponent(share)}" target="_blank" rel="noopener">Share on WhatsApp</a></div>`}catch(e){b.disabled=false;toast('Could not join right now.')}}
+/* ---- Check a driver ---- */
+function l2CheckHtml(){return `<section class="g2-sec l2-sec" id="l2-check"><h2>Check a driver</h2><p class="sub">Type a driver's full name or their number plate to see if they're verified on Enivel and when their documents expire.</p>
+  <form class="l2-search" onsubmit="event.preventDefault();l2Check(this.q.value)"><input name="q" placeholder="e.g. Sipho Dlamini or GP 12 AB CD" autocomplete="off" aria-label="Driver name or number plate"><button class="btn">Check</button></form><div class="l2-res" id="l2-chk">${L2.chk||''}</div></section>`}
+function l2Date(d){if(!d)return '<span class="muted">not given</span>';const ok=Date.parse(d)>=Date.now();return `<span class="${ok?'l2-ok':'l2-bad'}">${ok?'valid until':'expired'} ${new Date(d).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})}</span>`}
+async function l2Check(q){const box=document.getElementById('l2-chk');if(!box)return;box.innerHTML='<p class="small muted">Checking…</p>';let data=null;try{const r=await sb.rpc('check_driver',{p_q:q});data=r.error?null:r.data}catch(e){}
+  let out;if(!data)out='<p class="small">Checking isn\'t available right now. Please try again in a minute.</p>';
+  else if(data.error==='fullname')out='<p class="small">Type the driver\'s <b>first name and surname</b>, or their number plate.</p>';
+  else if(data.error==='short')out='<p class="small">Type a full name or a number plate.</p>';
+  else if(!data.results.length)out=`<div class="l2-chk"><b>No Enivel driver found for “${h(q)}”.</b><p class="small" style="margin:6px 0 0">This driver isn't registered on Enivel, or chose not to be listed here. Only book drivers you can verify, and always check the number plate before your child gets in.</p></div>`;
+  else out=data.results.map(x=>{const st={verified:'<span class="pill live">Verified by Enivel</span>',pending:'<span class="pill warn">Not verified yet</span>',inactive:'<span class="pill warn">Not active on Enivel</span>'}[x.status];
+    return `<div class="l2-chk"><div class="row between"><b>${h(x.name)}</b>${st}</div><div class="rows"><span>Driver's licence</span>${l2Date(x.licence)}<span>PrDP (professional permit)</span>${l2Date(x.prdp)}<span>Police clearance</span>${l2Date(x.police)}${x.insurance?`<span>Passenger insurance</span>${l2Date(x.insurance)}`:''}
+     ${(x.vehicles||[]).map(v=>`<span style="grid-column:1/-1;margin-top:6px"><b>${h(v.vehicle||'Vehicle')}</b>${v.plateMatch?' · <span class="l2-ok">matches the plate you typed</span>':''}</span><span>Licence disc</span>${l2Date(v.disc)}<span>Roadworthy</span>${l2Date(v.roadworthy)}`).join('')}
+     ${x.rating?`<span>Rating</span><span>★ ${x.rating} (${x.ratings})</span>`:''}${x.since?`<span>On Enivel since</span><span>${h(x.since)}</span>`:''}</div></div>`}).join('');
+  L2.chk=out;box.innerHTML=out}
+/* ---- contact, founder, endorsement ---- */
+function l2Wa(text){const pub=S.g2Pub||{};return typeof g2WaLink==='function'?g2WaLink(pub.phone,text||'Hi Enivel, I have a question about school transport.'):''}
+function l2ContactHtml(){const wa=l2Wa();return `<section class="g2-sec l2-sec" id="l2-contact"><h2>Talk to a person</h2><p class="sub">Enivel is built in South Africa by founder Kgosi Mosupi, to make the school run safer for children and simpler for parents and drivers. Questions before you sign up? We reply ourselves.</p>
+  <div class="l2-contact">${wa?`<a class="btn" href="${h(wa)}" target="_blank" rel="noopener">${typeof G2_ICON!=='undefined'&&G2_ICON.wa?G2_ICON.wa:''} WhatsApp us</a>`:''}<a class="btn ghost" href="mailto:${L2.email}?subject=${encodeURIComponent('Enivel question')}">Email ${L2.email}</a></div></section>`}
+function l2ContactMini(){const wa=l2Wa('Hi Enivel, I need help signing in.');return `<div class="g2-land"><p class="tiny muted" style="text-align:center;margin:18px 0">Need help? ${wa?`<a href="${h(wa)}" target="_blank" rel="noopener">WhatsApp us</a> or `:''}<a href="mailto:${L2.email}">${L2.email}</a></p></div>`}
+function l2Endorse(top){const it=(L2.cov?.endorsements||[]).filter(e=>e&&e.school);if(!it.length)return top;const e=it[0];
+  const band=`<div class="l2-endorse"><span style="font-size:1.2rem">★</span><div><b>Recommended by ${h(e.school)}</b>${e.quote?`<div class="small">“${h(e.quote)}”${e.by?` — ${h(e.by)}`:''}</div>`:''}${it.length>1?`<div class="tiny muted">and ${it.length-1} more school${it.length>2?'s':''}</div>`:''}</div></div>`;
+  const i=top.indexOf('<section class="g2-hero">');return i>0?top.slice(0,i)+band+top.slice(i):band+top}
+/* ?school= links from school pages and shares */
+(function l2Links(){try{const p=new URLSearchParams(location.search);const su=p.get('signup'),li=p.get('login'),pg=p.get('page');if(!su&&!li&&!pg)return;let n=0;const t=setInterval(()=>{n++;if(typeof S!=='undefined'&&S.ready!==false&&document.querySelector('#app header,#app main')){clearInterval(t);
+  if(pg&&['privacy','terms','safety','legal'].includes(pg))go(pg);else if(!me()){if(su)g2ToForm('signup',su==='driver'?'driver':'parent');else if(li)g2ToForm('login')}}if(n>60)clearInterval(t)},250)}catch(e){}})();
+(function l2Query(){try{const p=new URLSearchParams(location.search);const s=p.get('school');const c=p.get('check');if(!s&&!c)return;let n=0;const t=setInterval(()=>{n++;if(document.getElementById('l2-cov')){clearInterval(t);if(s)l2Find(s);if(c){const f=document.querySelector('#l2-check input');if(f&&c!=='1'){f.value=c;l2Check(c)}document.getElementById('l2-check')?.scrollIntoView();f&&f.focus()}}if(n>40)clearInterval(t)},300)}catch(e){}})();
+/* ---- referral share right after a parent signs up ---- */
+function l2ShareInvite(){const u=me();if(!u)return;const credit=pricing().referralCredit||50;const msg=l2ShareMsg();
+  modal(`<h3>Tell your class WhatsApp group</h3><p class="small" style="margin:6px 0 12px">Most parents find transport through other parents. Share Enivel with your child's class group${u.refCode?` and you both get <b>R${credit} off</b> when someone signs up with your link`:''}.</p><div class="card soft small" style="white-space:pre-wrap">${h(msg)}</div><a class="btn wide" style="margin-top:12px" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener" onclick="closeModal()">Share to WhatsApp</a><button class="btn ghost wide" style="margin-top:8px" onclick="closeModal()">Maybe later</button>`)}
+function l2ShareMsg(){const u=me();const credit=pricing().referralCredit||50;const link=u&&u.refCode&&typeof growRefLink==='function'?growRefLink(u.refCode):location.origin+'/';return `Hi everyone, I've started using Enivel for school transport: verified drivers, live alerts when our kids are picked up and dropped off, and you pay through the app. If you sign up with my link we both get R${credit} off: ${link}`}
+function l2ShareDismiss(){const u=me();if(u)ls.set('enivel_l2share_'+u.id,1);render()}
+{const _l2PH=VIEWS['p-home'];VIEWS['p-home']=function(){const html=_l2PH.apply(this,arguments);try{const u=me();if(!u||u.role!=='parent'||ls.get('enivel_l2share_'+u.id)||!u.createdAt||Date.now()-u.createdAt>14*864e5)return html;const credit=pricing().referralCredit||50;
+  const card=`<div class="card" id="l2-share" style="border:2px solid #25d366"><div class="row between"><b>Tell your class WhatsApp group</b><button class="btn sm ghost" aria-label="Dismiss" onclick="l2ShareDismiss()">✕</button></div><p class="small" style="margin:6px 0 10px">Most parents find transport through other parents.${u.refCode?` You both get <b>R${credit} off</b> when someone signs up with your link.`:''}</p><a class="btn" href="https://wa.me/?text=${encodeURIComponent(l2ShareMsg())}" target="_blank" rel="noopener" onclick="l2ShareDismiss()">Share to WhatsApp</a></div>`;
+  const i=html.indexOf('<div class="card');return i>=0?html.slice(0,i)+card+html.slice(i):card+html}catch(e){return html}}}
+/* ---- drivers can opt out of public Check a driver ---- */
+{const _l2DM=VIEWS['d-more'];if(_l2DM)VIEWS['d-more']=function(){const html=_l2DM.apply(this,arguments);try{const u=me();if(!u||u.role!=='driver')return html;const on=u.publicCheck!==false;
+  const card=`<div class="card"><h3>Public “Check a driver”</h3><p class="small muted">Parents can type your full name or number plate on enivel.co.za to see that you're verified and when your documents expire. No numbers, plate or phone are shown.</p><label class="row" style="gap:10px;margin-top:10px"><input type="checkbox" ${on?'checked':''} onchange="l2SetCheck(this.checked)"> <span class="small">Show me in Check a driver</span></label></div>`;
+  const k=html.lastIndexOf('</div>');return html+card}catch(e){return html}}}
+async function l2SetCheck(v){await Store.patch('users',me().id,{publicCheck:!!v});toast(v?'You can be checked publicly':'Hidden from Check a driver')}
+/* ---- admin: waitlist page + tile, endorsements editor ---- */
+const L2W={data:null,err:''};
+async function l2WlFetch(){try{const {data,error}=await sb.rpc('school_waitlist_admin');if(error){L2W.err=/function|does not exist|schema cache/i.test(error.message)?'setup':error.message;L2W.data=null}else{L2W.err='';L2W.data=data}}catch(e){L2W.err='error'}if(S.route==='a-waitlist')render()}
+VIEWS['a-waitlist']=adminGate(()=>{if(!L2W.data&&!L2W.err)setTimeout(l2WlFetch,0);const d=L2W.data;
+  const head=pageHead('Waitlist','Parents waiting for a driver, by school',`<button class="btn sm ghost" onclick="L2W.data=null;l2WlFetch()">Refresh</button>`);
+  if(L2W.err==='setup')return head+'<div class="card"><p class="small">Run the latest database script to switch on the waitlist (it should say “Enivel coverage, waitlist and Check a driver ready”).</p></div>';
+  if(!d)return head+'<div class="card"><p class="small muted">Loading…</p></div>';
+  const wa=(r)=>`https://wa.me/27${String(r.phone).replace(/^0/,'')}?text=${encodeURIComponent(`Hi ${r.name}, this is Enivel. You joined our waitlist for school transport to ${r.school}.`)}`;
+  return head+`<div class="card"><h3>Where to recruit drivers</h3>${d.bySchool.length?`<div class="lv-rows" style="margin-top:8px">${d.bySchool.slice(0,30).map(s=>`<span>${h(s.school)}</span><b>${s.n} parent${s.n>1?'s':''} · ${s.kids} child${s.kids>1?'ren':''}</b>`).join('')}</div><p class="tiny muted" style="margin-top:8px">Use these numbers when you talk to drivers: “${d.bySchool[0].n} parents are waiting for a driver at ${h(d.bySchool[0].school)}.”</p>`:'<p class="small muted">Nobody is waiting yet.</p>'}</div>
+   <div class="card" style="margin-top:12px"><h3>Latest</h3>${d.rows.length?`<div class="list">${d.rows.map(r=>`<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line);gap:8px"><div style="min-width:0"><b>${h(r.name)}</b> <span class="tiny muted">${h(r.phone)}</span><div class="tiny muted">${h(r.school)}${r.area?' · '+h(r.area):''} · ${r.kids} child${r.kids>1?'ren':''}${r.contacted?' · <span class="l2-ok">contacted</span>':''}</div></div><div class="row" style="gap:6px;flex:none"><a class="btn sm" href="${h(wa(r))}" target="_blank" rel="noopener" onclick="l2WlMark(${+r.id},true,false)">WhatsApp</a><button class="btn sm ghost" aria-label="Remove" onclick="l2WlMark(${+r.id},false,true)">✕</button></div></div>`).join('')}</div>`:'<p class="small muted">No sign-ups yet.</p>'}</div>`});
+async function l2WlMark(id,contacted,del){try{await sb.rpc('school_waitlist_mark',{p_id:id,p_contacted:contacted,p_delete:del})}catch(e){}L2W.data=null;l2WlFetch()}
+try{if(typeof ADMIN_TILES!=='undefined'&&!ADMIN_TILES.some(t=>t.route==='a-waitlist'))ADMIN_TILES.push({route:'a-waitlist',label:'Waitlist',icon:'funnel',tone:'violet',count:()=>{if(!L2W.data&&!L2W.err&&!L2W.busy){L2W.busy=true;setTimeout(()=>{l2WlFetch().finally(()=>L2W.busy=false)},0)}return L2W.data?L2W.data.rows.length:0},alert:()=>false,sub:()=>L2W.data&&L2W.data.bySchool[0]?`Top: ${L2W.data.bySchool[0].school}`:'Parents with no driver yet'})}catch(e){}
+function l2EndItems(){return ((Store.get('settings','endorse')||{}).items||[]).filter(Boolean)}
+async function l2EndSave(items){await Store.put('settings','endorse',{items});L2.covAt=0;render();toast('Saved')}
+function l2EndAdd(){modal(`<h3>Add a school endorsement</h3><p class="small muted" style="margin:6px 0 10px">Only add a school after the principal or governing body has agreed in writing to be named.</p><div class="stack"><div class="field"><label>School</label><input id="l2e-s" maxlength="80"></div><div class="field"><label>Short quote (optional)</label><input id="l2e-q" maxlength="160"></div><div class="field"><label>Who said it (optional)</label><input id="l2e-b" maxlength="60" placeholder="e.g. Mrs Dlamini, Principal"></div><button class="btn wide" id="l2e-go">Add</button></div>`);
+  const m=document.querySelector('.modal');m.querySelector('#l2e-go').onclick=()=>{const s=m.querySelector('#l2e-s').value.trim();if(s.length<3)return toast('Enter the school name');closeModal();l2EndSave([...l2EndItems(),{school:s,quote:m.querySelector('#l2e-q').value.trim(),by:m.querySelector('#l2e-b').value.trim(),at:Date.now()}])}}
+{const _l2AM=VIEWS['a-more'];VIEWS['a-more']=function(){const html=_l2AM.apply(this,arguments);try{if(!S.admin)return html;const it=l2EndItems();
+  const card=`<div class="card"><h3>School endorsements</h3><p class="small muted">Shown as “Recommended by [School]” at the top of the homepage.</p>${it.map((e,i)=>`<div class="row between" style="margin-top:8px"><span class="small"><b>${h(e.school)}</b>${e.quote?` · “${h(e.quote)}”`:''}</span><button class="btn sm ghost" onclick="l2EndSave(l2EndItems().filter((_,j)=>j!==${i}))">Remove</button></div>`).join('')}<button class="btn sm" style="margin-top:10px" onclick="l2EndAdd()">Add endorsement</button><button class="btn sm ghost" style="margin-top:10px;margin-left:6px" onclick="go('a-waitlist')">Open waitlist</button></div>`;
+  return html+card}catch(e){return html}}}
+/* privacy + driver agreement */
+if(typeof legalDoc==='function'){const p=legalDoc('privacy');if(p&&!p._l2){const b=p.body;p.body=L=>b(L)+`<h3>Waitlist and Check a driver</h3><p>If you join a school waitlist, we keep your name, WhatsApp number, school, area and number of children so we can tell you when a driver starts at that school. You can ask us to remove it at any time by email or WhatsApp. If you are a Driver, anyone can check your verification status and the expiry dates of your licence, PrDP, police clearance, insurance and vehicle documents by typing your full name or number plate. We never show document numbers, your plate, phone or address. You can switch this off in Settings.</p>`;p._l2=1}
+  const dr=legalDoc('driver');if(dr&&!dr._l2){const b=dr.body;dr.body=L=>b(L)+`<h3>Public verification check</h3><p>So that parents can check who is transporting their children, Enivel shows your verification status and document expiry dates (not numbers) to anyone who types your full name or number plate. You can turn this off in Settings; Enivel may still confirm your status to a parent or school who asks.</p>`;dr._l2=1}}
+</script>

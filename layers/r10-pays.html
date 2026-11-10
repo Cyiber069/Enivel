@@ -93,7 +93,7 @@
 /* ===== Round 10 · pays: "Pay for parents" (admin pays a family's month by card on PayFast, or records an EFT)
    and "Enivel Pays" (random monthly draw, parent certificate + share card, public #pays wall, TikTok card).
    Data written (same shapes as sponsor()): bookings.sponsoredMonths, bookings.paysCerts{month:{no,at,kind,method}},
-   transactions type 'sponsorship' (price, from 'enivel' to the driver) and 'platform_fee' (2%, from the admin) with
+   transactions type 'sponsorship' (price, from 'enivel' to the driver) and 'platform_fee' (5%, from the admin) with
    paidBy:'admin', method:'card'|'manual', intentId, parentId. users.paysWall = parent opted in to the public wall.
    Cloud: amounts, payments, draws and the public counter are done by the r10-pays.sql functions. ===== */
 const PAYS_FONT='"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
@@ -120,7 +120,7 @@ function paysPrice(b){let p=Number(b.price);if(!(p>0)||p>100000)return 0;let ref
 function paysSoftRender(){const a=document.activeElement;if(a&&a.closest&&a.closest('#app')&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)&&a.type!=='checkbox')return;if($('.overlay'))return;render()}
 
 /* ---------- families (admin) ---------- */
-/* every parent with an active monthly booking: what is still due for month m (transport + 2% fee per booking) */
+/* every parent with an active monthly booking: what is still due for month m (transport + 5% fee per booking) */
 function paysFamilies(m){const by={};
   for(const b of Store.all('bookings')){if(b.status!=='active'||b.once)continue;const u=Store.get('users',b.parentId);if(!u||u.role!=='parent')continue;(by[u.id]=by[u.id]||{u,bs:[]}).bs.push(b)}
   return Object.values(by).map(f=>{const due=f.bs.filter(b=>!bookingPaidFor(b,m)&&paysPrice(b)>0);const covered=f.bs.filter(b=>paysCovered(b,m));const blocked=!!(f.u.banned||f.u.suspended);
@@ -170,7 +170,7 @@ async function paysApplyLocal(ids,m,kind,method,note){const fams=paysFamilies(m)
       for(const b of f.due){const price=paysPrice(b),fee=feeFor(price);const kn=Store.get('kids',b.kidId)?.name||'Child';
         await Store.patch('bookings',b.id,{sponsoredMonths:[...new Set([...(b.sponsoredMonths||[]),m])],paysCerts:{...(b.paysCerts||{}),[m]:{no:cert,at,kind,method}}});
         await pushTx({type:'sponsorship',amount:price,from:'enivel',to:b.driverId,bookingId:b.id,kidId:b.kidId,parentId:f.u.id,month:m,note:`Transport for ${label} paid by Enivel admin`,paidBy:'admin',method,intentId});
-        await pushTx({type:'platform_fee',amount:fee,from:adm,to:'enivel',bookingId:b.id,parentId:f.u.id,month:m,note:`2% fee for ${label}, paid by Enivel admin`,paidBy:'admin',method,intentId,...(note?{memo:String(note).slice(0,200)}:{})});
+        await pushTx({type:'platform_fee',amount:fee,from:adm,to:'enivel',bookingId:b.id,parentId:f.u.id,month:m,note:`Enivel fee for ${label}, paid by Enivel admin`,paidBy:'admin',method,intentId,...(note?{memo:String(note).slice(0,200)}:{})});
         await notify(b.driverId,`💸 Enivel paid ${kn}'s transport for ${label}. You receive the full price.`,'pay','d-billing');
         if(!names.includes(kn))names.push(kn);amount+=price+fee;done++}
       await notify(f.u.id,`${kind==='draw'?'🎉 Enivel Pays picked your family! ':''}🎁 Your transport fee for ${label} (${names.join(', ')}) has been paid by Enivel admin. ${tail}`,'pay','p-cert')}}
@@ -344,7 +344,7 @@ VIEWS['a-pays']=adminGate(()=>{const m=[monthKey(),paysNextMonth()].includes(S.p
     <div class="pays-chips"><span>${st.families} ${st.families===1?'family':'families'}</span><span>${money(st.total)} covered</span></div>
     <div class="acts"><button class="btn" onclick="paysDraw()">${PAYS_DICE} Draw a family</button><button class="btn glass" onclick="paysTikTok()">${PAYS_SHARE} TikTok card</button></div></div>
   <div class="card" style="margin-top:14px"><div class="row between" style="gap:10px"><h3>Pay for parents</h3><div class="seg"><button class="${m===monthKey()?'on':''}" onclick="S.paysMonth='${monthKey()}';S.paysSel.clear();render()">${h(paysMonthName(monthKey()))}</button><button class="${m!==monthKey()?'on':''}" onclick="S.paysMonth='${paysNextMonth()}';S.paysSel.clear();render()">${h(paysMonthName(paysNextMonth()))}</button></div></div>
-    <p class="small muted" style="margin-top:4px">Pick families. Each shows what’s still due for ${h(paysMonthName(m))} (transport + 2% fee).</p>
+    <p class="small muted" style="margin-top:4px">Pick families. Each shows what’s still due for ${h(paysMonthName(m))} (transport + 5% fee).</p>
     ${fams.length?`<div class="row" style="margin-top:12px;gap:8px;flex-wrap:nowrap"><input id="pays-q" type="search" placeholder="Search parent or child" autocomplete="off" value="${h(S.paysQ||'')}" style="flex:1;min-width:0;padding:12px 14px;border-radius:14px;border:1px solid transparent;background:var(--bg2);outline:none;min-height:44px"><button class="btn ghost sm" id="pays-all" type="button">All due</button></div>
     <div class="pays-list" style="margin-top:12px" data-mount="paysAdmin">${fams.map(row).join('')}</div><p class="small muted" id="pays-nomatch" style="display:none;margin-top:10px">No family matches that search.</p>`:`<div data-mount="paysAdmin">${empty('No parents with active transport yet.','users')}</div>`}
     <div class="pays-bar"><div class="sum"><b id="pays-sum">${money(total)}</b><div class="tiny muted" id="pays-cnt">Pick families above</div></div>

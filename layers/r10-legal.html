@@ -46,9 +46,9 @@ const lg10Misses=[];
 /* public helpers other layers may use */
 function legalVersion(){return LG10_VERSION}
 function legalEffective(){return LG10_EFFECTIVE}
-function legalLink(id,label,sec){return `<a href="#" data-doc="${h(id)}"${sec?` data-sec="${h(sec)}"`:''}>${h(label)}</a>`}
+
 function legalConsentRecord(){const u=me();return {by:u?.id||null,at:Date.now(),version:LG10_VERSION}}
-function legalKidAccountConsent(id){return `<label class="tiny lg10-consent"><input type="checkbox" id="${h(id||'kc-consent')}"> <span>I am this child’s parent or legal guardian. I consent to Enivel processing their information as set out in the <a href="#" data-doc="kids">Children’s Accounts</a> terms and the <a href="#" data-doc="privacy" data-sec="p17">Privacy Policy</a>, and I am responsible for how they use the account.</span></label>`}
+
 function lg10IsKid(u){u=u||me();return !!u&&(u.role==='kid'||u.role==='child'||u.isKid===true||u.kid===true)}
 function lg10Div(){return `<div class="lg10-div"><span>New in version ${LG10_VERSION}</span></div>`}
 
@@ -220,7 +220,7 @@ lg10AddDoc('promotions',{id:'enivel-pays',title:'Enivel Pays Rules',sub:'Officia
 <p>6.3 Accounts operated by Enivel itself, including administrator accounts and any account used by an administrator in Parent or Transport mode, are never entered.</p>
 <p>6.4 If a winner turns out to be excluded or not eligible, the Prize is withdrawn (and recovered if already paid) and Enivel makes a new random draw for it in the same way, which is also recorded.</p>
 <h2 id="ep7">7. The Prize</h2>
-<p>7.1 Each Prize is Enivel paying the Transport Price and the 2% Platform Fee for one calendar month (the “Prize Month”) for each of the winner’s active monthly Bookings that is still unpaid for that month when the draw is made. The Prize Month is the month for which the draw is held, as stated in the winner’s notification.</p>
+<p>7.1 Each Prize is Enivel paying the Transport Price and the 5% Platform Fee for one calendar month (the “Prize Month”) for each of the winner’s active monthly Bookings that is still unpaid for that month when the draw is made. The Prize Month is the month for which the draw is held, as stated in the winner’s notification.</p>
 <p>7.2 The value of a Prize is the total of those amounts as shown in the Platform at the time of the draw, so it depends on the family’s Bookings. Enivel pays the Driver directly; no money is paid to the winner.</p>
 <p>7.3 Bookings the winner had already paid for the Prize Month are not covered and are not refunded because of the Prize. If a payment for a covered Booking is made by mistake after the draw, tell us and we will refund it under the Payments policy.</p>
 <p>7.4 <b>There is no cash alternative. A Prize cannot be exchanged for cash or anything else, transferred to another person or Booking, sold or carried over to another month. It covers only the Transport Price and Platform Fee, not other charges such as a disclosed waiting or return fee.</b></p>
