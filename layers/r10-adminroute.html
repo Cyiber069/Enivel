@@ -1,0 +1,24 @@
+<script>
+/* ===== 12 Nov owner: "the admin Transport account must be able to make routes without registering, only the admin".
+   Only when signed in as the admin and switched to the Transport view:
+   - the admin's own account counts as an approved driver (so its routes show on Find, the homepage and school pages);
+   - "Add vehicle" is a quick form (make, model, colour, plate, seats): no photos, no seat estimate step;
+   - "New route" works as soon as one vehicle exists.
+   Real drivers still go through verification, photos and the seat estimate. ===== */
+function arOn(){try{return !!(S.admin&&S.adminApp==='driver'&&me())}catch(e){return false}}
+async function arSelfApprove(){try{const u=me();if(!arOn()||u.verification?.status==='approved'||S._arApproving)return;S._arApproving=true;
+  await Store.patch('users',u.id,{verification:{...(u.verification||{}),status:'approved',approvedAt:Date.now(),note:'Enivel admin account',by:'admin'}});if(typeof auditLog==='function')try{auditLog('admin.transport','users','Admin account set as its own driver')}catch(e){}}catch(e){console.warn('ar',e)}finally{S._arApproving=false}}
+{const _arR=render;render=function(){const r=_arR.apply(this,arguments);try{if(arOn()&&me().verification?.status!=='approved')setTimeout(arSelfApprove,0)}catch(e){}return r}}
+function arVehicleForm(id){const v=id?Store.get('vehicles',id)||{}:{};
+  modal(`<h3>${id?'Edit':'Add'} vehicle</h3><p class="small muted" style="margin:4px 0 10px">Admin quick form: no photos or checks needed.</p><div class="stack">
+   <div class="grid g2"><div class="field"><label>Make</label><input id="ar-make" value="${h(v.make||'')}" placeholder="Toyota"></div><div class="field"><label>Model</label><input id="ar-model" value="${h(v.model||'')}" placeholder="Quantum"></div></div>
+   <div class="grid g2"><div class="field"><label>Colour</label><input id="ar-color" value="${h(v.color||'')}" placeholder="White"></div><div class="field"><label>Number plate</label><input id="ar-plate" value="${h(v.plate||'')}" placeholder="GP 12 AB CD"></div></div>
+   <div class="field"><label>Passenger seats</label><input id="ar-seats" type="number" min="1" max="60" value="${h(v.seats||14)}"></div>
+   <button class="btn wide" id="ar-save">Save vehicle</button></div>`);
+  const m=document.querySelector('.modal');m.querySelector('#ar-save').onclick=async()=>{const g=k=>m.querySelector('#ar-'+k).value.trim();const seats=Math.round(+g('seats'));
+    if(!g('make')||!g('model'))return toast('Enter the make and model');if(!seats||seats<1||seats>60)return toast('Seats must be 1 to 60');
+    const vid=id||uid();const u=me();
+    await Store.put('vehicles',vid,{...v,driverId:u.id,make:g('make'),model:g('model'),color:g('color'),plate:g('plate').toUpperCase(),seats,seatScan:{seats,conf:1,why:'Set by the Enivel admin'},photos:v.photos||{},createdAt:v.createdAt||Date.now(),adminQuick:true});
+    closeModal();toast('Vehicle saved');render()}}
+if(typeof addVehicle==='function'){const _arAV=addVehicle;addVehicle=function(id){if(arOn())return arVehicleForm(id);return _arAV.apply(this,arguments)}}
+</script>

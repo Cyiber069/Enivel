@@ -224,3 +224,5 @@ Round 11 (in progress): 4 subagents → layers r10-maps2 (Carto light/dark tiles
 - Note: this session now has internet, so some old map tests (tile fallbacks, TomTom mocks) fail on any version, including 10 Nov; not app bugs.
 
 ## 12 Nov — help texts updated (layers/r10-helpfix.html): guides point to enivel.co.za, no SMS in Worker text, booking = 48 h hold + PayFast, seat Estimate, PIN-only two-step. docs/Enivel-Details.pdf regenerated locally (not in GitHub: has the admin PIN).
+
+## 12 Nov — admin can run routes (layers/r10-adminroute.html): only for the admin in the Transport view: own account auto-approved as a driver (users.verification.status=approved, audited), quick vehicle form (make/model/colour/plate/seats, no photos/estimate), New route works. Test r13-adminroute (9). Normal drivers unchanged.
