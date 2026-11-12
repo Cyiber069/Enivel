@@ -222,3 +222,5 @@ Round 11 (in progress): 4 subagents → layers r10-maps2 (Carto light/dark tiles
   Homepage language switch removed (?lang= links still work). Homepage Log in button grey again ("Log in").
 - Tests: r13-tour (23). Harness switches the auto tutorial off on every page load (window.__stOrig.tour keeps the real one).
 - Note: this session now has internet, so some old map tests (tile fallbacks, TomTom mocks) fail on any version, including 10 Nov; not app bugs.
+
+## 12 Nov — help texts updated (layers/r10-helpfix.html): guides point to enivel.co.za, no SMS in Worker text, booking = 48 h hold + PayFast, seat Estimate, PIN-only two-step. docs/Enivel-Details.pdf regenerated locally (not in GitHub: has the admin PIN).

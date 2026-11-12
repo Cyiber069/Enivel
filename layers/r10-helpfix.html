@@ -1,0 +1,18 @@
+<script>
+/* ===== 12 Nov: bring the in-app help up to date (admin "?" guides + help centre):
+   the site lives on enivel.co.za now (not cyiber069.github.io), SMS is switched off, booking holds the seat
+   48 h and is paid on PayFast, the vehicle seat count is an "Estimate", two-step is a PIN. ===== */
+(function helpFix(){
+  const swaps=[[/https:\/\/cyiber069\.github\.io\/Enivel\//g,'https://enivel.co.za/'],[/https:\/\/cyiber069\.github\.io/g,'https://enivel.co.za'],
+    [/make sure cyiber069\.github\.io is in the list/g,'make sure enivel.co.za and www.enivel.co.za are in the list'],[/cyiber069\.github\.io/g,'enivel.co.za'],
+    [/It sends SMS codes, phone pop-ups,/g,'It sends phone pop-ups,']];
+  const fix=s=>typeof s==='string'?swaps.reduce((t,[a,b])=>t.replace(a,b),s):s;
+  try{if(typeof OWN_GUIDES==='object')for(const g of Object.values(OWN_GUIDES)){if(!g)continue;g.why=fix(g.why);g.t=fix(g.t);if(Array.isArray(g.steps))g.steps=g.steps.map(fix)}}catch(e){}
+  const faq={
+    'How do I start using Enivel?':'Add your child on the Kids tab (name, age, grade, school and pickup pin) and add your SA ID once in Settings. Then open Find, pick a route and tap Choose for a child. Your seat is held for 48 hours while you pay the first month securely on PayFast to confirm it.',
+    'How do I book transport?':'Open Find, pick a route and tap Choose for a child. Pick the child and confirm: the seat is held for 48 hours. Pay the first month securely on PayFast (driver\'s price plus the Enivel fee) and you are booked. The driver is told at once.'};
+  const faqFix=[[/then scan the seats so parents know how many seats you have/g,'then tap Estimate for the seat count (Enivel checks the real seats when it verifies the vehicle)'],
+    [/turn on two-step sign-in with a PIN or an SMS code/g,'turn on two-step sign-in with a 4-digit PIN']];
+  try{if(typeof HC_FAQ!=='undefined'&&Array.isArray(HC_FAQ))for(const f of HC_FAQ){if(!f)continue;if(faq[f.q])f.a=faq[f.q];else if(typeof f.a==='string')f.a=faqFix.reduce((t,[a,b])=>t.replace(a,b),f.a)}}catch(e){}
+})();
+</script>
