@@ -54,7 +54,7 @@ if(typeof logout==='function'){const _l2Out=logout;logout=async function(){const
   if(S.authPage||(S.authMode&&S.authMode!=='login')){const mode=S.authMode==='signup'?'Create your account':'Log in';
     const hd=(html.slice(0,a).match(/<div class="g2-auth-head" id="g2-auth-head">[\s\S]*?<\/div>/)||[''])[0];
     return `<div class="g2-land"><div class="l2-authtop"><button class="l2-back" onclick="S.authPage=false;S.authMode=null;render();window.scrollTo(0,0)">← Enivel home</button><span class="tiny muted">${h(mode)}</span></div>${hd}</div>`+html.slice(a,f)+l2ContactMini()}
-  let top=html.slice(0,a).replace(/<button class="btn sm ghost" onclick="g2ToForm\('login'\)">[\s\S]*?<\/button>/,'<button class="btn sm" onclick="g2ToForm(\'login\')">Log in</button>').replace(/<div class="g2-auth-head" id="g2-auth-head">[\s\S]*?<\/div>/,'');top=l2Endorse(top);top=top.replace('<section class="g2-hero">','<div class="l2-langrow">'+l2LangHtml()+'</div><section class="g2-hero">');
+  let top=html.slice(0,a).replace(/<button class="btn sm ghost" onclick="g2ToForm\('login'\)">[\s\S]*?<\/button>/,'<button class="btn sm ghost" onclick="g2ToForm(\'login\')">Log in</button>').replace(/<div class="g2-auth-head" id="g2-auth-head">[\s\S]*?<\/div>/,'');top=l2Endorse(top);/* language is chosen in Settings → Appearance now (owner: the switch looked out of place here) */
   const hs=top.indexOf('<section class="g2-hero">');const he=hs>=0?top.indexOf('</section>',hs):-1;
   if(he>0)top=top.slice(0,he+10)+l2CoverageHtml()+top.slice(he+10);else top=top+l2CoverageHtml();
   return top+l2CheckHtml()+l2ContactHtml()+html.slice(f)}catch(e){console.warn('l2',e);return html}}}

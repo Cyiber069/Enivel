@@ -1,0 +1,105 @@
+<style>
+.tr-spot{position:fixed;z-index:2000;border-radius:16px;pointer-events:none;box-shadow:0 0 0 9999px rgba(10,10,20,.45);outline:3px solid #7c3aed;outline-offset:3px;transition:top .25s,left .25s,width .25s,height .25s;animation:trPulse 1.6s ease-in-out infinite}
+@keyframes trPulse{0%,100%{outline-color:#7c3aed}50%{outline-color:#a78bfa}}
+.tr-card{position:fixed;z-index:2001;left:12px;right:12px;max-width:420px;margin:0 auto;background:var(--bg,#fff);color:var(--fg,#111);border-radius:18px;padding:14px 16px;box-shadow:0 12px 40px rgba(0,0,0,.28);border:1px solid var(--line,#e6e6ea)}
+.tr-card .tr-step{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#7c3aed}
+.tr-card .tr-txt{font-size:.95rem;line-height:1.4;margin:6px 0 12px}
+.tr-card .tr-row{display:flex;gap:8px;justify-content:space-between;align-items:center}
+.tr-card .tr-skip{background:transparent;border:0;color:var(--fg2,#666);font-size:.85rem;cursor:pointer;min-height:40px;padding:0 4px;text-decoration:underline}
+.tr-dots{display:flex;gap:4px}.tr-dots i{width:6px;height:6px;border-radius:50%;background:var(--line,#ddd)}.tr-dots i.on{background:#7c3aed}
+@media (prefers-reduced-motion:reduce){.tr-spot{animation:none;transition:none}}
+</style>
+<script>
+/* ===== 12 Nov owner: "a step-by-step tutorial after someone signs up for the first time, depending on who they are".
+   Drivers: add a vehicle, then make the first route. Parents: add the first child, then set home and school.
+   Only once, right after the account is created (stored on the profile as tours.first, so it never comes back on
+   a new login or another phone). "Skip tutorial" closes it. Settings → Tutorials replays any of them.
+   The guide never blocks the screen: it highlights the button to tap and waits until that step is done. ===== */
+const TR={cur:null,i:0,t:null,auto:true};
+function trT(o){return (o&&(o[I18N.lang]||o.en))||''}
+function trVis(sel){const all=[...document.querySelectorAll(sel)];return all.find(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(e).visibility!=='hidden'})||null}
+function trByText(sel,re){return [...document.querySelectorAll(sel)].find(e=>re.test(e.textContent)&&e.getBoundingClientRect().width>0)||null}
+function trTab(r){return trVis(`nav.tabs button[onclick="go('${r}')"]`)||trVis(`nav.rail button[onclick="go('${r}')"]`)||trVis(`[onclick="go('${r}')"]`)}
+const trModal=()=>!!document.querySelector('.overlay .modal');
+const TOURS={
+  driverRoute:{role:'driver',title:{en:'Set up your first route',af:'Stel jou eerste roete op',zu:'Setha umzila wakho wokuqala'},steps:[
+    {skipIf:()=>myVehicles().length>0,target:()=>S.route==='d-vehicles'?null:trTab('d-vehicles'),done:()=>S.route==='d-vehicles'||myVehicles().length>0,
+     text:{en:'First add the vehicle you drive. Tap <b>Vehicles</b>.',af:'Voeg eers die voertuig by wat jy bestuur. Tik <b>Voertuie</b>.',zu:'Okokuqala engeza imoto oyishayelayo. Thinta u-<b>Vehicles</b>.'}},
+    {skipIf:()=>myVehicles().length>0,target:()=>trVis('button[onclick="addVehicle()"]'),done:()=>!!document.querySelector('.modal #v-make')||myVehicles().length>0,
+     text:{en:'Tap <b>Add vehicle</b>.',af:'Tik <b>Voeg voertuig by</b>.',zu:'Thinta u-<b>Add vehicle</b>.'}},
+    {skipIf:()=>myVehicles().length>0,modal:true,done:()=>myVehicles().length>0,
+     text:{en:'Fill in the make, model, colour and number plate, add the 5 photos, tap <b>Estimate</b> for the seats, then <b>Save</b>.',af:'Vul die maak, model, kleur en nommerplaat in, voeg die 5 foto\'s by, tik <b>Estimate</b> vir die sitplekke en dan <b>Save</b>.',zu:'Gcwalisa uhlobo, imodeli, umbala nenombolo yepuleti, engeza izithombe ezi-5, thinta u-<b>Estimate</b> wezihlalo, bese u-<b>Save</b>.'}},
+    {target:()=>S.route==='d-routes'?null:trTab('d-routes'),done:()=>S.route==='d-routes'||myRoutes().length>0,
+     text:{en:'Now make your route. Tap <b>Routes</b>.',af:'Maak nou jou roete. Tik <b>Roetes</b>.',zu:'Manje yenza umzila wakho. Thinta u-<b>Routes</b>.'}},
+    {target:()=>trVis('button[onclick="addRoute()"]'),done:()=>!!document.querySelector('.modal #r-name')||myRoutes().length>0,
+     text:{en:'Tap <b>New route</b>.',af:'Tik <b>Nuwe roete</b>.',zu:'Thinta u-<b>New route</b>.'}},
+    {modal:true,done:()=>myRoutes().length>0,
+     text:{en:'Give the route a name, type your <b>area</b> and the <b>school</b> and pick them from the list so the map knows where. Set the pickup times, the <b>price per month</b> (the box shows typical prices) and the seats, then tap <b>Save route</b>.',af:'Gee die roete \'n naam, tik jou <b>area</b> en die <b>skool</b> in en kies dit uit die lys sodat die kaart weet waar. Stel die optyd, die <b>prys per maand</b> (die blokkie wys tipiese pryse) en die sitplekke, en tik dan <b>Save route</b>.',zu:'Nika umzila igama, bhala <b>indawo</b> yakho kanye <b>nesikole</b> bese ukhetha ohlwini ukuze ibalazwe lazi. Setha izikhathi zokuthatha, <b>intengo ngenyanga</b> (ibhokisi likhombisa amanani ajwayelekile) nezihlalo, bese uthinta u-<b>Save route</b>.'}},
+    {info:true,text:{en:'Done! Your route shows to parents once Enivel has verified your documents. Before each first pickup, open Enivel and tap <b>Start trip</b>.',af:'Klaar! Jou roete wys vir ouers sodra Enivel jou dokumente geverifieer het. Maak Enivel oop en tik <b>Start trip</b> voor elke eerste optel.',zu:'Kuphelile! Umzila wakho uzobonakala kubazali uma i-Enivel isiqinisekisile imibhalo yakho. Ngaphambi kokuthatha kokuqala, vula i-Enivel bese uthinta u-<b>Start trip</b>.'}}]},
+  parentKid:{role:'parent',title:{en:'Add your child',af:'Voeg jou kind by',zu:'Engeza ingane yakho'},steps:[
+    {skipIf:()=>kidsOf(me().id).length>0,target:()=>trVis('button[onclick="addKid()"]')||(S.route==='p-kids'?null:trTab('p-kids')),done:()=>!!document.querySelector('.modal input')&&/child|kind|ingane/i.test(document.querySelector('.modal h3')?.textContent||'')||kidsOf(me().id).length>0,
+     text:{en:'Let\'s add your child. Tap <b>Add child</b>.',af:'Kom ons voeg jou kind by. Tik <b>Add child</b>.',zu:'Ake sengeze ingane yakho. Thinta u-<b>Add child</b>.'}},
+    {skipIf:()=>kidsOf(me().id).length>0,modal:true,done:()=>kidsOf(me().id).length>0,
+     text:{en:'Type your child\'s name, age and school, then save. You can add photos and a handover code later.',af:'Tik jou kind se naam, ouderdom en skool in en stoor. Jy kan later foto\'s en \'n oorhandigingskode byvoeg.',zu:'Bhala igama lengane yakho, iminyaka nesikole, bese ulondoloza. Ungangeza izithombe nekhodi yokunikezela kamuva.'}},
+    {info:true,text:{en:'Great, your child is added. Next: set your home and school so drivers can see the route.',af:'Mooi, jou kind is bygevoeg. Volgende: stel jou huis en skool sodat bestuurders die roete kan sien.',zu:'Kuhle, ingane yakho yengeziwe. Okulandelayo: setha ikhaya nesikole ukuze abashayeli babone umzila.'},next:'parentPlaces'}]},
+  parentPlaces:{role:'parent',title:{en:'Set home and school',af:'Stel huis en skool',zu:'Setha ikhaya nesikole'},steps:[
+    {target:()=>S.route==='p-home'?null:trTab('p-home'),done:()=>S.route==='p-home',
+     text:{en:'Tap <b>Home</b>.',af:'Tik <b>Tuis</b>.',zu:'Thinta u-<b>Home</b>.'}},
+    {skipIf:()=>!!journey().pickupGeo,target:()=>trVis('.mf-row button[onclick="pickPlace(\'pickup\')"]')||trVis('[onclick="pickPlace(\'pickup\')"]'),done:()=>!!document.querySelector('.modal #pl-v')||!!journey().pickupGeo,
+     text:{en:'Tap <b>Set home</b> to add your pickup address.',af:'Tik <b>Set home</b> om jou optel-adres by te voeg.',zu:'Thinta u-<b>Set home</b> ukuze wengeze ikheli lokuthathwa.'}},
+    {skipIf:()=>!!journey().pickupGeo,modal:true,done:()=>!!journey().pickupGeo,
+     text:{en:'Type your street and suburb, <b>pick your address from the list</b>, then tap Save. Picking from the list puts the pin in the right place.',af:'Tik jou straat en voorstad, <b>kies jou adres uit die lys</b> en tik dan Save. As jy uit die lys kies, sit dit die speld op die regte plek.',zu:'Bhala umgwaqo wakho nendawo, <b>khetha ikheli lakho ohlwini</b>, bese uthinta u-Save. Ukukhetha ohlwini kubeka iphini endaweni efanele.'}},
+    {skipIf:()=>!!journey().dropoffGeo,target:()=>trVis('.mf-row button[onclick="pickPlace(\'dropoff\')"]')||trVis('[onclick="pickPlace(\'dropoff\')"]'),done:()=>!!document.querySelector('.modal #pl-v')||!!journey().dropoffGeo,
+     text:{en:'Now tap <b>Set school</b>.',af:'Tik nou <b>Set school</b>.',zu:'Manje thinta u-<b>Set school</b>.'}},
+    {skipIf:()=>!!journey().dropoffGeo,modal:true,done:()=>!!journey().dropoffGeo,
+     text:{en:'Type the school name and <b>pick it from the list</b>, then tap Save.',af:'Tik die skool se naam, <b>kies dit uit die lys</b> en tik dan Save.',zu:'Bhala igama lesikole <b>ulikhethe ohlwini</b>, bese uthinta u-Save.'}},
+    {info:true,text:{en:'All set! The map shows your road route. Tap <b>Find</b> to see verified drivers for your school.',af:'Alles reg! Die kaart wys jou padroete. Tik <b>Find</b> om geverifieerde bestuurders vir jou skool te sien.',zu:'Konke kulungile! Ibalazwe likhombisa umzila womgwaqo. Thinta u-<b>Find</b> ukuze ubone abashayeli abaqinisekisiwe besikole sakho.'}}]},
+  driverTrip:{role:'driver',title:{en:'Start a trip',af:'Begin \'n rit',zu:'Qala uhambo'},steps:[
+    {target:()=>S.route==='d-home'?null:trTab('d-home'),done:()=>S.route==='d-home',text:{en:'Tap <b>Home</b>.',af:'Tik <b>Tuis</b>.',zu:'Thinta u-<b>Home</b>.'}},
+    {target:()=>trByText('button',/^\s*(Start trip|Open trip)\s*$/),done:()=>S.route==='d-trip',
+     text:{en:'Before your first pickup, tap <b>Start trip</b>. Parents then see you live on the map and get their alerts. If you have no route yet, do “Set up your first route” first.',af:'Tik <b>Start trip</b> voor jou eerste optel. Ouers sien jou dan regstreeks op die kaart en kry hul kennisgewings. As jy nog nie \'n roete het nie, doen eers “Stel jou eerste roete op”.',zu:'Ngaphambi kokuthatha kokuqala, thinta u-<b>Start trip</b>. Abazali bese bekubona ebalazweni futhi bathole izaziso. Uma ungenawo umzila, qala ngokuthi “Setha umzila wakho wokuqala”.'}},
+    {info:true,text:{en:'On the trip screen tap <b>Picked up</b> at each child and <b>Dropped off</b> at school. Keep Enivel open while you drive.',af:'Op die ritskerm tik <b>Picked up</b> by elke kind en <b>Dropped off</b> by die skool. Hou Enivel oop terwyl jy bestuur.',zu:'Esikrinini sohambo thinta u-<b>Picked up</b> enganeni ngayinye no-<b>Dropped off</b> esikoleni. Gcina i-Enivel ivulekile uma ushayela.'}}]}
+};
+const TR_UI={step:{en:'Step',af:'Stap',zu:'Isinyathelo'},of:{en:'of',af:'van',zu:'kwe-'},skip:{en:'Skip tutorial',af:'Slaan oor',zu:'Yeqa isifundo'},next:{en:'Next',af:'Volgende',zu:'Okulandelayo'},finish:{en:'Finish',af:'Klaar',zu:'Qeda'}};
+function trSave(key,status){try{const u=me();if(!u)return;const tours={...(u.tours||{}),[key]:status};if(!tours.first)tours.first=Date.now();Store.patch('users',u.id,{tours});ls.set('enivel_tour_'+u.id,1)}catch(e){}}
+function trStart(key){const T=TOURS[key];if(!T)return;trStop(true);TR.cur=key;TR.i=0;trAdvanceSkips();trLoop();clearInterval(TR.t);TR.t=setInterval(trLoop,300)}
+function trStop(silent){clearInterval(TR.t);TR.t=null;document.querySelectorAll('.tr-spot,.tr-card').forEach(e=>e.remove());if(!silent)TR.cur=null}
+function trSkip(){const k=TR.cur;trStop();if(k)trSave(k,'skipped')}
+function trFinish(){const k=TR.cur;const nx=TOURS[k]?.steps[TR.i]?.next;trStop();if(k)trSave(k,'done');if(nx)setTimeout(()=>trStart(nx),300)}
+function trAdvanceSkips(){const T=TOURS[TR.cur];while(T&&TR.i<T.steps.length-1){const s=T.steps[TR.i];let skip=false;try{skip=s.skipIf&&s.skipIf()||(!s.info&&s.done&&s.done()&&!s.modal)}catch(e){}if(!skip)break;TR.i++}}
+function trNext(){TR.i++;trAdvanceSkips();trLoop()}
+function trLoop(){const T=TOURS[TR.cur];if(!T||!me()){trStop();return}const s=T.steps[TR.i];if(!s){trFinish();return}
+  if(!s.info){let d=false;try{d=s.done()}catch(e){}if(d){TR.i++;trAdvanceSkips();return trLoop()}}
+  const n=T.steps.length,last=TR.i===n-1;let tgt=null;if(!s.modal&&!s.info)try{tgt=s.target&&s.target()}catch(e){}
+  if(trModal()&&!s.modal)tgt=null;
+  if(tgt){const r0=tgt.getBoundingClientRect();if((r0.bottom>window.innerHeight-20||r0.top<0)&&TR._scrolled!==TR.cur+':'+TR.i){TR._scrolled=TR.cur+':'+TR.i;tgt.scrollIntoView({block:'center',behavior:'smooth'})}}
+  let spot=document.querySelector('.tr-spot');if(tgt){if(!spot){spot=document.createElement('div');spot.className='tr-spot';document.body.appendChild(spot)}const r=tgt.getBoundingClientRect();Object.assign(spot.style,{top:(r.top-6)+'px',left:(r.left-6)+'px',width:(r.width+12)+'px',height:(r.height+12)+'px'})}else if(spot)spot.remove();
+  let c=document.querySelector('.tr-card');if(!c){c=document.createElement('div');c.className='tr-card';c.setAttribute('role','dialog');c.setAttribute('aria-live','polite');document.body.appendChild(c)}
+  const html=`<div class="tr-step">${trT(T.title)} · ${trT(TR_UI.step)} ${TR.i+1} ${trT(TR_UI.of)} ${n}</div><div class="tr-txt">${trT(s.text)}</div><div class="tr-row"><button class="tr-skip" onclick="trSkip()">${trT(TR_UI.skip)}</button><div class="tr-dots">${T.steps.map((_,k)=>`<i class="${k===TR.i?'on':''}"></i>`).join('')}</div>${s.info?`<button class="btn sm" onclick="${last?'trFinish()':'trNext()'}">${trT(last?TR_UI.finish:TR_UI.next)}</button>`:'<span></span>'}</div>`;
+  if(c.dataset.h!==html){c.innerHTML=html;c.dataset.h=html}
+  /* place the card: top when a pop-up is open or the target is low on the screen, else bottom */
+  const vh=window.innerHeight;let top;if(s.modal||trModal())top=12;else if(tgt){const r=tgt.getBoundingClientRect();top=r.top>vh*0.55?Math.max(12,r.top-c.offsetHeight-18):Math.min(vh-c.offsetHeight-12,r.bottom+18)}else top=vh-c.offsetHeight-90;
+  c.style.top=Math.max(12,Math.min(vh-c.offsetHeight-12,top))+'px';c.style.bottom='auto'}
+/* first time only: right after the account is created */
+function trAuto(){try{const u=me();if(!TR.auto||TR.cur||!u||S.admin||S.adminApp||!['driver','parent'].includes(u.role))return;if(u.tours&&u.tours.first)return;if(ls.get('enivel_tour_'+u.id))return;
+  if(!u.createdAt||Date.now()-u.createdAt>2*864e5)return;if(document.querySelector('.overlay,.intro,.st-go'))return;if(u.role==='driver'&&!u.startRuleAt)return;
+  const key=u.role==='driver'?'driverRoute':'parentKid';const tours={...(u.tours||{}),first:Date.now()};Store.patch('users',u.id,{tours});ls.set('enivel_tour_'+u.id,1);setTimeout(()=>trStart(key),600)}catch(e){}}
+{const _trR=render;render=function(){const r=_trR.apply(this,arguments);try{setTimeout(trAuto,900);if(TR.cur)setTimeout(trLoop,50)}catch(e){}return r}}
+/* Settings → Tutorials */
+function trListHtml(role){const keys=Object.keys(TOURS).filter(k=>TOURS[k].role===role);if(!keys.length)return '';const u=me()||{};
+  const L={en:'Tutorials',af:'Tutoriale',zu:'Izifundo'},S2={en:'Step-by-step help. Tap one to start it again.',af:'Stap-vir-stap hulp. Tik een om weer te begin.',zu:'Usizo lwesinyathelo ngesinyathelo. Thinta esisodwa ukusiqala kabusha.'};
+  return `<div class="card" id="tr-list" style="margin-top:14px"><h3>${trT(L)}</h3><p class="small muted">${trT(S2)}</p><div class="list" style="margin-top:6px">${keys.map(k=>`<div class="item ex-item" style="cursor:pointer" onclick="trStart('${k}')"><div class="grow">${trT(TOURS[k].title)}${u.tours&&u.tours[k]==='done'?' <span class="pill live tiny">✓</span>':''}</div>›</div>`).join('')}</div></div>`}
+for(const r of ['p-more','d-more']){const f=VIEWS[r];if(!f)continue;VIEWS[r]=function(){const html=f.apply(this,arguments);try{const u=me();if(!u)return html;const role=r==='p-more'?'parent':'driver';const card=trListHtml(role);if(!card)return html;
+  const i=html.indexOf('<h3>Appearance</h3>');if(i>=0){const st=html.lastIndexOf('<div class="card',i);if(st>=0)return html.slice(0,st)+card+html.slice(st)}return html+card}catch(e){return html}}}
+/* Settings → Appearance → Language (removed from the public homepage) */
+function trLangBlock(){const L={en:'Language',af:'Taal',zu:'Ulimi'},N={en:'Menus, tutorials and the Enivel homepage change. Other screens are still in English for now.',af:'Kieslyste, tutoriale en die Enivel-tuisblad verander. Ander skerms is vir eers nog in Engels.',zu:'Amamenyu, izifundo nekhasi lasekhaya le-Enivel kuyashintsha. Ezinye izikrini zisesesiNgisini okwamanje.'};
+  return `<div class="eyebrow" style="margin-top:14px">${trT(L)}</div><div class="ex-ts" role="radiogroup" aria-label="${trT(L)}">${[['en','English'],['af','Afrikaans'],['zu','isiZulu']].map(([k,l])=>`<button type="button" role="radio" aria-checked="${I18N.lang===k}" class="${I18N.lang===k?'on':''}" onclick="trSetLang('${k}')">${l}</button>`).join('')}</div><p class="tiny muted" style="margin-top:6px">${trT(N)}</p>`}
+async function trSetLang(k){I18N.lang=k;try{ls.set('enivel_lang',k)}catch(e){}try{const u=me();if(u)await Store.patch('users',u.id,{lang:k})}catch(e){}render()}
+if(typeof exTextBlock==='function'){const _trTB=exTextBlock;exTextBlock=function(){return _trTB.apply(this,arguments)+trLangBlock()}}
+/* the language saved on the profile follows the person to other phones */
+{const _trR2=render;render=function(){try{const u=me();if(u&&u.lang&&['en','af','zu'].includes(u.lang)&&u.lang!==I18N.lang&&!TR._langSynced){I18N.lang=u.lang;ls.set('enivel_lang',u.lang)}if(u)TR._langSynced=true}catch(e){}return _trR2.apply(this,arguments)}}
+/* menus inside the app in the chosen language */
+i18nT('Home','Tuis','Ikhaya');i18nT('Find','Soek','Thola');i18nT('Kids','Kinders','Izingane');i18nT('Chat','Klets','Ingxoxo');i18nT('More','Meer','Okunye');i18nT('Vehicles','Voertuie','Izimoto');i18nT('Routes','Roetes','Imizila');
+i18nT('Appearance','Voorkoms','Ukubukeka');i18nT('Text size','Teksgrootte','Usayizi wombhalo');i18nT('Settings','Instellings','Izilungiselelo');i18nT('Help & extras','Hulp en ekstras','Usizo nokunye');i18nT('Notifications','Kennisgewings','Izaziso');
+{const _trR3=render;render=function(){const r=_trR3.apply(this,arguments);try{if(me()&&I18N.lang!=='en'){const a=document.getElementById('app');if(a){const save=S.route;i18nApply(a)}}}catch(e){}return r}}
+</script>

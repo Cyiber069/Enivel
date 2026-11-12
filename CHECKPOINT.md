@@ -212,3 +212,13 @@ Round 11 (in progress): 4 subagents → layers r10-maps2 (Carto light/dark tiles
 - Removed never-referenced functions: footer, legalLink, legalKidAccountConsent, mapTiles.
 - Bug sweep: every screen for visitor/parent/driver/admin opened with no errors (pg/crawl.mjs). Old tests updated for the new Log in page.
 - Owner: rerun setup.sql; add a phone number in Admin → Legal details for the WhatsApp button; submit sitemap in Google Search Console.
+
+## 12 Nov — first-time tutorials, language in Appearance, grey Log in
+- layers/r10-tour.html: step-by-step guide (highlight + card, never blocks the screen, Skip tutorial). Auto only for accounts < 2 days old with no users.tours.first
+  (set when it starts, so never again on reload/another phone). Driver: Vehicles → Add vehicle → form → Routes → New route → form → done (vehicle steps skipped if
+  one exists). Parent: Add child → form → then "Set home and school" (Home → Set home → pick address → Set school → pick → Find). Driver waits until the
+  "Start every trip" agreement is accepted. Settings → Tutorials replays: driverRoute, driverTrip, parentKid, parentPlaces. Texts in EN/AF/ZU.
+- Settings → Appearance → Language (English/Afrikaans/isiZulu), saved on users.lang; changes menus, tutorials and the homepage; other screens English for now.
+  Homepage language switch removed (?lang= links still work). Homepage Log in button grey again ("Log in").
+- Tests: r13-tour (23). Harness switches the auto tutorial off on every page load (window.__stOrig.tour keeps the real one).
+- Note: this session now has internet, so some old map tests (tile fallbacks, TomTom mocks) fail on any version, including 10 Nov; not app bugs.
